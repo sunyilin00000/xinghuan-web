@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0e0e10" />
+  <title>星环 · 智能教学中枢</title>
+  <link rel="stylesheet" href="style.css" />
+  <script>
+    // 部署后把这里改成你的 SCF API 网关地址（或在部署前全局替换）
+    window.XINGHUAN_API = 'https://你的-SCF-网关地址';
+  </script>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="brand" aria-label="星环教学实验中心">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-copy">
+        <span class="brand-title">星环 · 智能教学中枢</span>
+        <span class="brand-subtitle">XINGHUAN LIVE LEARNING</span>
+      </span>
+    </div>
+    <nav class="org-switch" aria-label="切换协会看板">
+      <button class="org-switch-tab active" type="button" data-org="astro" aria-pressed="true">天文协会</button>
+      <button class="org-switch-tab" type="button" data-org="bio" aria-pressed="false">生物科技协会</button>
+      <button class="org-switch-tab" type="button" data-org="outdoor" aria-pressed="false">户协</button>
+      <button class="org-switch-tab" type="button" data-org="nankai_astro" aria-pressed="false">南开天协</button>
+    </nav>
+    <div class="top-actions">
+      <span class="status-chip" aria-live="polite">
+        <span id="connectionDot" class="status-dot"></span>
+        <span id="connectionText">正在连接</span>
+      </span>
+      <button id="headerLoginButton" class="btn btn-gold" type="button">账号登录</button>
+    </div>
+  </header>
+
+  <main class="dashboard">
+    <section class="page-heading" aria-labelledby="pageTitle">
+      <div>
+        <p class="eyebrow">LIVE CLASSROOM · XINGHUAN AI</p>
+        <h1 id="pageTitle">星环 · 智能教学中枢</h1>
+        <p class="heading-note">课堂答题、实时提问与实验数据在同一视角汇合，匿名会话可查看公开数据。</p>
+      </div>
+      <div class="clock" aria-label="当前时间">
+        <strong id="clockTime">--:--:--</strong>
+        <span id="clockDate">正在同步时间</span>
+      </div>
+    </section>
+
+    <section class="identity-strip" aria-label="登录状态">
+      <div class="identity-main">
+        <span id="identityBadge" class="identity-badge" aria-hidden="true">访</span>
+        <div class="identity-copy">
+          <p id="identityTitle" class="identity-title">匿名只读会话</p>
+          <p id="identitySubtitle" class="identity-subtitle">登录后可查看完整会员身份并使用数据写入能力</p>
+        </div>
+      </div>
+      <div class="session-actions">
+        <span id="sessionOrgChip" class="role-chip">未绑定社团</span>
+        <button id="sessionLoginButton" class="btn btn-gold" type="button">登录</button>
+      </div>
+    </section>
+
+    <section class="stats-grid" aria-label="数据概览">
+      <article class="stat-card">
+        <p class="stat-label">实验记录</p>
+        <p id="recordCount" class="stat-value">--<small>条</small></p>
+      </article>
+      <article class="stat-card">
+        <p class="stat-label">平均亮度</p>
+        <p id="averageValue" class="stat-value">--<small>mag</small></p>
+      </article>
+      <article class="stat-card">
+        <p class="stat-label">数据来源</p>
+        <p id="sourceValue" class="stat-value">--</p>
+      </article>
+      <article class="stat-card">
+        <p class="stat-label">云开发环境</p>
+        <p class="stat-value" title="cloud1-d6gagyei397d315ca">cloud1<small>生产环境</small></p>
+      </article>
+    </section>
+
+    <section class="workspace-grid">
+      <article class="panel chart-panel">
+        <header class="panel-head">
+          <div class="panel-title-wrap">
+            <h2 class="panel-title">亮度变化曲线</h2>
+            <p class="panel-subtitle">experiment_results / value</p>
+          </div>
+          <div class="chart-actions">
+            <button id="addRecordButton" class="btn btn-quiet" type="button" disabled>写入测试数据</button>
+            <button id="refreshButton" class="btn" type="button">刷新数据</button>
+          </div>
+        </header>
+        <div class="chart-shell">
+          <div id="experimentChart" role="img" aria-label="实验亮度变化图表"></div>
+          <div id="chartLoading" class="chart-loading">正在同步云端实验数据</div>
+        </div>
+      </article>
+
+      <aside class="panel activity-panel" aria-labelledby="recentTitle">
+        <header class="panel-head">
+          <div class="panel-title-wrap">
+            <h2 id="recentTitle" class="panel-title">最近记录</h2>
+            <p class="panel-subtitle">按创建时间与数据值整理</p>
+          </div>
+          <span id="recordBadge" class="role-chip">0 条</span>
+        </header>
+        <ul id="recordList" class="record-list"></ul>
+      </aside>
+    </section>
+
+
+    <section id="classroomBoard" class="panel classroom-board" aria-labelledby="classroomBoardTitle">
+      <header class="panel-head">
+        <div class="panel-title-wrap">
+          <h2 id="classroomBoardTitle" class="panel-title">课堂答题与提问广场</h2>
+          <p class="panel-subtitle">student_answers / classroom_chats · 登录后实时同步</p>
+        </div>
+        <div class="classroom-controls">
+          <select id="classroomCourseSelect" class="classroom-select" aria-label="选择课堂" disabled>
+            <option value="">登录后选择进行中的课堂</option>
+          </select>
+          <button id="classroomRefreshButton" class="btn" type="button" disabled>同步课堂</button>
+          <button id="generateDiagnosisButton" class="btn btn-gold diagnosis-button" type="button" hidden>🤖 生成 AI 诊断</button>
+        </div>
+      </header>
+      <div id="teacherControlBar" class="teacher-control-bar" hidden>
+        <div class="teacher-control-copy">
+          <span class="teacher-control-kicker">教师控制台</span>
+          <strong id="answerStatusLabel">作答进行中</strong>
+          <span id="answerRoundMeta" class="teacher-control-kicker">第 1 轮 · 等待课堂同步</span>
+        </div>
+        <div class="teacher-control-actions">
+          <button id="pauseAnswersButton" class="btn control-btn control-pause" type="button">⏸ 暂停作答</button>
+          <button id="resumeAnswersButton" class="btn control-btn control-resume" type="button">▶ 恢复作答</button>
+          <button id="resetStageButton" class="btn control-btn control-reset" type="button">↻ 重置当前环节</button>
+        </div>
+      </div>
+      <div class="classroom-stat-grid">
+        <article class="classroom-stat">
+          <p class="classroom-stat-label">当前答题人数</p>
+          <p id="classAnswerTotal" class="classroom-stat-value">--<small>人</small></p>
+        </article>
+        <article class="classroom-stat">
+          <p class="classroom-stat-label">总体正确率</p>
+          <p id="classAnswerCorrectRate" class="classroom-stat-value">--<small>%</small></p>
+        </article>
+        <article class="classroom-stat">
+          <p class="classroom-stat-label">总体错误率</p>
+          <p id="classAnswerWrongRate" class="classroom-stat-value">--<small>%</small></p>
+        </article>
+        <article class="classroom-stat">
+          <p class="classroom-stat-label">实时提问</p>
+          <p id="classQuestionCount" class="classroom-stat-value">--<small>条</small></p>
+        </article>
+      </div>
+      <div class="classroom-workspace">
+        <section class="classroom-block" aria-labelledby="answerTableTitle">
+          <header class="classroom-block-head">
+            <h3 id="answerTableTitle" class="classroom-block-title">学生答题明细</h3>
+            <span id="answerTableMeta" class="classroom-block-meta">等待课堂数据</span>
+          </header>
+          <div id="answerTableEmpty" class="classroom-empty">登录并选择课堂后，答题明细会实时汇入这里。</div>
+          <div id="answerTableWrap" class="answer-table-wrap" hidden>
+            <table class="answer-table">
+              <thead>
+                <tr>
+                  <th style="width: 22%;">学生</th>
+                  <th style="width: 22%;">所选答案</th>
+                  <th style="width: 18%;">结果</th>
+                  <th style="width: 20%;">历史正确率</th>
+                  <th style="width: 18%;">提交时间</th>
+                </tr>
+              </thead>
+              <tbody id="answerTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <div class="classroom-side">
+          <section class="classroom-block" aria-labelledby="answerOptionTitle">
+            <header class="classroom-block-head">
+              <h3 id="answerOptionTitle" class="classroom-block-title">实时选项人数</h3>
+              <span class="classroom-block-meta">数字变化自动高亮</span>
+            </header>
+            <div id="answerOptionList" class="answer-option-list" aria-live="polite">
+              <div class="classroom-empty compact">本轮选项统计会实时显示在这里。</div>
+            </div>
+          </section>
+
+          <section class="classroom-block" aria-labelledby="wrongOptionsTitle">
+            <header class="classroom-block-head">
+              <h3 id="wrongOptionsTitle" class="classroom-block-title">错误选项分布</h3>
+              <span class="classroom-block-meta">错题人员</span>
+            </header>
+            <div id="wrongOptionList" class="wrong-option-list">
+              <div class="classroom-empty">暂无错题数据</div>
+            </div>
+          </section>
+
+          <section class="classroom-block" aria-labelledby="pollDistributionTitle">
+            <header class="classroom-block-head">
+              <h3 id="pollDistributionTitle" class="classroom-block-title">投票实时分布</h3>
+              <span id="pollBlockMeta" class="classroom-block-meta">polls · 等待数据</span>
+            </header>
+            <div id="pollDistribution" class="poll-distribution" aria-live="polite">
+              <div class="classroom-empty compact">课堂投票发布后，选项人数会实时更新。</div>
+            </div>
+          </section>
+
+          <section class="classroom-block" aria-labelledby="questionFeedTitle">
+            <header class="classroom-block-head">
+              <h3 id="questionFeedTitle" class="classroom-block-title">提问广场</h3>
+              <span id="anonymousState" class="classroom-block-meta">匿名提问默认开启</span>
+            </header>
+            <div id="classQuestionFeed" class="question-feed" aria-live="polite">
+              <div class="classroom-empty">课堂提问会实时滚动显示在这里。</div>
+            </div>
+          </section>
+
+          <section id="aiDiagnosisCard" class="classroom-block ai-diagnosis-card" hidden>
+            <header class="classroom-block-head">
+              <h3 class="classroom-block-title">AI 个性化教学建议</h3>
+              <span id="aiDiagnosisMeta" class="classroom-block-meta">星环 AI</span>
+            </header>
+            <div id="aiDiagnosisContent" class="ai-diagnosis-content" aria-live="polite">
+              <div class="classroom-empty compact">正在分析本轮错题与选项分布...</div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <section class="classroom-block group-submission-block" aria-labelledby="groupSubmissionTitle">
+        <header class="classroom-block-head">
+          <h3 id="groupSubmissionTitle" class="classroom-block-title">小组任务提交墙</h3>
+          <span id="groupWallMeta" class="classroom-block-meta">group_tasks · 等待小组数据</span>
+        </header>
+        <div id="groupSubmissionWall" class="group-submission-wall" aria-live="polite">
+          <div class="classroom-empty compact">小组提交后会点亮对应卡片。</div>
+        </div>
+      </section>
+
+      <p id="classroomBoardNote" class="classroom-board-note">实时监听不可用时会自动切换为 3 秒云函数同步；匿名提问在写入云端时即抹除学生身份。</p>
+    </section>
+
+    <footer class="console-strip">
+      <span id="consoleMessage" class="console-message">初始化 CloudBase Web SDK</span>
+      <span class="console-code">ENV / cloud1-d6gagyei397d315ca</span>
+    </footer>
+  </main>
+
+  <div id="loginModal" class="modal login-modal" role="dialog" aria-modal="true" aria-labelledby="loginTitle" aria-hidden="true">
+    <button id="closeLoginButton" class="login-close" type="button" aria-label="返回匿名看板">×</button>
+    <section class="login-stage">
+      <span class="login-orbit-mark" aria-hidden="true"><i></i></span>
+      <p class="login-kicker">XINGHUAN INTELLIGENT LEARNING</p>
+      <h2 id="loginTitle" class="login-hero-title">星环 · 智能教学中枢</h2>
+      <p class="login-hero-copy">连接课堂、实验与每一位学习者。<br />使用星环终端成员账号进入实时教学现场。</p>
+
+      <form id="loginForm" class="login-form login-capsule">
+        <div class="login-capsule-line">
+          <div class="login-fields">
+            <label class="field login-field" for="username">
+              <span>账号</span>
+              <input id="username" name="username" type="text" autocomplete="username" placeholder="成员账号" maxlength="80" required />
+            </label>
+            <label class="field login-field" for="password">
+              <span>密码</span>
+              <input id="password" name="password" type="password" autocomplete="current-password" placeholder="登录密码" maxlength="128" required />
+            </label>
+          </div>
+          <button id="submitLoginButton" class="btn btn-gold login-submit" type="submit">进入中枢</button>
+        </div>
+        <div id="loginError" class="login-error" role="alert"></div>
+        <p class="login-footnote">登录票据仅用于当前浏览器会话，账号密码不会被保存。未登录可直接返回匿名只读看板。</p>
+        <div class="login-actions">
+          <button id="cancelLoginButton" class="btn btn-quiet login-back" type="button">返回匿名看板</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
