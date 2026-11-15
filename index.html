@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="style.css" />
   <script>
     // 部署后把这里改成你的 SCF API 网关地址（或在部署前全局替换）
-   window.XINGHUAN_API = 'https://1521583267-cn8t3sbvwc.ap-shanghai.tencentscf.com';
+    window.XINGHUAN_API = 'https://你的-SCF-网关地址';
   </script>
 </head>
 <body>
@@ -21,11 +21,8 @@
         <span class="brand-subtitle">XINGHUAN LIVE LEARNING</span>
       </span>
     </div>
-    <nav class="org-switch" aria-label="切换协会看板">
-      <button class="org-switch-tab active" type="button" data-org="astro" aria-pressed="true">天文协会</button>
-      <button class="org-switch-tab" type="button" data-org="bio" aria-pressed="false">生物科技协会</button>
-      <button class="org-switch-tab" type="button" data-org="outdoor" aria-pressed="false">户协</button>
-      <button class="org-switch-tab" type="button" data-org="nankai_astro" aria-pressed="false">南开天协</button>
+    <nav class="org-switch" aria-label="协会看板">
+      <button class="org-switch-tab active" type="button" data-org="astro" aria-pressed="true">中国海洋大学天文协会</button>
     </nav>
     <div class="top-actions">
       <span class="status-chip" aria-live="polite">
@@ -124,7 +121,7 @@
             <option value="">登录后选择进行中的课堂</option>
           </select>
           <button id="classroomRefreshButton" class="btn" type="button" disabled>同步课堂</button>
-          <button id="generateDiagnosisButton" class="btn btn-gold diagnosis-button" type="button" hidden>🤖 生成 AI 诊断</button>
+          <button id="generateDiagnosisButton" class="btn btn-gold diagnosis-button" type="button" hidden>生成 AI 诊断</button>
         </div>
       </header>
       <div id="teacherControlBar" class="teacher-control-bar" hidden>
@@ -134,9 +131,9 @@
           <span id="answerRoundMeta" class="teacher-control-kicker">第 1 轮 · 等待课堂同步</span>
         </div>
         <div class="teacher-control-actions">
-          <button id="pauseAnswersButton" class="btn control-btn control-pause" type="button">⏸ 暂停作答</button>
-          <button id="resumeAnswersButton" class="btn control-btn control-resume" type="button">▶ 恢复作答</button>
-          <button id="resetStageButton" class="btn control-btn control-reset" type="button">↻ 重置当前环节</button>
+          <button id="pauseAnswersButton" class="btn control-btn control-pause" type="button">暂停作答</button>
+          <button id="resumeAnswersButton" class="btn control-btn control-resume" type="button">恢复作答</button>
+          <button id="resetStageButton" class="btn control-btn control-reset" type="button">重置当前环节</button>
         </div>
       </div>
       <div class="classroom-stat-grid">
@@ -155,6 +152,10 @@
         <article class="classroom-stat">
           <p class="classroom-stat-label">实时提问</p>
           <p id="classQuestionCount" class="classroom-stat-value">--<small>条</small></p>
+        </article>
+        <article class="classroom-stat">
+          <p class="classroom-stat-label">答题完成率</p>
+          <p id="classCompletionRate" class="classroom-stat-value">--<small>%</small></p>
         </article>
       </div>
       <div class="classroom-workspace">
@@ -218,6 +219,16 @@
             </header>
             <div id="classQuestionFeed" class="question-feed" aria-live="polite">
               <div class="classroom-empty">课堂提问会实时滚动显示在这里。</div>
+            </div>
+          </section>
+
+          <section class="classroom-block" aria-labelledby="pendingListTitle">
+            <header class="classroom-block-head">
+              <h3 id="pendingListTitle" class="classroom-block-title">待作答名单</h3>
+              <span id="pendingListMeta" class="classroom-block-meta">本轮未提交的学生</span>
+            </header>
+            <div id="pendingList" class="pending-list">
+              <div class="classroom-empty compact">本轮暂无作答数据</div>
             </div>
           </section>
 

@@ -83,7 +83,7 @@
         'teacherControlBar', 'pauseAnswersButton', 'resumeAnswersButton', 'resetStageButton',
         'answerStatusLabel', 'answerRoundMeta', 'answerOptionList', 'pollDistribution',
         'pollBlockMeta', 'groupSubmissionWall', 'groupWallMeta', 'generateDiagnosisButton',
-        'aiDiagnosisCard', 'aiDiagnosisContent', 'aiDiagnosisMeta'
+        'aiDiagnosisCard', 'aiDiagnosisContent', 'aiDiagnosisMeta', 'classCompletionRate', 'pendingList', 'pendingListMeta'
       ].forEach((id) => {
         elements[id] = document.getElementById(id);
       });
@@ -587,6 +587,15 @@
       setClassroomStat(elements.classAnswerCorrectRate, '--', '%');
       setClassroomStat(elements.classAnswerWrongRate, '--', '%');
       setClassroomStat(elements.classQuestionCount, '--', '条');
+      if (elements.classCompletionRate) setClassroomStat(elements.classCompletionRate, '--', '%');
+      if (elements.pendingList) {
+        clearNode(elements.pendingList);
+        const pEmpty = document.createElement('div');
+        pEmpty.className = 'classroom-empty compact';
+        pEmpty.textContent = '本轮暂无作答数据';
+        elements.pendingList.appendChild(pEmpty);
+      }
+      if (elements.pendingListMeta) elements.pendingListMeta.textContent = '本轮未提交的学生';
       clearNode(elements.answerTableBody);
       clearNode(elements.wrongOptionList);
       const wrongEmpty = document.createElement('div');
@@ -974,7 +983,7 @@
         showToast('AI 诊断失败：' + getErrorMessage(error), true);
       } finally {
         state.classroom.diagnosisBusy = false;
-        elements.generateDiagnosisButton.textContent = '🤖 生成 AI 诊断';
+        elements.generateDiagnosisButton.textContent = '生成 AI 诊断';
         updateTeacherControls();
       }
     }
@@ -1028,6 +1037,44 @@
         ? total + ' 人作答 · ' + Number(overall.correct || 0) + ' 人正确'
         : '本轮暂无提交';
       applySessionStatus(stats && stats.session_status);
+      renderPendingList(stats);
+    }
+
+    // v1.3 待作答名单 + 答题完成率：由后端 get_class_stats 的全班名单(students)与本轮作答(answers)计算
+    function renderPendingList(stats) {
+      if (!elements.pendingList) return;
+      const students = (stats && stats.students) || [];
+      const answers = (stats && stats.answers) || [];
+      const answeredIds = new Set(answers.map(item => String(item.student_id)));
+      const pending = students.filter(item => !answeredIds.has(String(item.student_id)));
+      const total = students.length;
+      const completion = total ? Math.round((answeredIds.size / total) * 100) : 0;
+      if (elements.classCompletionRate) setClassroomStat(elements.classCompletionRate, completion, '%');
+      clearNode(elements.pendingList);
+      if (!total) {
+        const empty = document.createElement('div');
+        empty.className = 'classroom-empty compact';
+        empty.textContent = '本轮暂无作答数据';
+        elements.pendingList.appendChild(empty);
+        if (elements.pendingListMeta) elements.pendingListMeta.textContent = '本轮未提交的学生';
+        return;
+      }
+      if (!pending.length) {
+        const done = document.createElement('div');
+        done.className = 'classroom-empty compact';
+        done.textContent = '全部完成作答';
+        elements.pendingList.appendChild(done);
+      } else {
+        pending.forEach(item => {
+          const chip = document.createElement('span');
+          chip.className = 'pending-chip';
+          chip.textContent = item.student_name || '成员';
+          elements.pendingList.appendChild(chip);
+        });
+      }
+      if (elements.pendingListMeta) {
+        elements.pendingListMeta.textContent = pending.length + ' 人未交 · 完成率 ' + completion + '%';
+      }
     }
 
     function studentAccuracyMap(stats) {
