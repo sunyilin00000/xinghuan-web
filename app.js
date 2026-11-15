@@ -83,7 +83,7 @@
         'teacherControlBar', 'pauseAnswersButton', 'resumeAnswersButton', 'resetStageButton',
         'answerStatusLabel', 'answerRoundMeta', 'answerOptionList', 'pollDistribution',
         'pollBlockMeta', 'groupSubmissionWall', 'groupWallMeta', 'generateDiagnosisButton',
-        'aiDiagnosisCard', 'aiDiagnosisContent', 'aiDiagnosisMeta', 'classCompletionRate', 'pendingList', 'pendingListMeta', 'cheatAlertList', 'cheatAlertMeta', 'voiceFeed', 'voiceFeedMeta', 'voiceRoster', 'voiceRosterMeta'
+        'aiDiagnosisCard', 'aiDiagnosisContent', 'aiDiagnosisMeta', 'classCompletionRate', 'pendingList', 'pendingListMeta', 'cheatAlertList', 'cheatAlertMeta', 'voiceFeed', 'voiceFeedMeta', 'voiceRoster', 'voiceRosterMeta', 'micToggle', 'voiceEnrollModal', 'veConsent', 'veRecord', 'veCancel', 'veStatus'
       ].forEach((id) => {
         elements[id] = document.getElementById(id);
       });
@@ -1122,6 +1122,272 @@
       if (window.speechSynthesis) speechSynthesis.cancel();
     }
 
+    // v2.1 PPT 演示：本机解析，支持多图翻页 / pptx（best-effort）
+    const ppt = { slides: [], index: 0 };
+    function renderPptSlide() {
+      const stage = document.getElementById('pptStage');
+      if (!stage) return;
+      const pages = stage.querySelectorAll('.slide-page');
+      pages.forEach((p, i) => p.classList.toggle('active', i === ppt.index));
+      const nav = document.getElementById('pptNav');
+      const pageLabel = document.getElementById('pptPage');
+      if (nav) nav.hidden = ppt.slides.length === 0;
+      if (pageLabel) pageLabel.textContent = ppt.slides.length ? (ppt.index + 1) + ' / ' + ppt.slides.length : '0 / 0';
+      const prev = document.getElementById('pptPrev');
+      const next = document.getElementById('pptNext');
+      if (prev) prev.disabled = ppt.index <= 0;
+      if (next) next.disabled = ppt.index >= ppt.slides.length - 1;
+    }
+    function clearPpt() {
+      const stage = document.getElementById('pptStage');
+      if (stage) stage.innerHTML = '<div class="classroom-empty compact">点击"打开 PPT"选择文件，或把多张课堂照片拖进来</div>';
+      ppt.slides = []; ppt.index = 0;
+      renderPptSlide();
+      const clearBtn = document.getElementById('pptClear');
+      const resize = document.getElementById('pptResize');
+      if (clearBtn) clearBtn.hidden = true;
+      if (resize) resize.hidden = true;
+    }
+    function loadImageSlides(files) {
+      const stage = document.getElementById('pptStage');
+      if (!stage) return;
+      stage.innerHTML = '';
+      ppt.slides = [];
+      files.forEach(f => {
+        const url = URL.createObjectURL(f);
+        const page = document.createElement('div');
+        page.className = 'slide-page';
+        const img = document.createElement('img');
+        img.className = 'slide-img';
+        img.src = url;
+        page.appendChild(img);
+        stage.appendChild(page);
+        ppt.slides.push(url);
+      });
+      ppt.index = 0;
+      renderPptSlide();
+      const clearBtn = document.getElementById('pptClear');
+      const resize = document.getElementById('pptResize');
+      if (clearBtn) clearBtn.hidden = false;
+      if (resize) resize.hidden = false;
+    }
+    function loadPptx(file) {
+      // best-effort：动态加载 pptxjs 渲染；失败则提示转图片方案
+      const stage = document.getElementById('pptStage');
+      const loadScript = (src) => new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = src; s.onload = res; s.onerror = rej;
+        document.head.appendChild(s);
+      });
+      stage.innerHTML = '<div class="classroom-empty compact">正在解析 PPT…</div>';
+      (async () => {
+        try {
+          if (!window.jQuery) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js');
+          if (!window.JSZip) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js');
+          await loadScript('https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@1.21.1/js/pptxjs.min.js');
+          stage.innerHTML = '';
+          const url = URL.createObjectURL(file);
+          if (jQuery(stage).pptxToHtml) {
+            jQuery(stage).pptxToHtml({ file: url });
+            const resize = document.getElementById('pptResize');
+            if (resize) resize.hidden = false;
+          } else {
+            throw new Error('渲染器不可用');
+          }
+        } catch (e) {
+          stage.innerHTML = '<div class="classroom-empty compact">PPT 解析失败（可能是网络拦截了渲染库）。替代方案：在 PowerPoint/WPS 里"另存为图片"，把各页 jpg 一起选中上传，效果相同。</div>';
+        }
+      })();
+    }
+    function bindPpt() {
+      const input = document.getElementById('pptFile');
+      const upload = document.getElementById('pptUpload');
+      if (upload && input) upload.addEventListener('click', () => input.click());
+      if (input) input.addEventListener('change', () => {
+        const files = Array.from(input.files || []);
+        if (!files.length) return;
+        const images = files.filter(f => /^image\//.test(f.type));
+        if (files.length === 1 && /\.pptx$/i.test(files[0].name)) loadPptx(files[0]);
+        else if (images.length) loadImageSlides(images);
+        else alert('请选择 .pptx 文件或图片');
+        input.value = '';
+      });
+      const prev = document.getElementById('pptPrev');
+      const next = document.getElementById('pptNext');
+      const clearBtn = document.getElementById('pptClear');
+      if (prev) prev.addEventListener('click', () => { if (ppt.index > 0) { ppt.index--; renderPptSlide(); } });
+      if (next) next.addEventListener('click', () => { if (ppt.index < ppt.slides.length - 1) { ppt.index++; renderPptSlide(); } });
+      if (clearBtn) clearBtn.addEventListener('click', clearPpt);
+
+      // 尺寸拖拽：右下角把手调宽度，记忆到 localStorage
+      const stage = document.getElementById('pptStage');
+      const resize = document.getElementById('pptResize');
+      if (stage) {
+        const saved = Number(localStorage.getItem('ppt_width') || 0);
+        if (saved >= 320) stage.style.width = saved + 'px';
+      }
+      if (resize && stage) {
+        resize.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          const startX = e.clientX;
+          const startW = stage.getBoundingClientRect().width;
+          const onMove = (ev) => {
+            const w = Math.max(320, Math.min(window.innerWidth - 40, startW + (ev.clientX - startX)));
+            stage.style.width = w + 'px';
+          };
+          const onUp = (ev) => {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            localStorage.setItem('ppt_width', String(Math.round(stage.getBoundingClientRect().width)));
+          };
+          document.addEventListener('mousemove', onMove);
+          document.addEventListener('mouseup', onUp);
+        });
+      }
+
+      // 面板收起：所有 panel / classroom-block 头部加收起按钮，状态存 localStorage，互不影响
+      const savedCollapsed = new Set(JSON.parse(localStorage.getItem('collapsed_blocks') || '[]'));
+      document.querySelectorAll('.panel, .classroom-block').forEach((block, i) => {
+        const head = block.querySelector('.panel-head, .classroom-block-head');
+        if (!head) return;
+        const id = block.id || (block.className.split(' ')[0] + '_' + i);
+        const btn = document.createElement('button');
+        btn.className = 'collapse-btn';
+        btn.type = 'button';
+        btn.textContent = '收起';
+        head.appendChild(btn);
+        if (savedCollapsed.has(id)) { block.classList.add('collapsed'); btn.textContent = '展开'; }
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          block.classList.toggle('collapsed');
+          const collapsed = block.classList.contains('collapsed');
+          btn.textContent = collapsed ? '展开' : '收起';
+          if (collapsed) savedCollapsed.add(id); else savedCollapsed.delete(id);
+          localStorage.setItem('collapsed_blocks', JSON.stringify(Array.from(savedCollapsed)));
+        });
+      });
+    }
+
+    // v2.0 教师端收音：MediaRecorder → PCM16 → SCF 转写+认人 → 实时发言流
+    const mic = { on: false, recorder: null, audioCtx: null, busy: false };
+
+    async function decodeToPcm16(blob) {
+      const buf = await blob.arrayBuffer();
+      if (!mic.audioCtx) mic.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const decoded = await mic.audioCtx.decodeAudioData(buf);
+      const src = decoded.getChannelData(0);
+      const targetRate = 16000;
+      const ratio = decoded.sampleRate / targetRate;
+      const outLen = Math.floor(src.length / ratio);
+      const out = new Int16Array(outLen);
+      for (let i = 0; i < outLen; i++) {
+        const idx = Math.floor(i * ratio);
+        let s = Math.max(-1, Math.min(1, src[idx]));
+        out[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      }
+      let bin = '';
+      const bytes = new Uint8Array(out.buffer);
+      const CHUNK = 0x8000;
+      for (let i = 0; i < bytes.length; i += CHUNK) {
+        bin += String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i + CHUNK, bytes.length)));
+      }
+      return btoa(bin);
+    }
+
+    function startMicLoop() {
+      if (mic.recorder) return;
+      const rec = new MediaRecorder(new MediaStream(micStream.getTracks()));
+      mic.recorder = rec;
+      rec.ondataavailable = () => {};
+      rec.onstop = async () => {
+        if (!mic.on) return;
+        const blob = lastBlob;
+        lastBlob = null;
+        if (blob && !mic.busy) {
+          mic.busy = true;
+          try {
+            const audio = await decodeToPcm16(blob);
+            await apiFetch('/voice/classroom-audio', {
+              method: 'POST',
+              body: { audio, session_id: state.classroom.sessionId, course_id: state.classroom.courseId }
+            });
+          } catch (e) { console.warn('[mic] 分片上传失败', e); }
+          finally { mic.busy = false; }
+        }
+        if (mic.on) setTimeout(() => { try { rec.start(); scheduleStop(); } catch (e) {} }, 120);
+      };
+      let lastBlob = null;
+      const scheduleStop = () => setTimeout(() => {
+        if (mic.on && rec.state === 'recording') {
+          const reader = new FileReader();
+          rec.requestData ? null : null;
+          rec.ondataavailable = (e) => { if (e.data && e.data.size) lastBlob = e.data; };
+          rec.stop();
+        }
+      }, 3000);
+      rec.start();
+      scheduleStop();
+    }
+    let micStream = null;
+
+    async function toggleMic() {
+      if (mic.on) {
+        mic.on = false;
+        try { mic.recorder && mic.recorder.state !== 'inactive' && mic.recorder.stop(); } catch (e) {}
+        mic.recorder = null;
+        if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+        elements.micToggle.textContent = '开启收音';
+        elements.micToggle.classList.remove('recording');
+        return;
+      }
+      // 首次开启前检查声纹注册
+      try {
+        const st = await apiFetch('/voice/status', { method: 'GET' });
+        if (st && st.code === 0 && st.data && !st.data.enrolled) { openVoiceEnroll(); return; }
+      } catch (e) {}
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mic.on = true;
+      elements.micToggle.textContent = '收音中 · 点击停止';
+      elements.micToggle.classList.add('recording');
+      startMicLoop();
+    }
+
+    function openVoiceEnroll() {
+      elements.voiceEnrollModal.classList.add('open');
+      elements.voiceEnrollModal.setAttribute('aria-hidden', 'false');
+      elements.veStatus.textContent = '';
+    }
+    function closeVoiceEnroll() {
+      elements.voiceEnrollModal.classList.remove('open');
+      elements.voiceEnrollModal.setAttribute('aria-hidden', 'true');
+    }
+    async function enrollRecord() {
+      if (!elements.veConsent.checked) { elements.veStatus.textContent = '请先勾选同意书'; return; }
+      elements.veStatus.textContent = '录音中，请朗读上方文字…';
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const rec = new MediaRecorder(stream);
+        const chunks = [];
+        rec.ondataavailable = e => chunks.push(e.data);
+        const done = new Promise(res => { rec.onstop = res; });
+        rec.start();
+        setTimeout(() => rec.stop(), 5000);
+        await done;
+        stream.getTracks().forEach(t => t.stop());
+        elements.veStatus.textContent = '识别中…';
+        const audio = await decodeToPcm16(new Blob(chunks));
+        const r = await apiFetch('/voice/enroll', { method: 'POST', body: { audio, consent: true } });
+        if (r && r.code === 0) {
+          elements.veStatus.textContent = '注册成功，可以开启收听了';
+          setTimeout(() => { closeVoiceEnroll(); }, 900);
+        } else {
+          elements.veStatus.textContent = (r && r.message) || '注册失败';
+        }
+      } catch (e) {
+        elements.veStatus.textContent = '麦克风不可用：' + (e.message || e);
+      }
+    }
+
     // v1.9 实时发言面板：轮询 voice_activity，最新一条高亮为"正在发言"
     async function refreshVoiceFeed() {
       if (!state.classroom.sessionId || !classroomIsReady()) return;
@@ -1573,6 +1839,8 @@
     }
 
     function disconnectClassroomBoard(keepSelection = false) {
+      if (typeof mic !== 'undefined' && mic.on) toggleMic();
+      if (elements.micToggle) elements.micToggle.disabled = true;
       closeClassroomWatches();
       stopClassroomPolling();
       clearTimeout(state.classroom.statsTimer);
@@ -1608,6 +1876,7 @@
       state.classroom.courseId = courseId;
       state.classroom.diagnosis = null;
       elements.classroomRefreshButton.disabled = false;
+      elements.micToggle.disabled = false;
       elements.answerTableEmpty.hidden = false;
       elements.answerTableWrap.hidden = true;
       elements.answerTableEmpty.textContent = '正在连接课堂实时数据...';
@@ -1725,6 +1994,7 @@
     }
 
     function bindEvents() {
+      bindPpt();
       document.querySelectorAll('[data-org]').forEach((button) => {
         button.addEventListener('click', () => activateOrg(button.dataset.org));
       });
@@ -1741,6 +2011,9 @@
       elements.resumeAnswersButton.addEventListener('click', () => runTeacherControl('resume'));
       elements.resetStageButton.addEventListener('click', () => runTeacherControl('reset'));
       elements.generateDiagnosisButton.addEventListener('click', generateAIDiagnosis);
+      elements.micToggle.addEventListener('click', toggleMic);
+      elements.veRecord.addEventListener('click', enrollRecord);
+      elements.veCancel.addEventListener('click', closeVoiceEnroll);
       // v1.5 门禁：点击遮罩与 Esc 不再允许跳过登录
     }
 

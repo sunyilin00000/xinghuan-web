@@ -107,6 +107,32 @@
     </section>
 
 
+    <!-- v2.1 PPT 演示：文件仅在本机浏览器解析，不上传 -->
+    <section id="pptPanel" class="panel ppt-panel" aria-labelledby="pptTitle">
+      <header class="panel-head">
+        <div class="panel-title-wrap">
+          <h2 id="pptTitle" class="panel-title">PPT 演示</h2>
+          <p class="panel-subtitle">支持 .pptx 或多张图片（jpg/png）· 文件只在本机打开，不会上传</p>
+        </div>
+        <div class="ppt-actions">
+          <input id="pptFile" type="file" accept=".pptx,image/*" multiple style="display:none" />
+          <button id="pptUpload" class="btn btn-gold" type="button">打开 PPT</button>
+          <button id="pptClear" class="btn btn-quiet" type="button" hidden>关闭演示</button>
+        </div>
+      </header>
+      <div id="pptStageWrap" class="ppt-stage-wrap">
+        <div id="pptStage" class="ppt-stage">
+          <div class="classroom-empty compact">点击"打开 PPT"选择文件，或把多张课堂照片拖进来</div>
+        </div>
+        <div id="pptNav" class="ppt-nav" hidden>
+          <button id="pptPrev" class="ppt-nav-btn" type="button">‹ 上一页</button>
+          <span id="pptPage" class="ppt-page">0 / 0</span>
+          <button id="pptNext" class="ppt-nav-btn" type="button">下一页 ›</button>
+        </div>
+        <div id="pptResize" class="ppt-resize" title="拖动调整大小" hidden>◢</div>
+      </div>
+    </section>
+
     <section id="classroomBoard" class="panel classroom-board" aria-labelledby="classroomBoardTitle">
       <header class="panel-head">
         <div class="panel-title-wrap">
@@ -118,6 +144,7 @@
             <option value="">登录后选择进行中的课堂</option>
           </select>
           <button id="classroomRefreshButton" class="btn" type="button" disabled>同步课堂</button>
+          <button id="micToggle" class="btn btn-gold" type="button" disabled>开启收音</button>
           <button id="generateDiagnosisButton" class="btn btn-gold diagnosis-button" type="button" hidden>生成 AI 诊断</button>
         </div>
       </header>
@@ -316,6 +343,21 @@
 
       </form>
     </section>
+  </div>
+
+  <!-- v2.0 教师声纹注册弹窗 -->
+  <div id="voiceEnrollModal" class="modal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="voice-enroll-card">
+      <h3 class="ve-title">注册教师声纹</h3>
+      <p class="ve-desc">实时发言需要"认人"。请朗读下方文字 5 秒，系统仅提取声纹特征，不保存原始录音。</p>
+      <div class="ve-passage">星环终端正在记录课堂的每一次发声，让每一句疑问都被听见。</div>
+      <label class="ve-consent"><input type="checkbox" id="veConsent" /> 我已阅读并同意《声纹采集告知书》</label>
+      <div class="ve-btns">
+        <button id="veRecord" class="btn btn-gold" type="button">开始录音（5秒）</button>
+        <button id="veCancel" class="btn btn-quiet" type="button">取消</button>
+      </div>
+      <div id="veStatus" class="ve-status"></div>
+    </div>
   </div>
 
   <!-- v1.7 MOSS 全屏红色警报 -->

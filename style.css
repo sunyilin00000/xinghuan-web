@@ -2216,3 +2216,73 @@ body.auth-locked .topbar { display: none; }
 }
 .vr-on { border: 1px solid rgba(134, 181, 160, 0.45); background: rgba(80, 132, 112, 0.1); color: #b6ddca; }
 .vr-off { border: 1px solid rgba(255, 255, 255, 0.09); background: rgba(255, 255, 255, 0.02); color: #7c8896; }
+
+/* v2.0 教师收音 + 声纹注册 */
+#micToggle.recording { border-color: rgba(222, 69, 69, 0.6); background: rgba(183, 55, 55, 0.2); color: #f0b0b0; }
+.voice-enroll-card {
+  width: min(560px, 92vw);
+  padding: 34px;
+  border: 1px solid rgba(212, 196, 168, 0.25);
+  border-radius: 16px;
+  background: rgba(14, 14, 16, 0.98);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.5);
+}
+.ve-title { margin: 0 0 12px; color: #ebe0cc; font-size: 20px; }
+.ve-desc { margin: 0 0 16px; color: #92a0af; font-size: 12px; line-height: 1.7; }
+.ve-passage {
+  padding: 18px;
+  border: 1px dashed rgba(212, 196, 168, 0.35);
+  border-radius: 10px;
+  color: #d8dee6;
+  font-size: 15px;
+  line-height: 1.8;
+  text-align: center;
+  margin-bottom: 14px;
+}
+.ve-consent { display: flex; align-items: center; gap: 8px; color: #92a0af; font-size: 12px; margin-bottom: 18px; }
+.ve-btns { display: flex; gap: 12px; }
+.ve-status { margin-top: 14px; color: #86b5a0; font-size: 12px; min-height: 18px; }
+
+/* v2.1 PPT 演示面板 */
+.ppt-panel { margin-bottom: 16px; }
+.ppt-actions { display: flex; gap: 10px; }
+.ppt-stage-wrap { position: relative; padding: 14px; overflow: auto; }
+.ppt-stage {
+  position: relative;
+  width: 720px;
+  max-width: 100%;
+  min-height: 240px;
+  margin: 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 10px;
+  background: #0a0a0c;
+  overflow: hidden;
+}
+.ppt-stage .slide-page { display: none; }
+.ppt-stage .slide-page.active { display: block; }
+.ppt-stage img.slide-img { display: block; width: 100%; height: auto; }
+.ppt-nav { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 12px; }
+.ppt-nav-btn { padding: 8px 22px; border: 1px solid rgba(212, 196, 168, 0.4); border-radius: 8px; background: transparent; color: #d4c4a8; font-size: 13px; cursor: pointer; }
+.ppt-nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.ppt-page { color: #92a0af; font-size: 13px; font-variant-numeric: tabular-nums; }
+.ppt-resize {
+  position: absolute; right: 6px; bottom: 6px;
+  width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(212, 196, 168, 0.55);
+  cursor: nwse-resize; user-select: none;
+  font-size: 13px;
+}
+/* v2.1 面板收起：只影响本面板，不影响 PPT */
+.collapse-btn {
+  margin-left: 10px;
+  padding: 2px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  background: transparent;
+  color: #92a0af;
+  font-size: 11px;
+  cursor: pointer;
+}
+.collapse-btn:hover { color: #ebe0cc; border-color: rgba(212, 196, 168, 0.4); }
+.panel.collapsed .panel-head ~ *, .classroom-block.collapsed .classroom-block-head ~ * { display: none !important; }
