@@ -879,8 +879,15 @@
       if (elements.resumeAnswersButton) elements.resumeAnswersButton.disabled = !paused || state.classroom.controlBusy;
     }
 
+    // v1.4 教师后端权限门：仅管理员/授课教师可见；普通成员登录后不可见
+    function canSeeTeacherBackend() {
+      const u = state.user || {};
+      const isAdminUser = u.super_admin === true || u.role === 'admin' || u.course_teacher === true;
+      return isAdminUser && state.classroom.role === 'teacher';
+    }
+
     function updateTeacherControls() {
-      const isTeacher = state.classroom.role === 'teacher';
+      const isTeacher = canSeeTeacherBackend();
       if (elements.teacherControlBar) elements.teacherControlBar.hidden = !isTeacher;
       if (elements.generateDiagnosisButton) elements.generateDiagnosisButton.hidden = !isTeacher;
       if (elements.aiDiagnosisCard && !isTeacher) elements.aiDiagnosisCard.hidden = true;
@@ -1513,12 +1520,14 @@
         await initializeChart();
         await initializeCloudbase();
       } catch (error) {
-        console.error('[星环实验大屏] 初始化失败', error);
+        console.error('[星环教学中枢] 初始化失败', error);
         setConnection('error', '初始化失败');
         elements.chartLoading.classList.add('hidden');
         elements.consoleMessage.textContent = '初始化失败 · ' + getErrorMessage(error);
         showToast('初始化失败：' + getErrorMessage(error), true);
       }
+      // v1.4 默认进入登录页：任何身份都先登录，取消可回匿名看板
+      openLogin();
     }
 
     boot();
