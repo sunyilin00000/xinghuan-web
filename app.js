@@ -83,7 +83,7 @@
         'teacherControlBar', 'pauseAnswersButton', 'resumeAnswersButton', 'resetStageButton',
         'answerStatusLabel', 'answerRoundMeta', 'answerOptionList', 'pollDistribution',
         'pollBlockMeta', 'groupSubmissionWall', 'groupWallMeta', 'generateDiagnosisButton',
-        'aiDiagnosisCard', 'aiDiagnosisContent', 'aiDiagnosisMeta', 'classCompletionRate', 'pendingList', 'pendingListMeta'
+        'aiDiagnosisCard', 'aiDiagnosisContent', 'aiDiagnosisMeta', 'classCompletionRate', 'pendingList', 'pendingListMeta', 'cheatAlertList', 'cheatAlertMeta', 'voiceFeed', 'voiceFeedMeta', 'voiceRoster', 'voiceRosterMeta'
       ].forEach((id) => {
         elements[id] = document.getElementById(id);
       });
@@ -599,6 +599,18 @@
         elements.pendingList.appendChild(pEmpty);
       }
       if (elements.pendingListMeta) elements.pendingListMeta.textContent = '本轮未提交的学生';
+      if (elements.cheatAlertList) {
+        clearNode(elements.cheatAlertList);
+        const cEmpty = document.createElement('div');
+        cEmpty.className = 'classroom-empty compact';
+        cEmpty.textContent = '暂无警报，课堂状态正常';
+        elements.cheatAlertList.appendChild(cEmpty);
+        const cBoard = elements.cheatAlertList.closest('.cheat-block');
+        if (cBoard) cBoard.classList.remove('has-alert');
+      }
+      if (elements.cheatAlertMeta) elements.cheatAlertMeta.textContent = '切屏/离开应用事件';
+      const oldBanner = document.querySelector('.cheat-banner');
+      if (oldBanner) oldBanner.classList.remove('show');
       clearNode(elements.answerTableBody);
       clearNode(elements.wrongOptionList);
       const wrongEmpty = document.createElement('div');
@@ -1050,6 +1062,235 @@
       renderPendingList(stats);
     }
 
+    // v1.7 MOSS 语音引擎：低沉、慢速、平静机器腔（浏览器内置 TTS，无需音频文件）
+    let mossVoice = null;
+    let mossCooldownUntil = 0;
+    function pickMossVoice() {
+      if (mossVoice) return mossVoice;
+      const voices = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+      mossVoice =
+        voices.find(v => /zh|中文|Chinese/i.test(v.lang + v.name) && /Yunyang|Yunjian|Kangkang|Male|男/i.test(v.name)) ||
+        voices.find(v => /zh|中文|Chinese/i.test(v.lang + v.name)) ||
+        null;
+      return mossVoice;
+    }
+    if (window.speechSynthesis) speechSynthesis.onvoiceschanged = () => { mossVoice = null; pickMossVoice(); };
+
+    function mossSpeak(text, onEnd) {
+      if (!window.speechSynthesis) { if (onEnd) setTimeout(onEnd, 3000); return; }
+      try {
+        const utter = new SpeechSynthesisUtterance(text);
+        const v = pickMossVoice();
+        if (v) utter.voice = v;
+        utter.pitch = 0.55;   // 压低 = 机器感
+        utter.rate = 0.88;    // 略慢 = MOSS 的平静
+        utter.volume = 1;
+        if (onEnd) { utter.onend = onEnd; utter.onerror = onEnd; }
+        speechSynthesis.cancel();
+        speechSynthesis.speak(utter);
+      } catch (e) { console.warn('MOSS 语音失败', e); if (onEnd) setTimeout(onEnd, 3000); }
+    }
+
+    // 全屏红警：showMossAlert(['张三','李四'])
+    function showMossAlert(names) {
+      const mask = document.getElementById('mossAlert');
+      const box = document.getElementById('mossNames');
+      if (!mask || !box) return;
+      clearNode(box);
+      names.forEach(n => {
+        const chip = document.createElement('span');
+        chip.className = 'moss-name';
+        chip.textContent = n;
+        box.appendChild(chip);
+      });
+      mask.classList.add('show');
+      mask.setAttribute('aria-hidden', 'false');
+      const spoken = '警告。检测到，' + names.slice(0, 3).join('，') + '，切屏行为。课堂注意力，已离线。请教师关注。';
+      // v1.8：语音播完自动退出；onend 不可靠时由兜底计时器关闭
+      const spokenLen = spoken.length;
+      mossSpeak(spoken, () => hideMossAlert());
+      clearTimeout(state.mossAutoTimer);
+      state.mossAutoTimer = setTimeout(() => hideMossAlert(), Math.min(20000, 4000 + spokenLen * 320));
+      mossCooldownUntil = Date.now() + 45000; // 45 秒冷却，避免连播
+    }
+    function hideMossAlert() {
+      clearTimeout(state.mossAutoTimer);
+      const mask = document.getElementById('mossAlert');
+      if (!mask) return;
+      mask.classList.remove('show');
+      mask.setAttribute('aria-hidden', 'true');
+      if (window.speechSynthesis) speechSynthesis.cancel();
+    }
+
+    // v1.9 实时发言面板：轮询 voice_activity，最新一条高亮为"正在发言"
+    async function refreshVoiceFeed() {
+      if (!state.classroom.sessionId || !classroomIsReady()) return;
+      try {
+        const payload = await apiFetch('/collection', { method: 'POST', body: { name: 'voice_activity', where: { session_id: state.classroom.sessionId } } });
+        renderVoiceFeed((payload && payload.data) || []);
+      } catch (error) { console.warn('[星环教学中枢] 实时发言读取失败', error); }
+    }
+    function renderVoiceFeed(items) {
+      const el = elements.voiceFeed;
+      if (!el) return;
+      const rows = items.slice().sort((a, b) => Number(b.at || 0) - Number(a.at || 0)).slice(0, 30);
+      clearNode(el);
+      if (!rows.length) {
+        const empty = document.createElement('div');
+        empty.className = 'classroom-empty compact';
+        empty.textContent = '学生发言经声纹识别后实时汇入';
+        el.appendChild(empty);
+        if (elements.voiceFeedMeta) elements.voiceFeedMeta.textContent = 'voice_activity · 等待数据';
+        return;
+      }
+      rows.forEach((row, i) => {
+        const item = document.createElement('div');
+        item.className = 'voice-item' + (i === 0 ? ' latest' : '');
+        const text = document.createElement('div');
+        text.className = 'voice-text';
+        const who = document.createElement('b');
+        who.textContent = row.member_name || '成员';
+        text.append(who, document.createTextNode('：' + (row.text || '')));
+        const time = document.createElement('div');
+        time.className = 'voice-time';
+        time.textContent = shortTime(row.at);
+        item.append(text, time);
+        el.appendChild(item);
+      });
+      if (elements.voiceFeedMeta) elements.voiceFeedMeta.textContent = rows.length + ' 条发言 · 最新：' + (rows[0].member_name || '成员');
+    }
+
+    // v1.9 声纹注册名单
+    async function refreshVoiceRoster() {
+      if (!state.classroom.courseId || !classroomIsReady()) return;
+      try {
+        const payload = await apiFetch('/voice/roster?course_id=' + state.classroom.courseId + '&session_id=' + state.classroom.sessionId, { method: 'GET' });
+        if (!payload || payload.code !== 0) {
+          if (elements.voiceRosterMeta) elements.voiceRosterMeta.textContent = (payload && payload.message) || '读取失败';
+          return;
+        }
+        renderVoiceRoster(payload.data || []);
+      } catch (error) { console.warn('[星环教学中枢] 声纹名单读取失败', error); }
+    }
+    function renderVoiceRoster(students) {
+      const el = elements.voiceRoster;
+      if (!el) return;
+      clearNode(el);
+      if (!students.length) {
+        const empty = document.createElement('div');
+        empty.className = 'classroom-empty compact';
+        empty.textContent = '暂无课程学生数据';
+        el.appendChild(empty);
+        return;
+      }
+      let on = 0;
+      students.forEach(s => {
+        if (s.voice_enrolled) on++;
+        const chip = document.createElement('span');
+        chip.className = 'vr-chip ' + (s.voice_enrolled ? 'vr-on' : 'vr-off');
+        chip.textContent = (s.name || '成员') + (s.voice_enrolled ? '' : ' · 未注册');
+        el.appendChild(chip);
+      });
+      if (elements.voiceRosterMeta) elements.voiceRosterMeta.textContent = '已注册声纹 ' + on + '/' + students.length;
+    }
+
+    // v1.6 课堂警报：轮询 course_events（切屏/离开应用），聚合并红色警报
+    async function refreshCheatEvents() {
+      if (!state.classroom.sessionId || !classroomIsReady()) return;
+      try {
+        const payload = await apiFetch('/collection', { method: 'POST', body: { name: 'course_events', where: { session_id: state.classroom.sessionId, event: 'cheat' } } });
+        renderCheatAlerts((payload && payload.data) || []);
+      } catch (error) {
+        console.warn('[星环教学中枢] 课堂警报读取失败', error);
+      }
+    }
+
+    let cheatSignature = '';
+
+    function renderCheatAlerts(events) {
+      const listEl = elements.cheatAlertList;
+      if (!listEl) return;
+      const board = listEl.closest('.cheat-block');
+      const map = new Map();
+      (events || []).forEach(ev => {
+        const key = String(ev.student_id || ev.student_name || '未知');
+        const cur = map.get(key) || { name: ev.student_name || '成员', count: 0, last: 0 };
+        cur.count += 1;
+        const t = Number(ev.time || 0);
+        if (t > cur.last) cur.last = t;
+        map.set(key, cur);
+      });
+      const rows = Array.from(map.values()).sort((a, b) => b.count - a.count || b.last - a.last);
+      clearNode(listEl);
+      if (!rows.length) {
+        cheatSignature = '';
+        board.classList.remove('has-alert');
+        const empty = document.createElement('div');
+        empty.className = 'classroom-empty compact';
+        empty.textContent = '暂无警报，课堂状态正常';
+        listEl.appendChild(empty);
+        if (elements.cheatAlertMeta) elements.cheatAlertMeta.textContent = '切屏/离开应用事件';
+        updateCheatBanner(null);
+        return;
+      }
+      board.classList.add('has-alert');
+      // v1.7 新事件触发全屏 MOSS 警报（签名变化 = 有人新增切屏，且不在冷却期）
+      const signature = rows.map(r => r.name + ':' + r.count).join('|');
+      if (cheatSignature && signature !== cheatSignature && Date.now() > mossCooldownUntil) {
+        const newNames = rows.filter(r => {
+          const prev = (cheatSignature.split('|').find(s => s.indexOf(r.name + ':') === 0) || r.name + ':0').split(':')[1];
+          return r.count > Number(prev);
+        }).map(r => r.name);
+        if (newNames.length) showMossAlert(newNames);
+      }
+      cheatSignature = signature;
+      rows.forEach(row => {
+        const item = document.createElement('article');
+        item.className = 'cheat-item';
+        const avatar = document.createElement('div');
+        avatar.className = 'cheat-avatar';
+        avatar.textContent = String(row.name).slice(0, 1);
+        const copy = document.createElement('div');
+        const name = document.createElement('div');
+        name.className = 'cheat-name';
+        name.textContent = row.name;
+        const sub = document.createElement('div');
+        sub.className = 'cheat-sub';
+        sub.textContent = row.last ? ('最近 ' + shortTime(row.last)) : '时间未知';
+        copy.append(name, sub);
+        const count = document.createElement('span');
+        count.className = 'cheat-count';
+        count.textContent = row.count + ' 次';
+        item.append(avatar, copy, count);
+        listEl.appendChild(item);
+      });
+      if (elements.cheatAlertMeta) elements.cheatAlertMeta.textContent = rows.length + ' 人触发警报';
+      updateCheatBanner(rows);
+    }
+
+    function updateCheatBanner(rows) {
+      let banner = document.querySelector('.cheat-banner');
+      if (!rows || !rows.length) {
+        if (banner) banner.classList.remove('show');
+        return;
+      }
+      if (!banner) {
+        const board = elements.cheatAlertList && elements.cheatAlertList.closest('.cheat-block');
+        if (!board) return;
+        banner = document.createElement('div');
+        banner.className = 'cheat-banner';
+        board.appendChild(banner);
+      }
+      const top = rows.slice(0, 3).map(r => r.name + '（' + r.count + '次）').join('、');
+      banner.textContent = '课堂警报：' + top + (rows.length > 3 ? ' 等 ' + rows.length + ' 人' : '') + ' 疑似上课切屏，请教师关注';
+      banner.classList.add('show');
+      // 新事件提示音式震动（仅网页标题闪烁）
+      if (document.title.indexOf('【警报】') !== 0) {
+        document.title = '【警报】' + document.title.replace(/^【警报】/, '');
+        setTimeout(() => { document.title = document.title.replace(/^【警报】/, ''); }, 5000);
+      }
+    }
+
     // v1.3 待作答名单 + 答题完成率：由后端 get_class_stats 的全班名单(students)与本轮作答(answers)计算
     function renderPendingList(stats) {
       if (!elements.pendingList) return;
@@ -1302,6 +1543,9 @@
         refreshClassStats({ silent: true });
         refreshClassroomChats();
         refreshAuxiliaryCollections();
+        refreshCheatEvents();
+        refreshVoiceFeed();
+        refreshVoiceRoster();
       }, 3000);
       elements.classroomBoardNote.textContent = '实时监听不可用，当前通过 3 秒云函数同步课堂数据。';
     }
@@ -1487,6 +1731,8 @@
       elements.headerLoginButton.addEventListener('click', openLogin);
       elements.sessionLoginButton.addEventListener('click', openLogin);
       elements.loginForm.addEventListener('submit', submitLogin);
+      const mossCloseBtn = document.getElementById('mossClose');
+      if (mossCloseBtn) mossCloseBtn.addEventListener('click', hideMossAlert);
       elements.refreshButton.addEventListener('click', () => loadRecords({ toast: true }));
       elements.addRecordButton.addEventListener('click', addTestRecord);
       elements.classroomCourseSelect.addEventListener('change', handleClassroomCourseChange);

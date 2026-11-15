@@ -219,6 +219,36 @@
             </div>
           </section>
 
+          <section class="classroom-block cheat-block" aria-labelledby="cheatAlertTitle">
+            <header class="classroom-block-head">
+              <h3 id="cheatAlertTitle" class="classroom-block-title">课堂警报</h3>
+              <span id="cheatAlertMeta" class="classroom-block-meta">切屏/离开应用事件</span>
+            </header>
+            <div id="cheatAlertList" class="cheat-list">
+              <div class="classroom-empty compact">暂无警报，课堂状态正常</div>
+            </div>
+          </section>
+
+          <section class="classroom-block" aria-labelledby="voiceFeedTitle">
+            <header class="classroom-block-head">
+              <h3 id="voiceFeedTitle" class="classroom-block-title">实时发言</h3>
+              <span id="voiceFeedMeta" class="classroom-block-meta">voice_activity · 等待数据</span>
+            </header>
+            <div id="voiceFeed" class="voice-feed">
+              <div class="classroom-empty compact">学生发言经声纹识别后实时汇入</div>
+            </div>
+          </section>
+
+          <section class="classroom-block" aria-labelledby="voiceRosterTitle">
+            <header class="classroom-block-head">
+              <h3 id="voiceRosterTitle" class="classroom-block-title">声纹注册名单</h3>
+              <span id="voiceRosterMeta" class="classroom-block-meta">声纹引擎未配置</span>
+            </header>
+            <div id="voiceRoster" class="voice-roster">
+              <div class="classroom-empty compact">配置声纹引擎后显示注册状态</div>
+            </div>
+          </section>
+
           <section class="classroom-block" aria-labelledby="pendingListTitle">
             <header class="classroom-block-head">
               <h3 id="pendingListTitle" class="classroom-block-title">待作答名单</h3>
@@ -286,6 +316,17 @@
 
       </form>
     </section>
+  </div>
+
+  <!-- v1.7 MOSS 全屏红色警报 -->
+  <div id="mossAlert" class="moss-alert" role="alert" aria-hidden="true">
+    <div class="moss-alert-box">
+      <div class="moss-triangle"><span>!</span></div>
+      <div class="moss-title">警告</div>
+      <div class="moss-subtitle">检测到疑似切屏行为</div>
+      <div id="mossNames" class="moss-names"></div>
+      <button id="mossClose" class="moss-close" type="button">收到，关闭警报</button>
+    </div>
   </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>

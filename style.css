@@ -2045,3 +2045,174 @@
 /* v1.5 登录门禁：未登录状态下整个看板不可见，只显示登录页 */
 body.auth-locked .dashboard,
 body.auth-locked .topbar { display: none; }
+
+/* v1.6 课堂警报 */
+.cheat-block { border-color: rgba(255, 139, 139, 0.28); }
+.cheat-block.has-alert {
+  border-color: rgba(222, 69, 69, 0.72);
+  background: linear-gradient(145deg, rgba(183, 55, 55, 0.14), rgba(255, 255, 255, 0.012));
+  animation: cheatAlertPulse 1.6s ease-in-out infinite;
+}
+@keyframes cheatAlertPulse {
+  0%, 100% { box-shadow: 0 0 0 rgba(222, 69, 69, 0); }
+  50% { box-shadow: 0 0 17px rgba(222, 69, 69, 0.34); }
+}
+.cheat-list { display: grid; gap: 8px; padding: 11px; max-height: 190px; overflow-y: auto; }
+.cheat-item {
+  display: grid;
+  grid-template-columns: 29px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 10px;
+  border: 1px solid rgba(222, 69, 69, 0.3);
+  border-radius: 9px;
+  background: rgba(183, 55, 55, 0.08);
+}
+.cheat-avatar {
+  display: grid;
+  place-items: center;
+  width: 29px;
+  height: 29px;
+  border: 1px solid rgba(222, 69, 69, 0.5);
+  border-radius: 50%;
+  color: #ef9a9a;
+  font-size: 10px;
+}
+.cheat-name { color: var(--text); font-size: 11px; font-weight: 570; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cheat-sub { color: var(--faint); font-size: 8px; margin-top: 3px; }
+.cheat-count { color: #f0b0b0; font-size: 13px; font-weight: 620; white-space: nowrap; }
+.cheat-banner {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 14px 14px;
+  padding: 10px;
+  border: 1px solid rgba(222, 69, 69, 0.55);
+  border-radius: 5px;
+  background: rgba(183, 55, 55, 0.16);
+  color: #f2bcbc;
+  font-size: 12px;
+  letter-spacing: 2px;
+  animation: cheatAlertPulse 1.2s ease-in-out infinite;
+}
+.cheat-banner.show { display: flex; }
+
+/* v1.8 MOSS 科幻全息警报 */
+.moss-alert {
+  position: fixed; inset: 0; z-index: 9999;
+  display: none; align-items: center; justify-content: center;
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 82, 82, 0.028) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(255, 82, 82, 0.02) 0 1px, transparent 1px 56px),
+    repeating-linear-gradient(0deg, rgba(255, 82, 82, 0.02) 0 1px, transparent 1px 56px),
+    radial-gradient(circle at 50% 42%, rgba(255, 60, 60, 0.14), transparent 46%),
+    rgba(6, 2, 2, 0.97);
+  animation: mossScan 6s linear infinite;
+}
+.moss-alert.show { display: flex; }
+@keyframes mossScan {
+  from { background-position: 0 0, 0 0, 0 0, 0 0, 0 0; }
+  to { background-position: 0 0, 56px 0, 0 56px, 0 0, 0 0; }
+}
+.moss-alert-box {
+  position: relative;
+  text-align: center;
+  max-width: 82vw;
+  padding: 56px 72px;
+  border: 1px solid rgba(255, 82, 82, 0.4);
+  background: rgba(20, 4, 4, 0.55);
+  box-shadow: 0 0 60px rgba(255, 60, 60, 0.18), inset 0 0 40px rgba(255, 60, 60, 0.05);
+}
+.moss-alert-box::before, .moss-alert-box::after {
+  content: "";
+  position: absolute;
+  width: 26px; height: 26px;
+  border: 2px solid #ff5252;
+}
+.moss-alert-box::before { top: -2px; left: -2px; border-right: 0; border-bottom: 0; }
+.moss-alert-box::after { bottom: -2px; right: -2px; border-left: 0; border-top: 0; }
+.moss-triangle {
+  position: relative;
+  width: 132px; height: 116px;
+  margin: 0 auto 24px;
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.14) 0 2px, transparent 2px 5px),
+    linear-gradient(180deg, rgba(255, 90, 90, 0.95), rgba(160, 20, 20, 0.95));
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  display: flex; align-items: flex-end; justify-content: center;
+  filter: drop-shadow(0 0 26px rgba(255, 82, 82, 0.8));
+  animation: mossHolo 1.6s steps(2) infinite;
+}
+.moss-triangle span {
+  color: #fff; font-size: 66px; font-weight: 800; line-height: 1;
+  padding-bottom: 6px;
+  text-shadow: 0 0 18px rgba(255, 255, 255, 0.9);
+}
+@keyframes mossHolo {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.86; }
+}
+.moss-title {
+  color: #ff8a80;
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: 40px; font-weight: 800; letter-spacing: 30px; margin-bottom: 6px; padding-left: 30px;
+  text-shadow: 0 0 24px rgba(255, 82, 82, 0.75);
+}
+.moss-subtitle {
+  color: rgba(255, 205, 210, 0.8);
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: 14px; letter-spacing: 8px; margin-bottom: 28px;
+}
+.moss-names { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 30px; }
+.moss-name {
+  padding: 8px 20px;
+  border: 1px solid rgba(255, 82, 82, 0.6);
+  background: rgba(255, 60, 60, 0.1);
+  color: #ffebee;
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: 15px;
+  letter-spacing: 2px;
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+  animation: mossChipIn 300ms ease both;
+}
+@keyframes mossChipIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.moss-close {
+  padding: 11px 40px;
+  border: 1px solid rgba(255, 82, 82, 0.55);
+  background: transparent;
+  color: #ffcdd2;
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: 13px; letter-spacing: 4px;
+  cursor: pointer;
+  clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+}
+.moss-close:hover { background: rgba(255, 82, 82, 0.16); }
+
+/* v1.9 实时发言 + 声纹名单 */
+.voice-feed { display: flex; flex-direction: column; gap: 8px; padding: 11px; max-height: 260px; overflow-y: auto; }
+.voice-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  padding: 10px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.018);
+}
+.voice-item.latest { border-color: rgba(212, 196, 168, 0.4); background: rgba(212, 196, 168, 0.06); }
+.voice-text { color: #d8dee6; font-size: 11px; line-height: 1.55; word-break: break-word; }
+.voice-text b { color: #ebe0cc; font-weight: 620; }
+.voice-time { color: #5e6b79; font-size: 9px; white-space: nowrap; }
+.voice-roster { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px; max-height: 170px; overflow-y: auto; }
+.vr-chip {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.vr-on { border: 1px solid rgba(134, 181, 160, 0.45); background: rgba(80, 132, 112, 0.1); color: #b6ddca; }
+.vr-off { border: 1px solid rgba(255, 255, 255, 0.09); background: rgba(255, 255, 255, 0.02); color: #7c8896; }
