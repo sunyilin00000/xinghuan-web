@@ -2041,3 +2041,7 @@
   font-size: 11px;
   white-space: nowrap;
 }
+
+/* v1.5 登录门禁：未登录状态下整个看板不可见，只显示登录页 */
+body.auth-locked .dashboard,
+body.auth-locked .topbar { display: none; }

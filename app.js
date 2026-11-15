@@ -229,6 +229,7 @@
 
     function setAnonymous() {
       disconnectClassroomBoard();
+      document.body.classList.add('auth-locked');
       state.mode = 'anonymous';
       state.user = null;
       elements.identityBadge.textContent = '访';
@@ -250,6 +251,7 @@
       }
       elements.loginError.classList.remove('show');
       elements.loginError.textContent = '';
+      document.body.classList.add('auth-locked'); // v1.5 门禁：未登录不可见看板
       elements.loginModal.classList.add('open');
       elements.loginModal.setAttribute('aria-hidden', 'false');
       document.body.style.overflow = 'hidden';
@@ -260,6 +262,7 @@
       elements.loginModal.classList.remove('open');
       elements.loginModal.setAttribute('aria-hidden', 'true');
       document.body.style.overflow = '';
+      document.body.classList.remove('auth-locked');
       elements.password.value = '';
     }
 
@@ -1483,8 +1486,6 @@
       });
       elements.headerLoginButton.addEventListener('click', openLogin);
       elements.sessionLoginButton.addEventListener('click', openLogin);
-      elements.closeLoginButton.addEventListener('click', closeLogin);
-      elements.cancelLoginButton.addEventListener('click', closeLogin);
       elements.loginForm.addEventListener('submit', submitLogin);
       elements.refreshButton.addEventListener('click', () => loadRecords({ toast: true }));
       elements.addRecordButton.addEventListener('click', addTestRecord);
@@ -1494,12 +1495,7 @@
       elements.resumeAnswersButton.addEventListener('click', () => runTeacherControl('resume'));
       elements.resetStageButton.addEventListener('click', () => runTeacherControl('reset'));
       elements.generateDiagnosisButton.addEventListener('click', generateAIDiagnosis);
-      elements.loginModal.addEventListener('click', (event) => {
-        if (event.target === elements.loginModal) closeLogin();
-      });
-      document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && elements.loginModal.classList.contains('open')) closeLogin();
-      });
+      // v1.5 门禁：点击遮罩与 Esc 不再允许跳过登录
     }
 
     async function boot() {
