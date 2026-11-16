@@ -28,6 +28,24 @@
   const heroUserMeta = doc.getElementById('heroUserMeta');
   const heroAccess = doc.querySelector('.hero-access');
   const navButtons = Array.from(doc.querySelectorAll('[data-scroll]'));
+  const partners = doc.getElementById('partners');
+  const consoleNavButton = doc.querySelector('[data-console]');
+  const navHeroButton = doc.querySelector('[data-scroll="#hero"]');
+  const navPartnersButton = doc.querySelector('[data-scroll="#partners"]');
+  const applyButton = doc.getElementById('applyButton');
+  const registerButton = doc.getElementById('registerButton');
+  const footerConsoleButton = doc.getElementById('footerConsoleButton');
+  const joinModal = doc.getElementById('joinModal');
+  const joinForm = doc.getElementById('joinForm');
+  const joinFormView = doc.getElementById('joinFormView');
+  const joinSuccess = doc.getElementById('joinSuccess');
+  const joinClose = doc.getElementById('joinClose');
+  const joinDone = doc.getElementById('joinDone');
+  const joinRef = doc.getElementById('joinRef');
+  const joinOrg = doc.getElementById('joinOrg');
+  const joinName = doc.getElementById('joinName');
+  const joinContact = doc.getElementById('joinContact');
+  const joinIntro = doc.getElementById('joinIntro');
 
   if (!starCanvas || !ringCanvas) return;
 
@@ -68,19 +86,25 @@
 
   function makeStars() {
     const area = starState.w * starState.h;
-    const total = clamp(Math.round(area / 7800), 90, 260);
+    const total = clamp(Math.round(area / 7200), 100, 280);
     const stars = [];
     for (let i = 0; i < total; i += 1) {
       const depth = Math.random();
-      const big = Math.random() > 0.9;
+      const z = 0.12 + depth * 0.88;
+      const big = Math.random() > 0.91;
+      const tintRoll = Math.random();
       stars.push({
         x: Math.random() * starState.w,
         y: Math.random() * starState.h,
         depth,
-        r: big ? 1.2 + Math.random() * 1.2 : 0.28 + Math.random() * 0.9,
+        z,
+        r: big
+          ? 1.15 + depth * 1.35 + Math.random() * 0.8
+          : 0.2 + depth * 0.7 + Math.random() * 0.3,
         phase: Math.random() * TAU,
-        twinkle: 0.5 + Math.random() * 2.2,
-        tint: Math.random() < 0.2 ? 'warm' : 'cool',
+        twinkle: 0.3 + Math.random() * 1.8,
+        tint: tintRoll < 0.12 ? 'warm' : tintRoll < 0.2 ? 'violet' : 'cool',
+        baseAlpha: 0.16 + depth * 0.62,
         big
       });
     }
@@ -108,26 +132,32 @@
 
     for (let i = 0; i < starState.stars.length; i += 1) {
       const s = starState.stars[i];
-      // 星空以更慢的速度上移：浅层粒子几乎不动，深层粒子更明显
-      const shift = scroll * (0.018 + s.depth * 0.05);
+      // Z 轴景深：远处星星几乎不随页面移动，近处星星有轻微位移
+      const depthPower = Math.pow(s.depth, 2.4);
+      const shift = scroll * (0.0025 + depthPower * 0.072);
       let y = (s.y - shift) % h;
       if (y < 0) y += h;
-      const drift = time * (0.7 + s.depth * 2.1);
+      const drift = time * (0.06 + depthPower * 1.65);
       let x = (s.x + drift) % w;
       if (x < 0) x += w;
 
-      const flicker = 0.5 + 0.5 * Math.sin(time * s.twinkle + s.phase);
-      const alpha = (0.15 + s.depth * 0.55) * (0.45 + flicker * 0.55);
+      const breath = 0.5 + 0.5 * Math.sin(time * s.twinkle + s.phase);
+      const alpha = s.baseAlpha * (0.36 + breath * 0.64);
+      const radius = s.r * (0.9 + breath * 0.14);
       ctx.globalAlpha = alpha;
-      ctx.fillStyle = s.tint === 'warm' ? 'rgba(255,226,186,1)' : 'rgba(214,228,255,1)';
+      ctx.fillStyle = s.tint === 'warm'
+        ? 'rgba(255,226,188,1)'
+        : s.tint === 'violet'
+          ? 'rgba(203,193,255,1)'
+          : 'rgba(211,225,255,1)';
       ctx.beginPath();
-      ctx.arc(x, y, s.r, 0, TAU);
+      ctx.arc(x, y, radius, 0, TAU);
       ctx.fill();
 
       if (s.big) {
-        ctx.globalAlpha = alpha * 0.18;
+        ctx.globalAlpha = alpha * 0.16;
         ctx.beginPath();
-        ctx.arc(x, y, s.r * 4.5, 0, TAU);
+        ctx.arc(x, y, radius * 4.8, 0, TAU);
         ctx.fill();
       }
     }
@@ -475,7 +505,7 @@
   }
 
   function hasBlockingOverlay() {
-    return Boolean(doc.querySelector('.moss-alert.show, .ueg-modal.show, .modal.open'));
+    return Boolean(doc.querySelector('.moss-alert.show, .ueg-modal.show, .join-modal.open, .modal.open'));
   }
 
   function onWheel(event) {
@@ -540,6 +570,44 @@
   }, { passive: true });
 
   /* =========================================================
+     3.5 监控中枢显隐 & 顶部导航状态
+     ========================================================= */
+  function updateNavActive() {
+    const y = window.scrollY || 0;
+    const consoleMode = doc.body.classList.contains('console-mode');
+    const partnerTop = partners ? partners.offsetTop : heroHeightCache;
+    const switchLine = Math.max(80, partnerTop - window.innerHeight * 0.48);
+    const deckTop = deck && consoleMode ? deck.offsetTop : Infinity;
+    const consoleActive = consoleMode && y > deckTop - window.innerHeight * 0.55;
+
+    if (navHeroButton) {
+      navHeroButton.classList.toggle('active', !consoleActive && y < switchLine);
+    }
+    if (navPartnersButton) {
+      navPartnersButton.classList.toggle('active', !consoleActive && y >= switchLine);
+    }
+    if (consoleNavButton) {
+      consoleNavButton.classList.toggle('active', consoleActive);
+    }
+  }
+
+  function openConsole(tab) {
+    doc.body.classList.add('console-mode');
+    if (tab) {
+      const tabButton = doc.querySelector('.page-tab[data-tab="' + tab + '"]');
+      if (tabButton) tabButton.click();
+    }
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (deck) scrollToElement(deck, 18);
+        window.dispatchEvent(new Event('resize'));
+        window.setTimeout(() => window.dispatchEvent(new Event('resize')), 420);
+        updateNavActive();
+      });
+    });
+  }
+
+  /* =========================================================
      4. 滚动视差 & 顶部状态
      ========================================================= */
   const applyScrollFX = throttleRaf(() => {
@@ -579,12 +647,8 @@
       progressBar.style.transform = 'scaleX(' + (max > 0 ? clamp(y / max, 0, 1) : 0) + ')';
     }
 
-    if (navButtons.length) {
-      const activeTarget = y > heroHeightCache * 0.55 ? '#deck' : '#hero';
-      navButtons.forEach((btn) => {
-        if (btn.dataset.tabJump) return;
-        btn.classList.toggle('active', btn.dataset.scroll === activeTarget);
-      });
+    if (navButtons.length || consoleNavButton) {
+      updateNavActive();
     }
   });
 
@@ -635,6 +699,7 @@
   function setupReveal() {
     if (reduceMotion) return;
     const selectors = [
+      '.partners-head', '.partner-grid', '.partners-cta',
       '.deck-head', '.deck-rail', '.page-tabs', '.identity-strip',
       '.stats-grid > .stat-card', '.workspace-grid > .panel',
       '.ppt-panel', '.classroom-board', '.classroom-side > .classroom-block',
@@ -676,12 +741,12 @@
     doc.body.classList.remove('is-authed');
     if (heroAccess) heroAccess.setAttribute('aria-hidden', 'true');
     if (window.scrollY > 80) smoothTo(0);
-    const capsule = doc.querySelector('.login-capsule');
-    if (capsule) {
-      capsule.classList.remove('is-pulse');
-      void capsule.offsetWidth;
-      capsule.classList.add('is-pulse');
-      window.setTimeout(() => capsule.classList.remove('is-pulse'), 1600);
+    const panel = doc.querySelector('.login-panel');
+    if (panel) {
+      panel.classList.remove('is-pulse');
+      void panel.offsetWidth;
+      panel.classList.add('is-pulse');
+      window.setTimeout(() => panel.classList.remove('is-pulse'), 1600);
     }
   }
 
@@ -707,41 +772,39 @@
     onLoginScreen: revealLoginForm,
     onLoginSuccess: setAuthedUI,
     scrollToHero: () => smoothTo(0),
-    scrollToDeck: () => scrollToElement(deck, 18)
+    scrollToDeck: () => openConsole()
   };
 
   doc.querySelectorAll('[data-scroll]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const target = doc.querySelector(btn.dataset.scroll);
-      if (btn.dataset.tabJump === 'resources') {
-        const tab = doc.querySelector('.page-tab[data-tab="resources"]');
-        if (tab) tab.click();
-        scrollToElement(deck, 18);
-        return;
-      }
-      scrollToElement(target, target === deck ? 18 : 0);
+      scrollToElement(target, 0);
     });
   });
+
+  if (consoleNavButton) {
+    consoleNavButton.addEventListener('click', () => openConsole());
+  }
+
+  if (footerConsoleButton) {
+    footerConsoleButton.addEventListener('click', () => openConsole());
+  }
 
   if (scrollCue) {
     scrollCue.addEventListener('click', (event) => {
       event.preventDefault();
-      scrollToElement(deck, 18);
+      scrollToElement(partners, 0);
     });
   }
 
   const enterConsoleButton = doc.getElementById('enterConsoleButton');
   if (enterConsoleButton) {
-    enterConsoleButton.addEventListener('click', () => scrollToElement(deck, 18));
+    enterConsoleButton.addEventListener('click', () => openConsole());
   }
 
   const openResourcesButton = doc.getElementById('openResourcesButton');
   if (openResourcesButton) {
-    openResourcesButton.addEventListener('click', () => {
-      const tab = doc.querySelector('.page-tab[data-tab="resources"]');
-      if (tab) tab.click();
-      scrollToElement(deck, 18);
-    });
+    openResourcesButton.addEventListener('click', () => openConsole('resources'));
   }
 
   // 兜底：即使 app.js 未主动通知，也从身份标题推断登录态
@@ -756,6 +819,130 @@
     });
     observer.observe(identityTitle, { childList: true, characterData: true, subtree: true });
   }
+
+  /* =========================================================
+     7.5 入驻申请弹窗
+     ========================================================= */
+  let lastJoinFocus = null;
+
+  function resetJoinState() {
+    if (joinForm) joinForm.reset();
+    if (joinFormView) joinFormView.hidden = false;
+    if (joinSuccess) joinSuccess.hidden = true;
+    [joinOrg, joinName, joinContact, joinIntro].forEach((field) => {
+      if (field) field.classList.remove('is-invalid');
+    });
+  }
+
+  function openJoinModal() {
+    if (!joinModal) return;
+    lastJoinFocus = doc.activeElement;
+    resetJoinState();
+    joinModal.classList.add('open');
+    joinModal.setAttribute('aria-hidden', 'false');
+    doc.body.classList.add('join-open');
+    smooth.running = false;
+    smooth.target = smooth.current = window.scrollY;
+    const focusJoin = () => {
+      if (!joinModal.classList.contains('open') || !joinOrg) return;
+      try { joinOrg.focus({ preventScroll: true }); } catch (error) { joinOrg.focus(); }
+    };
+    requestAnimationFrame(focusJoin);
+    window.setTimeout(focusJoin, 140);
+    window.setTimeout(focusJoin, 480);
+  }
+
+  function closeJoinModal() {
+    if (!joinModal) return;
+    joinModal.classList.remove('open');
+    joinModal.setAttribute('aria-hidden', 'true');
+    doc.body.classList.remove('join-open');
+    if (lastJoinFocus && typeof lastJoinFocus.focus === 'function') {
+      try { lastJoinFocus.focus({ preventScroll: true }); } catch (error) { lastJoinFocus.focus(); }
+    }
+  }
+
+  if (applyButton) applyButton.addEventListener('click', openJoinModal);
+  if (registerButton) registerButton.addEventListener('click', openJoinModal);
+  if (joinClose) joinClose.addEventListener('click', closeJoinModal);
+  if (joinDone) joinDone.addEventListener('click', closeJoinModal);
+
+  if (joinModal) {
+    joinModal.addEventListener('click', (event) => {
+      if (event.target === joinModal) closeJoinModal();
+    });
+    joinModal.addEventListener('keydown', (event) => {
+      if (event.key !== 'Tab' || !joinModal.classList.contains('open')) return;
+      const focusable = Array.from(joinModal.querySelectorAll(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href]'
+      )).filter((el) => el.offsetParent !== null);
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && doc.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && doc.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    });
+  }
+
+  window.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && joinModal && joinModal.classList.contains('open')) {
+      closeJoinModal();
+    }
+  });
+
+  if (joinForm) {
+    joinForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const fields = [
+        { el: joinOrg, value: joinOrg ? joinOrg.value.trim() : '' },
+        { el: joinName, value: joinName ? joinName.value.trim() : '' },
+        { el: joinContact, value: joinContact ? joinContact.value.trim() : '' }
+      ];
+      const missing = fields.find((field) => !field.value);
+      if (missing) {
+        if (missing.el) {
+          missing.el.classList.add('is-invalid');
+          missing.el.focus({ preventScroll: true });
+          window.setTimeout(() => missing.el.classList.remove('is-invalid'), 1400);
+        }
+        return;
+      }
+
+      const ref = 'XH-' + Date.now().toString(36).toUpperCase().slice(-6) + '-' + Math.floor(Math.random() * 90 + 10);
+      const entry = {
+        organization: fields[0].value,
+        name: fields[1].value,
+        contact: fields[2].value,
+        intro: joinIntro ? joinIntro.value.trim() : '',
+        ref,
+        at: new Date().toISOString()
+      };
+      try {
+        const raw = window.localStorage.getItem('xinghuan_partner_applications');
+        const list = raw ? JSON.parse(raw) : [];
+        list.push(entry);
+        window.localStorage.setItem('xinghuan_partner_applications', JSON.stringify(list.slice(-30)));
+      } catch (error) {
+        console.warn('[星环] 入驻申请本地记录失败', error);
+      }
+
+      if (joinRef) joinRef.textContent = ref;
+      if (joinFormView) joinFormView.hidden = true;
+      if (joinSuccess) joinSuccess.hidden = false;
+      if (joinDone) joinDone.focus({ preventScroll: true });
+    });
+  }
+
+  [joinOrg, joinName, joinContact].forEach((field) => {
+    if (!field) return;
+    field.addEventListener('input', () => field.classList.remove('is-invalid'));
+    field.addEventListener('change', () => field.classList.remove('is-invalid'));
+  });
 
   /* =========================================================
      8. 尺寸变化

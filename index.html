@@ -3,9 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#0a0a0c" />
+  <meta name="theme-color" content="#04050a" />
   <meta name="description" content="星环终端 · 智能中枢 —— 课堂答题、实时提问与实验数据在同一引力场中汇合。" />
   <title>星环终端 · 智能中枢</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap"
+    rel="stylesheet"
+    media="print"
+    onload="this.media='all'"
+  />
+  <noscript>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+  </noscript>
   <link rel="stylesheet" href="style.css" />
   <script>
     // 部署后把这里改成你的 SCF API 网关地址（或在部署前全局替换）
@@ -45,8 +59,8 @@
 
     <nav class="top-nav" aria-label="页面快捷导航">
       <button class="top-nav-link active" type="button" data-scroll="#hero">星环</button>
-      <button class="top-nav-link" type="button" data-scroll="#deck">监控中枢</button>
-      <button class="top-nav-link" type="button" data-scroll="#deck" data-tab-jump="resources">学习资源</button>
+      <button class="top-nav-link" type="button" data-scroll="#partners">入驻星系</button>
+      <button class="top-nav-link" type="button" data-console>监控中枢</button>
     </nav>
 
     <div class="top-actions">
@@ -72,31 +86,36 @@
 
         <h1 class="hero-title" id="heroTitle" aria-label="星环终端 · 智能中枢">
           <span class="title-line">星环终端</span>
-          <span class="title-sep" aria-hidden="true"></span>
-          <span class="title-accent">智能中枢</span>
+          <span class="title-subline">智能中枢</span>
         </h1>
+
+        <p class="title-en">XINGHUAN INTELLIGENT HUB</p>
 
         <p class="hero-subtitle">让课堂、实验与每一次提问，在同一个引力场里汇合。</p>
 
         <div id="loginModal" class="hero-login" role="dialog" aria-labelledby="loginTitle" aria-hidden="false">
           <p id="loginTitle" class="login-label"><span>MEMBER ACCESS</span> 成员接入</p>
 
-          <form id="loginForm" class="login-capsule" autocomplete="on" novalidate>
-            <label class="capsule-field" for="username">
-              <span class="capsule-label">账号</span>
-              <input id="username" name="username" type="text" autocomplete="username" placeholder="星环成员账号" maxlength="80" required />
-            </label>
-            <span class="capsule-line" aria-hidden="true"></span>
-            <label class="capsule-field" for="password">
-              <span class="capsule-label">密码</span>
-              <input id="password" name="password" type="password" autocomplete="current-password" placeholder="登录密码" maxlength="128" required />
-            </label>
-            <button id="submitLoginButton" class="capsule-submit" type="submit">
-              <span>进入中枢</span>
-              <svg class="capsule-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <path d="M2 8h11M9 3.5 13.5 8 9 12.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-            </button>
+          <form id="loginForm" class="login-panel" autocomplete="on" novalidate>
+            <div class="login-fields">
+              <label class="field-line" for="username">
+                <span class="field-label">账号 <em>ID</em></span>
+                <input id="username" name="username" type="text" autocomplete="username" placeholder="星环成员账号" maxlength="80" required />
+              </label>
+              <label class="field-line" for="password">
+                <span class="field-label">密码 <em>PASSWORD</em></span>
+                <input id="password" name="password" type="password" autocomplete="current-password" placeholder="登录密码" maxlength="128" required />
+              </label>
+            </div>
+            <div class="login-panel-actions">
+              <button id="submitLoginButton" class="login-submit" type="submit">
+                <span>进入中枢</span>
+                <svg class="capsule-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M2 8h11M9 3.5 13.5 8 9 12.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
+              <button id="registerButton" class="register-link" type="button">注册 / Register</button>
+            </div>
           </form>
 
           <div id="loginError" class="login-error" role="alert"></div>
@@ -127,13 +146,109 @@
         </div>
       </div>
 
-      <a class="scroll-cue" id="scrollCue" href="#deck" aria-label="下滑进入监控中枢">
-        <span class="scroll-cue-text">SCROLL TO EXPLORE</span>
+      <a class="scroll-cue" id="scrollCue" href="#partners" aria-label="下滑查看已入驻星系">
+        <span class="scroll-cue-text">SCROLL TO DISCOVER</span>
         <span class="scroll-cue-line"><i></i></span>
       </a>
     </section>
 
-    <!-- ============ 第二屏：监控中枢 ============ -->
+    <!-- ============ 第二屏：已入驻星系 ============ -->
+    <section class="partners" id="partners" aria-labelledby="partnersTitle">
+      <div class="partners-inner">
+        <header class="partners-head">
+          <div class="partners-head-main">
+            <p class="partners-kicker"><span class="partners-section">02</span> PARTNER ORGANIZATIONS <span class="slash">/</span> 已入驻星系</p>
+            <h2 id="partnersTitle" class="partners-title">已入驻星系</h2>
+          </div>
+          <p class="partners-sub">四支学生社团，在同一套星环教学系统里共享课堂、实验与灵感。<br />从中国海洋大学到南开大学，星环正在连接更多坐标。</p>
+        </header>
+
+        <div class="partner-grid">
+          <article class="partner-card partner-astro">
+            <div class="partner-card-top">
+              <span class="partner-number">01</span>
+              <span class="partner-orbit" aria-hidden="true"><i></i></span>
+            </div>
+            <div class="partner-card-body">
+              <h3 class="partner-name">海大天协</h3>
+              <p class="partner-en">OUC ASTRONOMY</p>
+              <p class="partner-desc">以星图为舟，在每一场晴夜里追踪深空。</p>
+            </div>
+            <div class="partner-card-foot">
+              <span class="partner-tag">ASTRONOMY</span>
+              <span class="partner-school">中国海洋大学</span>
+            </div>
+          </article>
+
+          <article class="partner-card partner-bio">
+            <div class="partner-card-top">
+              <span class="partner-number">02</span>
+              <span class="partner-orbit" aria-hidden="true"><i></i></span>
+            </div>
+            <div class="partner-card-body">
+              <h3 class="partner-name">海大生科协</h3>
+              <p class="partner-en">OUC BIOTECH</p>
+              <p class="partner-desc">从细胞到生态，把实验室的微光带进课堂。</p>
+            </div>
+            <div class="partner-card-foot">
+              <span class="partner-tag">LIFE SCIENCE</span>
+              <span class="partner-school">中国海洋大学</span>
+            </div>
+          </article>
+
+          <article class="partner-card partner-outdoor">
+            <div class="partner-card-top">
+              <span class="partner-number">03</span>
+              <span class="partner-orbit" aria-hidden="true"><i></i></span>
+            </div>
+            <div class="partner-card-body">
+              <h3 class="partner-name">海大户协</h3>
+              <p class="partner-en">OUC OUTDOOR</p>
+              <p class="partner-desc">山野、海岸与星空，把课堂延伸到户外。</p>
+            </div>
+            <div class="partner-card-foot">
+              <span class="partner-tag">EXPLORATION</span>
+              <span class="partner-school">中国海洋大学</span>
+            </div>
+          </article>
+
+          <article class="partner-card partner-nankai">
+            <div class="partner-card-top">
+              <span class="partner-number">04</span>
+              <span class="partner-orbit" aria-hidden="true"><i></i></span>
+            </div>
+            <div class="partner-card-body">
+              <h3 class="partner-name">南开天协</h3>
+              <p class="partner-en">NANKAI ASTRONOMY</p>
+              <p class="partner-desc">跨校共享观测与课程，让星环连接更多坐标。</p>
+            </div>
+            <div class="partner-card-foot">
+              <span class="partner-tag">CROSS-CAMPUS</span>
+              <span class="partner-school">南开大学</span>
+            </div>
+          </article>
+        </div>
+
+        <div class="partners-cta">
+          <button id="applyButton" class="apply-button" type="button">
+            <span class="apply-bracket">[</span>
+            <span class="apply-label">申请加入星环</span>
+            <span class="apply-bracket">]</span>
+          </button>
+          <p class="partners-note"><span></span> PARTNER APPLICATION · 审核通过后开通独立教学中枢</p>
+        </div>
+
+        <footer class="partners-foot">
+          <span>XINGHUAN PARTNER NETWORK · NODE 212</span>
+          <span class="partners-foot-end">
+            <span>04 ORGANIZATIONS / 2026</span>
+            <button id="footerConsoleButton" class="footer-console" type="button">进入监控中枢 <span aria-hidden="true">↗</span></button>
+          </span>
+        </footer>
+      </div>
+    </section>
+
+    <!-- ============ 监控中枢（默认隐藏，点击「监控中枢」后展开） ============ -->
     <div class="deck" id="deck">
 
       <div class="dashboard">
@@ -646,6 +761,63 @@
       <div class="moss-subtitle">检测到疑似切屏行为</div>
       <div id="mossNames" class="moss-names"></div>
       <button id="mossClose" class="moss-close" type="button">收到，关闭警报</button>
+    </div>
+  </div>
+
+  <!-- v4.0 入驻申请弹窗：登录区「注册」与星系区「申请加入星环」共用 -->
+  <div id="joinModal" class="join-modal" role="dialog" aria-modal="true" aria-labelledby="joinTitle" aria-hidden="true">
+    <div class="join-card" role="document">
+      <button id="joinClose" class="join-close" type="button" aria-label="关闭入驻申请">×</button>
+
+      <div id="joinFormView">
+        <p class="join-kicker"><span></span> PARTNER APPLICATION · 入驻申请</p>
+        <h3 id="joinTitle" class="join-title">申请加入星环</h3>
+        <p class="join-sub">留下你的社团与联系方式。审核通过后，星环将为你开启独立的教学中枢。</p>
+
+        <form id="joinForm" class="join-form" novalidate>
+          <label class="join-field" for="joinOrg">
+            <span>社团 / ORGANIZATION</span>
+            <select id="joinOrg" name="organization" required>
+              <option value="">选择你的社团</option>
+              <option value="海大天协">海大天协 · OUC Astronomy</option>
+              <option value="海大生科协">海大生科协 · OUC Biotech</option>
+              <option value="海大户协">海大户协 · OUC Outdoor</option>
+              <option value="南开天协">南开天协 · Nankai Astronomy</option>
+              <option value="其他社团">其他社团 / Other</option>
+            </select>
+          </label>
+
+          <div class="join-row">
+            <label class="join-field" for="joinName">
+              <span>联系人 / NAME</span>
+              <input id="joinName" name="name" type="text" placeholder="你的称呼" maxlength="40" required />
+            </label>
+            <label class="join-field" for="joinContact">
+              <span>联系方式 / CONTACT</span>
+              <input id="joinContact" name="contact" type="text" placeholder="邮箱 / 微信" maxlength="80" required />
+            </label>
+          </div>
+
+          <label class="join-field" for="joinIntro">
+            <span>一句话介绍 / INTRO</span>
+            <textarea id="joinIntro" name="intro" rows="3" placeholder="你的社团正在做什么？" maxlength="160"></textarea>
+          </label>
+
+          <button class="join-submit" type="submit">
+            <span>提交申请</span>
+            <span class="join-arrow" aria-hidden="true">→</span>
+          </button>
+          <p class="join-note">当前为前端演示：申请仅记录在本机浏览器，正式审核请联系星环运营团队。</p>
+        </form>
+      </div>
+
+      <div id="joinSuccess" class="join-success" hidden>
+        <div class="join-success-mark" aria-hidden="true"><span></span></div>
+        <p class="join-success-kicker">APPLICATION RECEIVED</p>
+        <h3 class="join-success-title">申请已记录</h3>
+        <p class="join-success-copy">星环运营团队会在 3 个工作日内与你联系。<br />申请编号 <strong id="joinRef">XH-000000</strong></p>
+        <button id="joinDone" class="join-done" type="button">返回星系</button>
+      </div>
     </div>
   </div>
 
