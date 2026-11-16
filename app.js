@@ -231,6 +231,7 @@
     function setAnonymous() {
       disconnectClassroomBoard();
       document.body.classList.add('auth-locked');
+      document.body.classList.remove('is-authed');
       state.mode = 'anonymous';
       state.user = null;
       elements.identityBadge.textContent = '访';
@@ -253,11 +254,22 @@
       }
       elements.loginError.classList.remove('show');
       elements.loginError.textContent = '';
-      document.body.classList.add('auth-locked'); // v1.5 门禁：未登录不可见看板
+      document.body.classList.add('auth-locked');
+      document.body.classList.remove('is-authed');
       elements.loginModal.classList.add('open');
       elements.loginModal.setAttribute('aria-hidden', 'false');
-      document.body.style.overflow = 'hidden';
-      setTimeout(() => elements.username.focus(), 80);
+      // v3.0：登录区已并入首屏星环舞台，不再锁死页面滚动
+      document.body.style.overflow = '';
+      if (window.XHLanding) window.XHLanding.onLoginScreen();
+      if (window.matchMedia('(pointer: fine)').matches) {
+        setTimeout(() => {
+          try {
+            elements.username.focus({ preventScroll: true });
+          } catch (error) {
+            elements.username.focus();
+          }
+        }, 120);
+      }
     }
 
     function closeLogin() {
@@ -265,7 +277,14 @@
       elements.loginModal.setAttribute('aria-hidden', 'true');
       document.body.style.overflow = '';
       document.body.classList.remove('auth-locked');
+      document.body.classList.add('is-authed');
       elements.password.value = '';
+      if (window.XHLanding) window.XHLanding.onLoginSuccess(state.user);
+      // 看板从隐藏变为显示后，ECharts 需要重新测量容器
+      requestAnimationFrame(() => {
+        if (state.chart) state.chart.resize();
+        setTimeout(() => { if (state.chart) state.chart.resize(); }, 360);
+      });
     }
 
     function normalizeDate(value) {
@@ -527,7 +546,12 @@
 
       state.busy = true;
       elements.submitLoginButton.disabled = true;
-      elements.submitLoginButton.textContent = '正在验证';
+      const submitLabel = elements.submitLoginButton.querySelector('span');
+      if (submitLabel) {
+        submitLabel.textContent = '正在验证';
+      } else {
+        elements.submitLoginButton.textContent = '正在验证';
+      }
       elements.loginError.classList.remove('show');
       elements.loginError.textContent = '';
       logStep('正在调用 memberService.web_login');
@@ -548,7 +572,12 @@
       } finally {
         state.busy = false;
         elements.submitLoginButton.disabled = false;
-        elements.submitLoginButton.textContent = '登录';
+        const submitLabelReset = elements.submitLoginButton.querySelector('span');
+        if (submitLabelReset) {
+          submitLabelReset.textContent = '进入中枢';
+        } else {
+          elements.submitLoginButton.textContent = '进入中枢';
+        }
         elements.password.value = '';
       }
     }
