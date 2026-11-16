@@ -244,7 +244,7 @@
   function makeParticles(size) {
     const inner = size * 0.105;
     const outer = size * 0.445;
-    const total = size < 720 ? 520 : 880;
+    const total = size < 720 ? 200 : 340; // v2.12.1 性能优化：粒子减量，盘效保留
     const particles = [];
     for (let i = 0; i < total; i += 1) {
       const rNorm = Math.pow(Math.random(), 1.35);
@@ -974,14 +974,18 @@
   let last = performance.now();
   let elapsed = 0;
 
+  let lastFrame = 0; // v2.12.1 性能优化：30fps 上限，视觉仍流畅
   function loop(now) {
+    if (now - lastFrame < 33) { requestAnimationFrame(loop); return; }
+    lastFrame = now;
     const dt = Math.min((now - last) / 1000, 0.05);
     last = now;
     elapsed += dt;
 
-    if (!doc.hidden) {
+    // v2.12.1 性能修复：滚出首屏或标签页隐藏时整帧跳过绘制，不再空转
+    if (!doc.hidden && (window.scrollY || 0) < heroHeightCache * 1.1) {
       drawStars(elapsed, dt);
-      if (!reduceMotion && (window.scrollY || 0) < heroHeightCache * 1.1) {
+      if (!reduceMotion) {
         drawRing(elapsed);
       }
       updateCursor();

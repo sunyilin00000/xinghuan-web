@@ -1514,9 +1514,13 @@
         renderVoiceFeed((payload && payload.data) || []);
       } catch (error) { console.warn('[星环教学中枢] 实时发言读取失败', error); }
     }
+    let voiceSigCache = ''; // v2.12.1 性能优化
     function renderVoiceFeed(items) {
       const el = elements.voiceFeed;
       if (!el) return;
+      const quickSig = (items || []).map((r) => (r.at || '') + ':' + (r.member_name || '') + ':' + (r.text || '')).join('|');
+      if (quickSig && quickSig === voiceSigCache) return;
+      voiceSigCache = quickSig;
       const rows = items.slice().sort((a, b) => Number(b.at || 0) - Number(a.at || 0)).slice(0, 30);
       clearNode(el);
       if (!rows.length) {
@@ -1591,9 +1595,13 @@
         renderStudentVoice((payload && payload.data) || []);
       } catch (e) { console.warn('[sv] 读取失败', e); }
     }
+    let svSigCache = ''; // v2.12.1 性能优化
     function renderStudentVoice(items) {
       const listEl = elements.svList;
       if (!listEl) return;
+      const quickSig = sv.kind + '|' + sv.category + '|' + (items || []).map((r) => (r.at || '') + ':' + (r.content || '')).join('|');
+      if (quickSig === svSigCache) return;
+      svSigCache = quickSig;
       const rows = items.filter(x => x.kind === sv.kind)
         .sort((a, b) => Number(b.at || 0) - Number(a.at || 0));
       // 分类 chips
@@ -1911,6 +1919,9 @@
     function renderMossFeed(events) {
       const el = elements.mossFeed;
       if (!el) return;
+      // v2.12.1 性能优化：数据没变就不重建 DOM（每 5 秒轮询不再整屏重绘）
+      const quickSig = (events || []).map((r) => (r.at || '') + ':' + (r.text || '')).join('|');
+      if (quickSig === mossSignature) return;
       const tagNames = { correct: '纠正', supplement: '补充', question: '提问', chat: '对话' };
       const rows = events.slice().sort((a, b) => Number(b.at || 0) - Number(a.at || 0)).slice(0, 20);
       clearNode(el);
@@ -1974,9 +1985,22 @@
 
     let cheatSignature = '';
 
+    let cheatSigCache = ''; // v2.12.1 性能优化
     function renderCheatAlerts(events) {
       const listEl = elements.cheatAlertList;
       if (!listEl) return;
+      {
+        const agg = new Map();
+        (events || []).forEach((ev) => {
+          const key = String(ev.student_id || ev.student_name || '未知');
+          const cur = agg.get(key) || { count: 0 };
+          cur.count += 1;
+          agg.set(key, cur);
+        });
+        const quickSig = Array.from(agg.values()).map((r) => r.count).join(',') + ':' + (events || []).length;
+        if (quickSig === cheatSigCache) return; // 数据没变，跳过重渲染
+        cheatSigCache = quickSig;
+      }
       const board = listEl.closest('.cheat-block');
       const map = new Map();
       (events || []).forEach(ev => {
@@ -2307,6 +2331,7 @@
     function startClassroomPolling() {
       if (state.classroom.pollTimer) return;
       state.classroom.connectionMode = 'poll';
+      // v2.12.1 性能优化：轮询 5 秒（原 3 秒），9 个并发请求降为可承受节奏
       state.classroom.pollTimer = setInterval(() => {
         refreshClassStats({ silent: true });
         refreshClassroomChats();
@@ -2316,7 +2341,7 @@
         refreshVoiceRoster();
         refreshMossFeed();
         refreshStudentVoice();
-      }, 3000);
+      }, 5000);
       // MOSS 助教心跳：每 75 秒一次（服务端 60 秒节流）
       clearInterval(state.mossTickTimer);
       state.mossTickTimer = setInterval(driveMossTick, 75000);
@@ -2554,6 +2579,14 @@
             showToast('提取码：' + code);
           }
         });
+      });
+      // v2.12.1 性能优化：标签页切后台暂停轮询，回来自动恢复
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          stopClassroomPolling();
+        } else if (state.classroom.sessionId && classroomIsReady()) {
+          startClassroomPolling();
+        }
       });
       // v2.11 学生操作台事件
       if (elements.scQuizSubmit) elements.scQuizSubmit.addEventListener('click', scSubmitQuiz);

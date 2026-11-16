@@ -1698,7 +1698,23 @@
 
     .panel,
     .stat-card {
-      animation: ambientBreathe 3.8s ease-in-out infinite;
+      position: relative;
+    }
+    /* v2.12.1 性能修复：呼吸发光改为 ::after 透明度动画（视觉一致，box-shadow 不再每帧重绘） */
+    .panel::after,
+    .stat-card::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      box-shadow: 0 0 34px rgba(212, 196, 168, 0.06);
+      opacity: 0;
+      pointer-events: none;
+      animation: ambientGlow 3.8s ease-in-out infinite;
+    }
+    @keyframes ambientGlow {
+      0%, 100% { opacity: 0; }
+      50% { opacity: 1; }
     }
 
     @keyframes orgDotBreathe {
