@@ -2336,3 +2336,40 @@ body.auth-locked .topbar { display: none; }
 .sv-cat-tag { padding: 1px 8px; border: 1px solid rgba(141, 184, 198, 0.4); border-radius: 999px; color: #a9ccdb; font-size: 9px; }
 .sv-time { margin-left: auto; color: #5e6b79; font-size: 9px; }
 .sv-text { color: #d8dee6; font-size: 11px; line-height: 1.6; word-break: break-word; }
+
+/* v2.7 UEG 联合政府警告窗 */
+.ueg-modal {
+  position: fixed; inset: 0; z-index: 9990;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(2, 6, 14, 0.92);
+  backdrop-filter: blur(10px);
+}
+.ueg-modal.show { display: flex; }
+.ueg-card {
+  width: min(680px, 90vw);
+  padding: 46px 40px;
+  border: 1px solid rgba(141, 184, 198, 0.4);
+  background: linear-gradient(160deg, rgba(10, 18, 30, 0.97), rgba(6, 10, 18, 0.97));
+  box-shadow: 0 0 70px rgba(141, 184, 198, 0.16);
+  text-align: center;
+  animation: uegIn 260ms ease both;
+}
+@keyframes uegIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+.ueg-flags { display: flex; justify-content: center; gap: 14px; margin-bottom: 30px; }
+.flag { width: 64px; height: 42px; position: relative; box-shadow: 0 4px 14px rgba(0,0,0,0.5); }
+.flag-cn { background: #de2910; }
+.flag-cn i { position: absolute; top: 7px; left: 8px; width: 16px; height: 16px; background: #ffde00; clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
+.flag-us { background: repeating-linear-gradient(180deg, #b22234 0 4px, #fff 4px 8px); }
+.flag-us i { position: absolute; top: 0; left: 0; width: 26px; height: 22px; background: #3c3b6e; }
+.flag-ru { background: linear-gradient(180deg, #fff 0 33%, #0039a6 33% 66%, #d52b1e 66%); }
+.flag-uk { background: #012169; }
+.flag-uk i { position: absolute; inset: 0; background:
+  linear-gradient(90deg, transparent 44%, #fff 44% 56%, transparent 56%),
+  linear-gradient(0deg, transparent 40%, #fff 40% 60%, transparent 60%),
+  linear-gradient(90deg, transparent 46%, #c8102e 46% 54%, transparent 54%),
+  linear-gradient(0deg, transparent 42%, #c8102e 42% 58%, transparent 58%); }
+.flag-fr { background: linear-gradient(90deg, #002395 0 33%, #fff 33% 66%, #ed2939 66%); }
+.ueg-en { color: #8db8c6; font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 14px; letter-spacing: 3px; line-height: 1.8; margin-bottom: 14px; }
+.ueg-zh { color: #d8dee6; font-size: 20px; letter-spacing: 6px; margin-bottom: 22px; }
+.ueg-line { height: 1px; background: linear-gradient(90deg, transparent, rgba(141,184,198,0.5), transparent); margin-bottom: 14px; }
+.ueg-small { color: #5e6b79; font-family: ui-monospace, monospace; font-size: 10px; letter-spacing: 4px; }

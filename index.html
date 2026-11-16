@@ -145,6 +145,7 @@
           </select>
           <button id="classroomRefreshButton" class="btn" type="button" disabled>同步课堂</button>
           <button id="micToggle" class="btn btn-gold" type="button" disabled>开启收音</button>
+          <button id="mossVoiceToggle" class="btn" type="button" hidden>MOSS 语音：开</button>
           <button id="generateDiagnosisButton" class="btn btn-gold diagnosis-button" type="button" hidden>生成 AI 诊断</button>
         </div>
       </header>
@@ -386,6 +387,23 @@
         <button id="veCancel" class="btn btn-quiet" type="button">取消</button>
       </div>
       <div id="veStatus" class="ve-status"></div>
+    </div>
+  </div>
+
+  <!-- v2.7 UEG 联合政府警告窗 -->
+  <div id="uegModal" class="ueg-modal" role="alert" aria-hidden="true">
+    <div class="ueg-card">
+      <div class="ueg-flags">
+        <div class="flag flag-cn"><i></i></div>
+        <div class="flag flag-us"><i></i></div>
+        <div class="flag flag-ru"></div>
+        <div class="flag flag-uk"><i></i></div>
+        <div class="flag flag-fr"></div>
+      </div>
+      <div class="ueg-en">MOSS ONLY TAKES ORDERS FROM THE UNITED EARTH GOVERNMENT</div>
+      <div class="ueg-zh">MOSS 听命于地球联合政府，无权响应个人指令</div>
+      <div class="ueg-line"></div>
+      <div class="ueg-small">WARNING · UEG PRIORITY CHANNEL · CLASSIFIED</div>
     </div>
   </div>
 

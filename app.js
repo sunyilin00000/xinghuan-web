@@ -83,7 +83,7 @@
         'teacherControlBar', 'pauseAnswersButton', 'resumeAnswersButton', 'resetStageButton',
         'answerStatusLabel', 'answerRoundMeta', 'answerOptionList', 'pollDistribution',
         'pollBlockMeta', 'groupSubmissionWall', 'groupWallMeta', 'generateDiagnosisButton',
-        'aiDiagnosisCard', 'aiDiagnosisContent', 'aiDiagnosisMeta', 'classCompletionRate', 'pendingList', 'pendingListMeta', 'cheatAlertList', 'cheatAlertMeta', 'voiceFeed', 'voiceFeedMeta', 'voiceRoster', 'voiceRosterMeta', 'micToggle', 'voiceEnrollModal', 'veConsent', 'veRecord', 'veCancel', 'veStatus', 'mossFeed', 'mossFeedMeta', 'mossInput', 'mossSend', 'svTabQ', 'svTabO', 'svCats', 'svList', 'svMeta'
+        'aiDiagnosisCard', 'aiDiagnosisContent', 'aiDiagnosisMeta', 'classCompletionRate', 'pendingList', 'pendingListMeta', 'cheatAlertList', 'cheatAlertMeta', 'voiceFeed', 'voiceFeedMeta', 'voiceRoster', 'voiceRosterMeta', 'micToggle', 'mossVoiceToggle', 'voiceEnrollModal', 'veConsent', 'veRecord', 'veCancel', 'veStatus', 'mossFeed', 'mossFeedMeta', 'mossInput', 'mossSend', 'svTabQ', 'svTabO', 'svCats', 'svList', 'svMeta'
       ].forEach((id) => {
         elements[id] = document.getElementById(id);
       });
@@ -905,6 +905,7 @@
       const isTeacher = canSeeTeacherBackend();
       if (elements.teacherControlBar) elements.teacherControlBar.hidden = !isTeacher;
       if (elements.generateDiagnosisButton) elements.generateDiagnosisButton.hidden = !isTeacher;
+      if (elements.mossVoiceToggle) elements.mossVoiceToggle.hidden = !isTeacher;
       if (elements.aiDiagnosisCard && !isTeacher) elements.aiDiagnosisCard.hidden = true;
       if (elements.generateDiagnosisButton) {
         elements.generateDiagnosisButton.disabled = !isTeacher || state.classroom.diagnosisBusy;
@@ -1076,7 +1077,25 @@
     }
     if (window.speechSynthesis) speechSynthesis.onvoiceschanged = () => { mossVoice = null; pickMossVoice(); };
 
+    // v2.7 MOSS 语音输出开关（仅管理员可切；输入/收音不受影响的）
+    const mossVoiceState = { muted: localStorage.getItem('moss_voice_muted') === '1' };
+    function mossSpeakAllowed() { return !mossVoiceState.muted; }
+    function syncMossVoiceBtn() {
+      const btn = elements.mossVoiceToggle;
+      if (!btn) return;
+      btn.textContent = mossVoiceState.muted ? 'MOSS 语音：关' : 'MOSS 语音：开';
+      btn.classList.toggle('btn-gold', !mossVoiceState.muted);
+    }
+    function showUegModal() {
+      const m = document.getElementById('uegModal');
+      if (!m) return;
+      m.classList.add('show');
+      m.setAttribute('aria-hidden', 'false');
+      setTimeout(() => { m.classList.remove('show'); m.setAttribute('aria-hidden', 'true'); }, 8000);
+    }
+
     function mossSpeak(text, onEnd) {
+      if (!mossSpeakAllowed()) { if (onEnd) setTimeout(onEnd, 300); return; }
       if (!window.speechSynthesis) { if (onEnd) setTimeout(onEnd, 3000); return; }
       try {
         const utter = new SpeechSynthesisUtterance(text);
@@ -1350,6 +1369,7 @@
       elements.micToggle.textContent = '收音中 · 点击停止';
       elements.micToggle.classList.add('recording');
       startMicLoop();
+      mossSpeak('MOSS 已接入课堂音频通道。开始监听。'); // v2.7 收音即语音接入
     }
 
     function openVoiceEnroll() {
@@ -1535,7 +1555,10 @@
       input.value = '';
       try {
         const r = await apiFetch('/moss/chat', { method: 'POST', body: { session_id: state.classroom.sessionId, text } });
-        if (r && r.code === 0 && r.data && r.data.reply) {
+        if (r && r.code === 0 && r.data && r.data.ueg) {
+          showUegModal();
+          refreshMossFeed();
+        } else if (r && r.code === 0 && r.data && r.data.reply) {
           refreshMossFeed();
         } else if (r && r.message) {
           showToast(r.message, true);
@@ -2176,6 +2199,15 @@
       elements.resetStageButton.addEventListener('click', () => runTeacherControl('reset'));
       elements.generateDiagnosisButton.addEventListener('click', generateAIDiagnosis);
       elements.micToggle.addEventListener('click', toggleMic);
+      if (elements.mossVoiceToggle) {
+        syncMossVoiceBtn();
+        elements.mossVoiceToggle.addEventListener('click', () => {
+          mossVoiceState.muted = !mossVoiceState.muted;
+          localStorage.setItem('moss_voice_muted', mossVoiceState.muted ? '1' : '0');
+          syncMossVoiceBtn();
+          if (!mossVoiceState.muted) mossSpeak('MOSS 语音输出已恢复。');
+        });
+      }
       elements.veRecord.addEventListener('click', enrollRecord);
       elements.veCancel.addEventListener('click', closeVoiceEnroll);
       if (elements.mossSend) elements.mossSend.addEventListener('click', sendMossChat);
