@@ -83,7 +83,7 @@
         'teacherControlBar', 'pauseAnswersButton', 'resumeAnswersButton', 'resetStageButton',
         'answerStatusLabel', 'answerRoundMeta', 'answerOptionList', 'pollDistribution',
         'pollBlockMeta', 'groupSubmissionWall', 'groupWallMeta', 'generateDiagnosisButton',
-        'aiDiagnosisCard', 'aiDiagnosisContent', 'aiDiagnosisMeta', 'classCompletionRate', 'pendingList', 'pendingListMeta', 'cheatAlertList', 'cheatAlertMeta', 'voiceFeed', 'voiceFeedMeta', 'voiceRoster', 'voiceRosterMeta', 'micToggle', 'mossVoiceToggle', 'voiceEnrollModal', 'veConsent', 'veRecord', 'veCancel', 'veStatus', 'mossFeed', 'mossFeedMeta', 'mossInput', 'mossSend', 'svTabQ', 'svTabO', 'svCats', 'svList', 'svMeta'
+        'aiDiagnosisCard', 'aiDiagnosisContent', 'aiDiagnosisMeta', 'classCompletionRate', 'pendingList', 'pendingListMeta', 'cheatAlertList', 'cheatAlertMeta', 'voiceFeed', 'voiceFeedMeta', 'voiceRoster', 'voiceRosterMeta', 'micToggle', 'mossVoiceToggle', 'voiceEnrollModal', 'veConsent', 'veRecord', 'veCancel', 'veStatus', 'mossFeed', 'mossFeedMeta', 'mossInput', 'mossSend', 'svTabQ', 'svTabO', 'svCats', 'svList', 'svMeta', 'voiceEnrollButton', 'studentConsole', 'scPhaseMeta', 'scQuizCard', 'scQuizQuestion', 'scQuizOptions', 'scQuizSubmit', 'scQuizState', 'scCheckinCard', 'scCheckinState', 'scCheckinButton', 'scChatInput', 'scChatSend', 'scChatAnon', 'scKindQ', 'scKindO', 'scPostInput', 'scPostSend', 'scTaskCard', 'scTaskRequirement', 'scTaskContent', 'scTaskSubmit', 'scTaskState', 'resourcesPage', 'consolePage', 'consoleSlot', 'consoleDenied'
       ].forEach((id) => {
         elements[id] = document.getElementById(id);
       });
@@ -225,6 +225,7 @@
       elements.headerLoginButton.disabled = false;
       elements.addRecordButton.disabled = false;
       closeLogin();
+      syncVoiceEnrollButton();
     }
 
     function setAnonymous() {
@@ -241,6 +242,7 @@
       elements.headerLoginButton.textContent = '账号登录';
       elements.headerLoginButton.disabled = false;
       elements.addRecordButton.disabled = true;
+      if (elements.voiceEnrollButton) elements.voiceEnrollButton.hidden = true;
       setClassroomUnavailable('登录天文协会成员账号后，可选择进行中的课堂并查看实时数据。');
     }
 
@@ -640,6 +642,7 @@
       elements.pollBlockMeta.textContent = 'polls · 等待数据';
       elements.groupWallMeta.textContent = 'group_tasks · 等待小组数据';
       elements.teacherControlBar.hidden = true;
+      if (elements.studentConsole) elements.studentConsole.hidden = true;
       elements.generateDiagnosisButton.hidden = true;
       elements.aiDiagnosisCard.hidden = true;
       document.body.classList.remove('classroom-paused');
@@ -1425,6 +1428,18 @@
       mossSpeak('MOSS 已接入课堂音频通道。开始监听。'); // v2.7 收音即语音接入
     }
 
+    // v2.10 学生/教师网页端声纹注册入口：登录后显示按钮，点击复用注册弹窗
+    async function syncVoiceEnrollButton() {
+      const btn = elements.voiceEnrollButton;
+      if (!btn) return;
+      btn.hidden = false;
+      btn.textContent = '注册声纹';
+      try {
+        const st = await apiFetch('/voice/status', { method: 'GET' });
+        if (st && st.code === 0 && st.data && st.data.enrolled) btn.textContent = '重新录制声纹';
+      } catch (e) {}
+    }
+
     function openVoiceEnroll() {
       elements.voiceEnrollModal.classList.add('open');
       elements.voiceEnrollModal.setAttribute('aria-hidden', 'false');
@@ -1451,7 +1466,8 @@
         const audio = await decodeToPcm16(new Blob(chunks));
         const r = await apiFetch('/voice/enroll', { method: 'POST', body: { audio, consent: true } });
         if (r && r.code === 0) {
-          elements.veStatus.textContent = '注册成功，可以开启收听了';
+          elements.veStatus.textContent = '注册成功，课堂收音将能识别你的发言';
+          if (elements.voiceEnrollButton) elements.voiceEnrollButton.textContent = '重新录制声纹';
           setTimeout(() => { closeVoiceEnroll(); }, 900);
         } else {
           elements.veStatus.textContent = (r && r.message) || '注册失败';
@@ -1537,6 +1553,8 @@
     let mossSignature = '';
     // v2.6 学生声音：问题/观点两个区域 × AI 分类筛选
     const sv = { kind: 'question', category: '' };
+    // v2.11 学生操作台状态：kind=问题/观点；checked=本次课是否已签到；selected=答题已选项
+    const sc = { kind: 'question', checked: false, selected: new Set() };
     async function refreshStudentVoice() {
       if (!state.classroom.sessionId || !classroomIsReady()) return;
       try {
@@ -1597,6 +1615,234 @@
       }
       if (elements.svMeta) elements.svMeta.textContent = (sv.kind === 'question' ? '问题' : '观点') + ' ' + shown.length + ' 条';
       state.svItems = items;
+    }
+
+    // v2.12 页面标签切换：课堂看板 / 学习资源 / 控制台（控制台学生显示"您暂无权限"）
+    const tcHome = { parent: null, next: null }; // 记录教师控制条在课堂板块的原位置，切回时还原
+
+    function moveTeacherBar(toSlot) {
+      const bar = elements.teacherControlBar;
+      if (!bar) return;
+      if (toSlot) {
+        if (!tcHome.parent) { tcHome.parent = bar.parentElement; tcHome.next = bar.nextElementSibling; }
+        toSlot.appendChild(bar);
+      } else if (tcHome.parent) {
+        tcHome.parent.insertBefore(bar, tcHome.next);
+      }
+    }
+
+    function switchPage(tab) {
+      document.querySelectorAll('.page-tab').forEach((b) => {
+        b.classList.toggle('active', b.dataset.tab === tab);
+      });
+      // 课堂板块整体显隐
+      document.querySelectorAll('.tab-classroom').forEach((el) => {
+        el.hidden = tab !== 'classroom';
+      });
+      if (elements.resourcesPage) elements.resourcesPage.hidden = tab !== 'resources';
+      if (elements.consolePage) {
+        elements.consolePage.hidden = tab !== 'console';
+        if (tab === 'console') {
+          if (canSeeTeacherBackend()) {
+            elements.consoleDenied.hidden = true;
+            elements.consoleSlot.hidden = false;
+            moveTeacherBar(elements.consoleSlot);
+            elements.teacherControlBar.hidden = false;
+          } else {
+            elements.consoleSlot.hidden = true;
+            elements.consoleDenied.hidden = false;
+          }
+        } else {
+          moveTeacherBar(null); // 离开控制台页，把控制条放回课堂板块原位置
+        }
+      }
+      if (state.chart) state.chart.resize(); // 切回课堂时图表尺寸校正
+    }
+
+    // v2.11 学生操作台：小程序课堂页功能网页版。数据来自 get_classroom_state 的 current_session.phase_payload
+    function renderStudentConsole(data) {
+      const wrap = elements.studentConsole;
+      if (!wrap) return;
+      const connected = state.classroom.sessionId && classroomIsReady();
+      if (!connected || canSeeTeacherBackend()) { wrap.hidden = true; return; }
+      wrap.hidden = false;
+      const session = (data && data.current_session) || null;
+      const pp = (session && session.phase_payload) || {};
+      const phaseNames = { checkin: '课堂签到', quiz: '课堂答题', task: '小组任务', discuss: '自由讨论', idle: '课前准备' };
+      elements.scPhaseMeta.textContent = '当前环节：' + (phaseNames[(session && session.phase) || 'idle'] || '课堂进行中');
+      // 答题卡：有 quiz 环节才显示；my_response 存在即已提交
+      const quiz = pp.quiz || null;
+      if (quiz) {
+        elements.scQuizCard.hidden = false;
+        elements.scQuizQuestion.textContent = quiz.question || '本轮题目';
+        renderScQuizOptions(quiz);
+        const mine = quiz.my_response;
+        if (mine) {
+          elements.scQuizState.textContent = '已提交：' + (((mine.answers || [])).join('、'));
+          elements.scQuizSubmit.disabled = true;
+        } else if (state.classroom.sessionStatus === 'paused') {
+          elements.scQuizState.textContent = '教师已暂停作答';
+          elements.scQuizSubmit.disabled = true;
+        } else {
+          elements.scQuizState.textContent = quiz.quiz_type === 'multiple' ? '可多选' : '单选';
+          elements.scQuizSubmit.disabled = false;
+        }
+      } else {
+        elements.scQuizCard.hidden = true;
+      }
+      // 签到卡：有 checkin 环节才显示
+      const checkin = pp.checkin || null;
+      if (checkin) {
+        elements.scCheckinCard.hidden = false;
+        if (sc.checked) {
+          elements.scCheckinState.textContent = '已签到';
+          elements.scCheckinButton.disabled = true;
+        } else {
+          elements.scCheckinState.textContent = '点击按钮完成签到';
+          elements.scCheckinButton.disabled = false;
+        }
+      } else {
+        elements.scCheckinCard.hidden = true;
+      }
+      // 小组任务卡：有 task 环节才显示；group_summary 学生端只含本组
+      const task = pp.task || null;
+      if (task) {
+        elements.scTaskCard.hidden = false;
+        elements.scTaskRequirement.textContent = '任务要求：' + (task.requirement || '见教师布置');
+        const myTask = (((data.group_summary || {}).items) || [])[0];
+        if (myTask && myTask.submit_status === 'submitted') {
+          elements.scTaskState.textContent = '你的小组已提交';
+          elements.scTaskSubmit.disabled = true;
+        } else {
+          elements.scTaskState.textContent = '';
+          elements.scTaskSubmit.disabled = false;
+        }
+      } else {
+        elements.scTaskCard.hidden = true;
+      }
+      // 匿名提问开关跟随教师端设置
+      const allowAnon = !state.classroom.chatSettings || state.classroom.chatSettings.allow_anonymous_questions !== false;
+      elements.scChatAnon.checked = allowAnon;
+      elements.scChatAnon.disabled = !allowAnon;
+    }
+
+    function renderScQuizOptions(quiz) {
+      const box = elements.scQuizOptions;
+      clearNode(box);
+      sc.selected.clear();
+      (quiz.options || []).forEach((opt) => {
+        const key = String(opt.key !== undefined ? opt.key : (opt.label || opt.text || ''));
+        const chip = document.createElement('span');
+        chip.className = 'sc-opt';
+        chip.textContent = opt.text || opt.label || key;
+        chip.addEventListener('click', () => {
+          if (quiz.quiz_type === 'multiple') {
+            // 多选：可反复切换
+            if (sc.selected.has(key)) { sc.selected.delete(key); chip.classList.remove('sel'); }
+            else { sc.selected.add(key); chip.classList.add('sel'); }
+          } else {
+            // 单选：清空后只选当前
+            sc.selected.clear();
+            box.querySelectorAll('.sc-opt').forEach((c) => c.classList.remove('sel'));
+            sc.selected.add(key);
+            chip.classList.add('sel');
+          }
+        });
+        box.appendChild(chip);
+      });
+    }
+
+    async function scSubmitQuiz() {
+      if (!sc.selected.size) { showToast('请先选择答案', true); return; }
+      elements.scQuizSubmit.disabled = true;
+      try {
+        const r = await callCourseService('submit_quiz', {
+          course_id: state.classroom.courseId,
+          answers: Array.from(sc.selected)
+        });
+        showToast(r && r.already_submitted ? '本轮已提交过答案' : '答案已提交');
+        sc.selected.clear();
+        await refreshClassStats({ silent: true });
+        await refreshClassroomChats();
+      } catch (e) {
+        showToast('提交失败：' + getErrorMessage(e), true);
+        elements.scQuizSubmit.disabled = false;
+      }
+    }
+
+    async function scSubmitCheckin() {
+      elements.scCheckinButton.disabled = true;
+      try {
+        const r = await callCourseService('submit_checkin', { course_id: state.classroom.courseId });
+        showToast(r && r.already_checked ? '你已签到过' : '签到成功');
+        sc.checked = true;
+        await refreshClassroomChats();
+      } catch (e) {
+        showToast('签到失败：' + getErrorMessage(e), true);
+        elements.scCheckinButton.disabled = false;
+      }
+    }
+
+    async function scSendChat() {
+      const content = elements.scChatInput.value.trim();
+      if (!content || !state.classroom.courseId) return;
+      elements.scChatSend.disabled = true;
+      try {
+        const r = await callCourseService('send_classroom_chat', {
+          course_id: state.classroom.courseId,
+          content: content,
+          is_anonymous: elements.scChatAnon.checked
+        });
+        if (r && r.muted) {
+          showToast('教师已开启全员禁言', true);
+        } else {
+          showToast('已发送到提问广场');
+          elements.scChatInput.value = '';
+        }
+        await refreshClassroomChats();
+      } catch (e) {
+        showToast('发送失败：' + getErrorMessage(e), true);
+      } finally {
+        elements.scChatSend.disabled = false;
+      }
+    }
+
+    async function scSendPost() {
+      const content = elements.scPostInput.value.trim();
+      if (content.length < 2 || !state.classroom.sessionId) { showToast('内容至少 2 个字', true); return; }
+      elements.scPostSend.disabled = true;
+      try {
+        const r = await apiFetch('/classroom/post', {
+          method: 'POST',
+          body: { session_id: state.classroom.sessionId, course_id: state.classroom.courseId, content: content, kind: sc.kind }
+        });
+        if (r && r.code === 0) {
+          showToast('已提交，AI 归类：' + ((r.data && r.data.category) || '其他'));
+          elements.scPostInput.value = '';
+          refreshStudentVoice();
+        } else {
+          showToast((r && r.message) || '提交失败', true);
+        }
+      } catch (e) {
+        showToast('提交失败', true);
+      } finally {
+        elements.scPostSend.disabled = false;
+      }
+    }
+
+    async function scSubmitTask() {
+      const content = elements.scTaskContent.value.trim();
+      if (!content) { showToast('请填写任务内容', true); return; }
+      elements.scTaskSubmit.disabled = true;
+      try {
+        const r = await callCourseService('submit_group_task', { course_id: state.classroom.courseId, content: content });
+        showToast(r && r.already_submitted ? '小组已提交过' : '小组任务已提交');
+        elements.scTaskContent.value = '';
+        await refreshClassroomChats();
+      } catch (e) {
+        showToast('提交失败：' + getErrorMessage(e), true);
+        elements.scTaskSubmit.disabled = false;
+      }
     }
 
     async function sendMossChat() {
@@ -2018,6 +2264,7 @@
         }
         updateTeacherControls();
         mergeClassroomChats(data.chats || []);
+        renderStudentConsole(data);
       } catch (error) {
         console.warn('[星环实验大屏] 课堂提问轮询失败', error);
       }
@@ -2081,6 +2328,9 @@
       }
       if (typeof mic !== 'undefined' && mic.on) toggleMic();
       if (elements.micToggle) elements.micToggle.disabled = true;
+      if (elements.studentConsole) elements.studentConsole.hidden = true;
+      sc.checked = false;
+      sc.selected.clear();
       closeClassroomWatches();
       stopClassroomPolling();
       clearTimeout(state.classroom.statsTimer);
@@ -2261,6 +2511,37 @@
           if (!mossVoiceState.muted) mossSpeak('MOSS 语音输出已恢复。');
         });
       }
+      if (elements.voiceEnrollButton) elements.voiceEnrollButton.addEventListener('click', openVoiceEnroll);
+      // v2.12 页面标签切换 + 学习资源提取码复制
+      document.querySelectorAll('.page-tab').forEach((b) => {
+        b.addEventListener('click', () => switchPage(b.dataset.tab));
+      });
+      document.querySelectorAll('.res-code').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const code = btn.dataset.code || '';
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(code).then(() => showToast('提取码 ' + code + ' 已复制'));
+          } else {
+            showToast('提取码：' + code);
+          }
+        });
+      });
+      // v2.11 学生操作台事件
+      if (elements.scQuizSubmit) elements.scQuizSubmit.addEventListener('click', scSubmitQuiz);
+      if (elements.scCheckinButton) elements.scCheckinButton.addEventListener('click', scSubmitCheckin);
+      if (elements.scChatSend) elements.scChatSend.addEventListener('click', scSendChat);
+      if (elements.scPostSend) elements.scPostSend.addEventListener('click', scSendPost);
+      if (elements.scTaskSubmit) elements.scTaskSubmit.addEventListener('click', scSubmitTask);
+      if (elements.scKindQ) elements.scKindQ.addEventListener('click', () => {
+        sc.kind = 'question';
+        elements.scKindQ.classList.add('sv-active'); elements.scKindO.classList.remove('sv-active');
+      });
+      if (elements.scKindO) elements.scKindO.addEventListener('click', () => {
+        sc.kind = 'opinion';
+        elements.scKindO.classList.add('sv-active'); elements.scKindQ.classList.remove('sv-active');
+      });
+      if (elements.scChatInput) elements.scChatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') scSendChat(); });
+      if (elements.scPostInput) elements.scPostInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') scSendPost(); });
       elements.veRecord.addEventListener('click', enrollRecord);
       elements.veCancel.addEventListener('click', closeVoiceEnroll);
       if (elements.mossSend) elements.mossSend.addEventListener('click', sendMossChat);

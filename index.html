@@ -43,6 +43,13 @@
       </div>
     </section>
 
+    <!-- v2.12 页面标签：课堂看板 / 学习资源 / 控制台 -->
+    <nav class="page-tabs" aria-label="页面导航">
+      <button class="page-tab active" data-tab="classroom" type="button">课堂看板</button>
+      <button class="page-tab" data-tab="resources" type="button">学习资源</button>
+      <button class="page-tab" data-tab="console" type="button">控制台</button>
+    </nav>
+
     <section class="identity-strip" aria-label="登录状态">
       <div class="identity-main">
         <span id="identityBadge" class="identity-badge" aria-hidden="true">访</span>
@@ -53,11 +60,12 @@
       </div>
       <div class="session-actions">
         <span id="sessionOrgChip" class="role-chip">未绑定社团</span>
+        <button id="voiceEnrollButton" class="btn" type="button" hidden>注册声纹</button>
         <button id="sessionLoginButton" class="btn btn-gold" type="button">登录</button>
       </div>
     </section>
 
-    <section class="stats-grid" aria-label="数据概览">
+    <section class="tab-classroom stats-grid" aria-label="数据概览">
       <article class="stat-card">
         <p class="stat-label">实验记录</p>
         <p id="recordCount" class="stat-value">--<small>条</small></p>
@@ -76,7 +84,7 @@
       </article>
     </section>
 
-    <section class="workspace-grid">
+    <section class="tab-classroom workspace-grid">
       <article class="panel chart-panel">
         <header class="panel-head">
           <div class="panel-title-wrap">
@@ -108,7 +116,7 @@
 
 
     <!-- v2.1 PPT 演示：文件仅在本机浏览器解析，不上传 -->
-    <section id="pptPanel" class="panel ppt-panel" aria-labelledby="pptTitle">
+    <section id="pptPanel" class="tab-classroom panel ppt-panel" aria-labelledby="pptTitle">
       <header class="panel-head">
         <div class="panel-title-wrap">
           <h2 id="pptTitle" class="panel-title">PPT 演示</h2>
@@ -133,7 +141,7 @@
       </div>
     </section>
 
-    <section id="classroomBoard" class="panel classroom-board" aria-labelledby="classroomBoardTitle">
+    <section id="classroomBoard" class="tab-classroom panel classroom-board" aria-labelledby="classroomBoardTitle">
       <header class="panel-head">
         <div class="panel-title-wrap">
           <h2 id="classroomBoardTitle" class="panel-title">课堂答题与提问广场</h2>
@@ -151,7 +159,7 @@
       </header>
       <div id="teacherControlBar" class="teacher-control-bar" hidden>
         <div class="teacher-control-copy">
-          <span class="teacher-control-kicker">教师控制台</span>
+          <span class="teacher-control-kicker">控制台</span>
           <strong id="answerStatusLabel">作答进行中</strong>
           <span id="answerRoundMeta" class="teacher-control-kicker">第 1 轮 · 等待课堂同步</span>
         </div>
@@ -161,6 +169,54 @@
           <button id="resetStageButton" class="btn control-btn control-reset" type="button">重置当前环节</button>
         </div>
       </div>
+      <!-- v2.11 学生操作台：小程序课堂页功能网页版（答题/签到/提问广场/问题观点/小组任务；收音用上方"开启收音"按钮） -->
+      <section id="studentConsole" class="student-console" hidden aria-label="学生操作台">
+        <header class="sc-head">
+          <h3 class="sc-title">学生操作台</h3>
+          <span id="scPhaseMeta" class="sc-meta">等待课堂数据</span>
+        </header>
+        <div class="sc-grid">
+          <article id="scQuizCard" class="sc-card" hidden>
+            <p class="sc-kicker">课堂答题</p>
+            <p id="scQuizQuestion" class="sc-question"></p>
+            <div id="scQuizOptions" class="sc-options"></div>
+            <button id="scQuizSubmit" class="btn btn-gold" type="button">提交答案</button>
+            <p id="scQuizState" class="sc-state"></p>
+          </article>
+          <article id="scCheckinCard" class="sc-card" hidden>
+            <p class="sc-kicker">课堂签到</p>
+            <p id="scCheckinState" class="sc-state"></p>
+            <button id="scCheckinButton" class="btn btn-gold" type="button">签到</button>
+          </article>
+          <article class="sc-card">
+            <p class="sc-kicker">提问广场</p>
+            <div class="sc-row">
+              <input id="scChatInput" class="sc-input" placeholder="向课堂提问（160字内）" maxlength="160" />
+              <button id="scChatSend" class="btn btn-gold" type="button">发送</button>
+            </div>
+            <label class="sc-anon"><input type="checkbox" id="scChatAnon" checked /> 匿名提问</label>
+          </article>
+          <article class="sc-card">
+            <p class="sc-kicker">提问题 / 发表观点（AI 自动归类）</p>
+            <div class="sc-tabs">
+              <span id="scKindQ" class="sv-tab sv-active">提问题</span>
+              <span id="scKindO" class="sv-tab">发表观点</span>
+            </div>
+            <div class="sc-row">
+              <input id="scPostInput" class="sc-input" placeholder="描述你的疑问或看法（500字内）" maxlength="500" />
+              <button id="scPostSend" class="btn btn-gold" type="button">提交</button>
+            </div>
+          </article>
+          <article id="scTaskCard" class="sc-card" hidden>
+            <p class="sc-kicker">小组任务</p>
+            <p id="scTaskRequirement" class="sc-question"></p>
+            <textarea id="scTaskContent" class="sc-textarea" placeholder="填写小组任务结论（1200字内）" maxlength="1200"></textarea>
+            <button id="scTaskSubmit" class="btn btn-gold" type="button">提交小组任务</button>
+            <p id="scTaskState" class="sc-state"></p>
+          </article>
+        </div>
+      </section>
+
       <div class="classroom-stat-grid">
         <article class="classroom-stat">
           <p class="classroom-stat-label">当前答题人数</p>
@@ -341,6 +397,87 @@
       <p id="classroomBoardNote" class="classroom-board-note">实时监听不可用时会自动切换为 3 秒云函数同步；匿名提问在写入云端时即抹除学生身份。</p>
     </section>
 
+    <!-- v2.12 学习资源：网盘教程资料卡片（点击提取码复制） -->
+    <section id="resourcesPage" class="panel resources-page" hidden aria-label="学习资源">
+      <header class="panel-head">
+        <div class="panel-title-wrap">
+          <h2 class="panel-title">学习资源</h2>
+          <p class="panel-subtitle">天文仪器 · 天文摄影 · 后期软件 · 教程合集（感谢艾博宇学长整理制作）</p>
+        </div>
+      </header>
+      <div class="res-grid">
+        <article class="res-card">
+          <div class="res-tag-row"><span class="res-tag">仪器教学</span><span class="res-tag tag-baidu">百度网盘</span></div>
+          <h3 class="res-title">天文仪器简易操作教学</h3>
+          <p class="res-desc">目前半成品，持续更新中，有需要的同学可以先看看。</p>
+          <div class="res-actions">
+            <a class="btn btn-gold res-link" href="https://pan.baidu.com/s/13ToIQRvubydfxkz5GzPxug" target="_blank" rel="noopener">打开网盘</a>
+            <button class="btn res-code" type="button" data-code="ouc1">提取码 ouc1 · 点击复制</button>
+          </div>
+        </article>
+        <article class="res-card">
+          <div class="res-tag-row"><span class="res-tag">星图软件</span><span class="res-tag tag-baidu">百度网盘</span></div>
+          <h3 class="res-title">天文摄影入门教学 · Stellarium 基础教学</h3>
+          <p class="res-desc">5.29 更新。Stellarium 是免费强大的 PC 端星图软件，非常推荐大家下载学习。</p>
+          <div class="res-actions">
+            <a class="btn btn-gold res-link" href="https://pan.baidu.com/s/1T35RXV_ZYkmDhy8ngStA_Q" target="_blank" rel="noopener">打开网盘</a>
+            <button class="btn res-code" type="button" data-code="ABYY">提取码 ABYY · 点击复制</button>
+          </div>
+        </article>
+        <article class="res-card">
+          <div class="res-tag-row"><span class="res-tag">摄影实战</span><span class="res-tag tag-baidu">百度网盘</span></div>
+          <h3 class="res-title">天文摄影基础教学 · 出摊实战流程</h3>
+          <p class="res-desc">5.28 更新。从仓库挑选器材到出摊架设，用 zwo 天文盒子完成深空观测，天亮收摊拍摄全套校准场。后期与仓库设备介绍后续更新。</p>
+          <div class="res-actions">
+            <a class="btn btn-gold res-link" href="https://pan.baidu.com/s/1tRZKvh2SA6jkO6wDWZaKXw" target="_blank" rel="noopener">打开网盘</a>
+            <button class="btn res-code" type="button" data-code="6Tst">提取码 6Tst · 点击复制</button>
+          </div>
+        </article>
+        <article class="res-card">
+          <div class="res-tag-row"><span class="res-tag">实用软件</span><span class="res-tag tag-baidu">百度网盘</span></div>
+          <h3 class="res-title">郭辰洋学长的软件包（掩星 / 太阳）</h3>
+          <p class="res-desc">天文社学长整理的观测小工具合集。</p>
+          <div class="res-actions">
+            <a class="btn btn-gold res-link" href="https://pan.baidu.com/s/1hd2qpHovTHNVOounaqVcBQ" target="_blank" rel="noopener">打开网盘</a>
+            <button class="btn res-code" type="button" data-code="digy">提取码 digy · 点击复制</button>
+          </div>
+        </article>
+        <article class="res-card">
+          <div class="res-tag-row"><span class="res-tag">后期处理</span><span class="res-tag tag-quark">夸克网盘</span></div>
+          <h3 class="res-title">月面叠加 &amp; PixInsight</h3>
+          <p class="res-desc">月面叠加与 PixInsight 后期处理资料，点击链接即可保存，无需下载 App 可在线播放。</p>
+          <div class="res-actions">
+            <a class="btn btn-gold res-link" href="https://pan.quark.cn/s/4300c1b9a9fd" target="_blank" rel="noopener">打开网盘</a>
+          </div>
+        </article>
+        <article class="res-card">
+          <div class="res-tag-row"><span class="res-tag">摄影教程</span><span class="res-tag tag-baidu">百度网盘</span></div>
+          <h3 class="res-title">摄影师看 Kan 的天文摄影与软件教程</h3>
+          <p class="res-desc">NINA / SIRIL 软件教学，附练习素材。</p>
+          <div class="res-actions">
+            <a class="btn btn-gold res-link" href="https://pan.baidu.com/s/1Vz-5RFwG0p3ZMe7IUKJ-Kw" target="_blank" rel="noopener">打开网盘</a>
+            <button class="btn res-code" type="button" data-code="uuhp">提取码 uuhp · 点击复制</button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- v2.12 控制台页：教师可见控制条；学生/匿名显示"您暂无权限" -->
+    <section id="consolePage" class="panel console-page" hidden aria-label="控制台">
+      <header class="panel-head">
+        <div class="panel-title-wrap">
+          <h2 class="panel-title">控制台</h2>
+          <p class="panel-subtitle">课堂控制 · 仅管理员与授课教师可用</p>
+        </div>
+      </header>
+      <div id="consoleSlot" class="console-slot"></div>
+      <div id="consoleDenied" class="console-denied" hidden>
+        <div class="denied-mark">!</div>
+        <p class="denied-title">您暂无权限</p>
+        <p class="denied-sub">控制台仅管理员与授课教师可用</p>
+      </div>
+    </section>
+
     <footer class="console-strip">
       <span id="consoleMessage" class="console-message">初始化 CloudBase Web SDK</span>
       <span class="console-code">ENV / cloud1-d6gagyei397d315ca</span>
@@ -378,7 +515,7 @@
   <!-- v2.0 教师声纹注册弹窗 -->
   <div id="voiceEnrollModal" class="modal" role="dialog" aria-modal="true" aria-hidden="true">
     <div class="voice-enroll-card">
-      <h3 class="ve-title">注册教师声纹</h3>
+      <h3 class="ve-title">注册课堂声纹</h3>
       <p class="ve-desc">实时发言需要"认人"。请朗读下方文字 5 秒，系统仅提取声纹特征，不保存原始录音。</p>
       <div class="ve-passage">星环终端正在记录课堂的每一次发声，让每一句疑问都被听见。</div>
       <label class="ve-consent"><input type="checkbox" id="veConsent" /> 我已阅读并同意《声纹采集告知书》</label>
