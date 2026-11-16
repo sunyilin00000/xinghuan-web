@@ -1094,20 +1094,73 @@
       setTimeout(() => { m.classList.remove('show'); m.setAttribute('aria-hidden', 'true'); }, 8000);
     }
 
+    // v2.10 MOSS 语音三级兜底：
+    // ① 本机苔总语音（moss-tts-service，http://localhost:5010；GitHub Pages https 页面跨域调用，需本机服务已启动）
+    // ② 云端备用：在 index.html 里设 window.MOSS_CLOUD_TTS = 'https://...' 即启用（如以后用 Cloudflare Tunnel 暴露本机服务）
+    // ③ 浏览器内置合成音（原方案，永远可用但音色不是苔总）
+    const MOSS_LOCAL_TTS = 'http://localhost:5010/text_to_speech';
+    const MOSS_CLOUD_TTS = window.MOSS_CLOUD_TTS || '';
+
+    // 用 Audio 播放一个音频地址；播完 resolve，出错/被自动播放策略拦截 reject（用于降级到下一级）
+    function playWavUrl(url) {
+      return new Promise((resolve, reject) => {
+        const audio = new Audio();
+        audio.onended = () => resolve();
+        audio.onerror = () => reject(new Error('音频播放失败'));
+        audio.src = url;
+        audio.play().catch(reject);
+      });
+    }
+
+    // 调用一个 TTS 接口（POST {text, speechRate} → wav）并播放，成功返回 true
+    async function speakViaTtsApi(url, text) {
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text, speechRate: 1 })
+      });
+      if (!resp.ok) throw new Error('TTS 接口响应 ' + resp.status);
+      const blob = await resp.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      try {
+        await playWavUrl(objectUrl);
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+      }
+      return true;
+    }
+
     function mossSpeak(text, onEnd) {
       if (!mossSpeakAllowed()) { if (onEnd) setTimeout(onEnd, 300); return; }
-      if (!window.speechSynthesis) { if (onEnd) setTimeout(onEnd, 3000); return; }
-      try {
-        const utter = new SpeechSynthesisUtterance(text);
-        const v = pickMossVoice();
-        if (v) utter.voice = v;
-        utter.pitch = 0.55;   // 压低 = 机器感
-        utter.rate = 0.88;    // 略慢 = MOSS 的平静
-        utter.volume = 1;
-        if (onEnd) { utter.onend = onEnd; utter.onerror = onEnd; }
-        speechSynthesis.cancel();
-        speechSynthesis.speak(utter);
-      } catch (e) { console.warn('MOSS 语音失败', e); if (onEnd) setTimeout(onEnd, 3000); }
+      (async () => {
+        // 第一级：本机苔总语音（服务没开/被拦就自动降级）
+        try {
+          await speakViaTtsApi(MOSS_LOCAL_TTS, text);
+          if (onEnd) setTimeout(onEnd, 100);
+          return;
+        } catch (e) { console.warn('[moss-voice] 本机语音不可用，尝试降级', e); }
+        // 第二级：云端备用（配置了才走，否则跳过）
+        if (MOSS_CLOUD_TTS) {
+          try {
+            await speakViaTtsApi(MOSS_CLOUD_TTS, text);
+            if (onEnd) setTimeout(onEnd, 100);
+            return;
+          } catch (e) { console.warn('[moss-voice] 云端语音不可用，降级浏览器合成', e); }
+        }
+        // 第三级：浏览器合成音（兜底）
+        if (!window.speechSynthesis) { if (onEnd) setTimeout(onEnd, 3000); return; }
+        try {
+          const utter = new SpeechSynthesisUtterance(text);
+          const v = pickMossVoice();
+          if (v) utter.voice = v;
+          utter.pitch = 0.55;   // 压低 = 机器感
+          utter.rate = 0.88;    // 略慢 = MOSS 的平静
+          utter.volume = 1;
+          if (onEnd) { utter.onend = onEnd; utter.onerror = onEnd; }
+          speechSynthesis.cancel();
+          speechSynthesis.speak(utter);
+        } catch (e) { console.warn('MOSS 语音失败', e); if (onEnd) setTimeout(onEnd, 3000); }
+      })();
     }
 
     // 全屏红警：showMossAlert(['张三','李四'])
