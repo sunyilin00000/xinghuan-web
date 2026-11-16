@@ -266,6 +266,35 @@
             </div>
           </section>
 
+          <section class="classroom-block" aria-labelledby="studentVoiceTitle">
+            <header class="classroom-block-head">
+              <h3 id="studentVoiceTitle" class="classroom-block-title">学生声音</h3>
+              <span id="svMeta" class="classroom-block-meta">AI 自动归类</span>
+            </header>
+            <div class="sv-tabs">
+              <div id="svTabQ" class="sv-tab sv-active">问题</div>
+              <div id="svTabO" class="sv-tab">观点</div>
+            </div>
+            <div id="svCats" class="sv-cats"></div>
+            <div id="svList" class="sv-list">
+              <div class="classroom-empty compact">学生从微信小程序课堂页发表后实时汇入</div>
+            </div>
+          </section>
+
+          <section class="classroom-block moss-block" aria-labelledby="mossFeedTitle">
+            <header class="classroom-block-head">
+              <h3 id="mossFeedTitle" class="classroom-block-title">MOSS 助教</h3>
+              <span id="mossFeedMeta" class="classroom-block-meta">自动提问 · 纠错 · 补充</span>
+            </header>
+            <div class="moss-chat-row">
+              <input id="mossInput" class="moss-input" placeholder="课上直接问 MOSS…（收音中说“MOSS”也可唤醒）" maxlength="200" />
+              <button id="mossSend" class="moss-send" type="button">发送</button>
+            </div>
+            <div id="mossFeed" class="moss-feed">
+              <div class="classroom-empty compact">MOSS 正在旁听课堂，可直接提问或等它自动介入</div>
+            </div>
+          </section>
+
           <section class="classroom-block" aria-labelledby="voiceRosterTitle">
             <header class="classroom-block-head">
               <h3 id="voiceRosterTitle" class="classroom-block-title">声纹注册名单</h3>

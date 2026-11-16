@@ -2286,3 +2286,53 @@ body.auth-locked .topbar { display: none; }
 }
 .collapse-btn:hover { color: #ebe0cc; border-color: rgba(212, 196, 168, 0.4); }
 .panel.collapsed .panel-head ~ *, .classroom-block.collapsed .classroom-block-head ~ * { display: none !important; }
+
+/* v2.6 MOSS 助教面板 */
+.moss-feed { display: flex; flex-direction: column; gap: 8px; padding: 11px; max-height: 280px; overflow-y: auto; }
+.moss-item { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 10px; padding: 10px; border: 1px solid rgba(212, 196, 168, 0.14); border-radius: 9px; background: rgba(212, 196, 168, 0.035); }
+.moss-tag { display: inline-flex; align-items: center; justify-content: center; height: 22px; border-radius: 6px; font-size: 10px; font-weight: 620; }
+.moss-tag.correct { background: rgba(222, 69, 69, 0.16); color: #f0a8a8; border: 1px solid rgba(222, 69, 69, 0.4); }
+.moss-tag.supplement { background: rgba(141, 184, 198, 0.12); color: #a9ccdb; border: 1px solid rgba(141, 184, 198, 0.35); }
+.moss-tag.question { background: rgba(212, 196, 168, 0.14); color: #e6d8b8; border: 1px solid rgba(212, 196, 168, 0.4); }
+.moss-text { color: #d8dee6; font-size: 11px; line-height: 1.6; word-break: break-word; }
+.moss-reason { color: #5e6b79; font-size: 9px; margin-top: 4px; }
+
+/* v2.5 MOSS 对话 */
+.moss-chat-row { display: flex; gap: 8px; padding: 10px 11px 0; }
+.moss-input {
+  flex: 1;
+  padding: 9px 14px;
+  border: 1px solid rgba(212, 196, 168, 0.25);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #d8dee6;
+  font-size: 12px;
+  outline: none;
+}
+.moss-input:focus { border-color: rgba(212, 196, 168, 0.55); }
+.moss-send {
+  padding: 9px 20px;
+  border: 1px solid rgba(212, 196, 168, 0.5);
+  border-radius: 8px;
+  background: rgba(212, 196, 168, 0.1);
+  color: #ebe0cc;
+  font-size: 12px;
+  cursor: pointer;
+}
+.moss-send:disabled { opacity: 0.4; }
+.moss-q { color: #8db8c6; font-size: 10px; margin-bottom: 4px; word-break: break-word; }
+
+/* v2.6 学生声音 */
+.sv-tabs { display: flex; gap: 8px; padding: 10px 11px 0; }
+.sv-tab { padding: 7px 20px; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: #92a0af; font-size: 11px; cursor: pointer; }
+.sv-tab.sv-active { border-color: rgba(212, 196, 168, 0.5); background: rgba(212, 196, 168, 0.08); color: #ebe0cc; }
+.sv-cats { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 11px 0; }
+.sv-cat { padding: 4px 12px; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 999px; color: #7c8896; font-size: 10px; cursor: pointer; }
+.sv-cat.active { border-color: rgba(141, 184, 198, 0.5); color: #a9ccdb; background: rgba(141, 184, 198, 0.08); }
+.sv-list { display: flex; flex-direction: column; gap: 8px; padding: 11px; max-height: 300px; overflow-y: auto; }
+.sv-item { padding: 10px 12px; border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 9px; background: rgba(255, 255, 255, 0.018); }
+.sv-top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.sv-name { color: #ebe0cc; font-size: 11px; font-weight: 620; }
+.sv-cat-tag { padding: 1px 8px; border: 1px solid rgba(141, 184, 198, 0.4); border-radius: 999px; color: #a9ccdb; font-size: 9px; }
+.sv-time { margin-left: auto; color: #5e6b79; font-size: 9px; }
+.sv-text { color: #d8dee6; font-size: 11px; line-height: 1.6; word-break: break-word; }

@@ -83,7 +83,7 @@
         'teacherControlBar', 'pauseAnswersButton', 'resumeAnswersButton', 'resetStageButton',
         'answerStatusLabel', 'answerRoundMeta', 'answerOptionList', 'pollDistribution',
         'pollBlockMeta', 'groupSubmissionWall', 'groupWallMeta', 'generateDiagnosisButton',
-        'aiDiagnosisCard', 'aiDiagnosisContent', 'aiDiagnosisMeta', 'classCompletionRate', 'pendingList', 'pendingListMeta', 'cheatAlertList', 'cheatAlertMeta', 'voiceFeed', 'voiceFeedMeta', 'voiceRoster', 'voiceRosterMeta', 'micToggle', 'voiceEnrollModal', 'veConsent', 'veRecord', 'veCancel', 'veStatus'
+        'aiDiagnosisCard', 'aiDiagnosisContent', 'aiDiagnosisMeta', 'classCompletionRate', 'pendingList', 'pendingListMeta', 'cheatAlertList', 'cheatAlertMeta', 'voiceFeed', 'voiceFeedMeta', 'voiceRoster', 'voiceRosterMeta', 'micToggle', 'voiceEnrollModal', 'veConsent', 'veRecord', 'veCancel', 'veStatus', 'mossFeed', 'mossFeedMeta', 'mossInput', 'mossSend', 'svTabQ', 'svTabO', 'svCats', 'svList', 'svMeta'
       ].forEach((id) => {
         elements[id] = document.getElementById(id);
       });
@@ -1460,6 +1460,156 @@
       if (elements.voiceRosterMeta) elements.voiceRosterMeta.textContent = '已注册声纹 ' + on + '/' + students.length;
     }
 
+    // v2.6 MOSS 助教：驱动心跳 + 面板渲染 + 语音播报
+    let mossSignature = '';
+    // v2.6 学生声音：问题/观点两个区域 × AI 分类筛选
+    const sv = { kind: 'question', category: '' };
+    async function refreshStudentVoice() {
+      if (!state.classroom.sessionId || !classroomIsReady()) return;
+      try {
+        const payload = await apiFetch('/collection', { method: 'POST', body: { name: 'class_posts', where: { session_id: state.classroom.sessionId } } });
+        renderStudentVoice((payload && payload.data) || []);
+      } catch (e) { console.warn('[sv] 读取失败', e); }
+    }
+    function renderStudentVoice(items) {
+      const listEl = elements.svList;
+      if (!listEl) return;
+      const rows = items.filter(x => x.kind === sv.kind)
+        .sort((a, b) => Number(b.at || 0) - Number(a.at || 0));
+      // 分类 chips
+      const catCount = {};
+      rows.forEach(x => { catCount[x.category || '其他'] = (catCount[x.category || '其他'] || 0) + 1; });
+      clearNode(elements.svCats);
+      const allBtn = document.createElement('span');
+      allBtn.className = 'sv-cat' + (sv.category === '' ? ' active' : '');
+      allBtn.textContent = '全部 ' + rows.length;
+      allBtn.addEventListener('click', () => { sv.category = ''; renderStudentVoice(items); });
+      elements.svCats.appendChild(allBtn);
+      Object.keys(catCount).forEach(cat => {
+        const c = document.createElement('span');
+        c.className = 'sv-cat' + (sv.category === cat ? ' active' : '');
+        c.textContent = cat + ' ' + catCount[cat];
+        c.addEventListener('click', () => { sv.category = sv.category === cat ? '' : cat; renderStudentVoice(items); });
+        elements.svCats.appendChild(c);
+      });
+      const shown = sv.category ? rows.filter(x => (x.category || '其他') === sv.category) : rows;
+      clearNode(listEl);
+      if (!shown.length) {
+        const empty = document.createElement('div');
+        empty.className = 'classroom-empty compact';
+        empty.textContent = sv.kind === 'question' ? '暂无疑问，鼓励学生提问' : '暂无观点，鼓励学生表达';
+        listEl.appendChild(empty);
+      } else {
+        shown.slice(0, 40).forEach(row => {
+          const item = document.createElement('article');
+          item.className = 'sv-item';
+          const top = document.createElement('div');
+          top.className = 'sv-top';
+          const name = document.createElement('span');
+          name.className = 'sv-name';
+          name.textContent = row.member_name || '成员';
+          const tag = document.createElement('span');
+          tag.className = 'sv-cat-tag';
+          tag.textContent = row.category || '其他';
+          const time = document.createElement('span');
+          time.className = 'sv-time';
+          time.textContent = shortTime(row.at);
+          top.append(name, tag, time);
+          const text = document.createElement('div');
+          text.className = 'sv-text';
+          text.textContent = row.content || '';
+          item.append(top, text);
+          listEl.appendChild(item);
+        });
+      }
+      if (elements.svMeta) elements.svMeta.textContent = (sv.kind === 'question' ? '问题' : '观点') + ' ' + shown.length + ' 条';
+      state.svItems = items;
+    }
+
+    async function sendMossChat() {
+      const input = elements.mossInput;
+      if (!input) return;
+      const text = input.value.trim();
+      if (!text || !state.classroom.sessionId) return;
+      if (elements.mossSend) elements.mossSend.disabled = true;
+      input.value = '';
+      try {
+        const r = await apiFetch('/moss/chat', { method: 'POST', body: { session_id: state.classroom.sessionId, text } });
+        if (r && r.code === 0 && r.data && r.data.reply) {
+          refreshMossFeed();
+        } else if (r && r.message) {
+          showToast(r.message, true);
+        }
+      } catch (e) { showToast('MOSS 暂时无法回应', true); }
+      finally { if (elements.mossSend) elements.mossSend.disabled = false; }
+    }
+
+    async function driveMossTick() {
+      if (!state.classroom.sessionId || !classroomIsReady()) return;
+      try {
+        await apiFetch('/moss/tick', { method: 'POST', body: { session_id: state.classroom.sessionId } });
+      } catch (e) { console.warn('[moss] tick 失败', e); }
+    }
+    async function refreshMossFeed() {
+      if (!state.classroom.sessionId || !classroomIsReady()) return;
+      try {
+        const payload = await apiFetch('/collection', { method: 'POST', body: { name: 'moss_events', where: { session_id: state.classroom.sessionId } } });
+        renderMossFeed((payload && payload.data) || []);
+      } catch (e) { console.warn('[moss] 读取失败', e); }
+    }
+    function renderMossFeed(events) {
+      const el = elements.mossFeed;
+      if (!el) return;
+      const tagNames = { correct: '纠正', supplement: '补充', question: '提问', chat: '对话' };
+      const rows = events.slice().sort((a, b) => Number(b.at || 0) - Number(a.at || 0)).slice(0, 20);
+      clearNode(el);
+      if (!rows.length) {
+        const empty = document.createElement('div');
+        empty.className = 'classroom-empty compact';
+        empty.textContent = 'MOSS 正在旁听课堂，关键时机会自动介入';
+        el.appendChild(empty);
+        if (elements.mossFeedMeta) elements.mossFeedMeta.textContent = '自动提问 · 纠错 · 补充';
+        return;
+      }
+      rows.forEach((row, i) => {
+        const item = document.createElement('article');
+        item.className = 'moss-item';
+        const tag = document.createElement('span');
+        tag.className = 'moss-tag ' + (row.type || 'supplement');
+        tag.textContent = tagNames[row.type] || '补充';
+        const body = document.createElement('div');
+        if (row.type === 'chat' && row.reason) {
+          const q = document.createElement('div');
+          q.className = 'moss-q';
+          q.textContent = row.reason;
+          body.appendChild(q);
+        }
+        const text = document.createElement('div');
+        text.className = 'moss-text';
+        text.textContent = row.text || '';
+        body.appendChild(text);
+        if (row.reason) {
+          const reason = document.createElement('div');
+          reason.className = 'moss-reason';
+          reason.textContent = '依据：' + row.reason;
+          body.appendChild(reason);
+        }
+        item.append(tag, body);
+        el.appendChild(item);
+      });
+      // 新事件语音播报（20 秒节流，复用 MOSS 声线）
+      const sig = rows.map(r => (r.at || '') + ':' + (r.text || '')).join('|');
+      if (mossSignature && sig !== mossSignature) {
+        const latest = rows[0];
+        if (latest && latest.text && Date.now() > mossCooldownUntil) {
+          mossSpeak(String(latest.text).replace(/^(更正|补充|提问)：/, '$1。'), null);
+          mossCooldownUntil = Date.now() + 20000;
+        }
+      }
+      mossSignature = sig;
+      if (elements.mossFeedMeta) elements.mossFeedMeta.textContent = rows.length + ' 次介入';
+    }
+
     // v1.6 课堂警报：轮询 course_events（切屏/离开应用），聚合并红色警报
     async function refreshCheatEvents() {
       if (!state.classroom.sessionId || !classroomIsReady()) return;
@@ -1812,7 +1962,13 @@
         refreshCheatEvents();
         refreshVoiceFeed();
         refreshVoiceRoster();
+        refreshMossFeed();
+        refreshStudentVoice();
       }, 3000);
+      // MOSS 助教心跳：每 75 秒一次（服务端 60 秒节流）
+      clearInterval(state.mossTickTimer);
+      state.mossTickTimer = setInterval(driveMossTick, 75000);
+      driveMossTick();
       elements.classroomBoardNote.textContent = '实时监听不可用，当前通过 3 秒云函数同步课堂数据。';
     }
 
@@ -1839,6 +1995,14 @@
     }
 
     function disconnectClassroomBoard(keepSelection = false) {
+      clearInterval(state.mossTickTimer);
+      if (elements.mossFeed) {
+        clearNode(elements.mossFeed);
+        const mEmpty = document.createElement('div');
+        mEmpty.className = 'classroom-empty compact';
+        mEmpty.textContent = 'MOSS 正在旁听课堂，关键时机会自动介入';
+        elements.mossFeed.appendChild(mEmpty);
+      }
       if (typeof mic !== 'undefined' && mic.on) toggleMic();
       if (elements.micToggle) elements.micToggle.disabled = true;
       closeClassroomWatches();
@@ -2014,6 +2178,18 @@
       elements.micToggle.addEventListener('click', toggleMic);
       elements.veRecord.addEventListener('click', enrollRecord);
       elements.veCancel.addEventListener('click', closeVoiceEnroll);
+      if (elements.mossSend) elements.mossSend.addEventListener('click', sendMossChat);
+      if (elements.svTabQ) elements.svTabQ.addEventListener('click', () => {
+        sv.kind = 'question';
+        elements.svTabQ.classList.add('sv-active'); elements.svTabO.classList.remove('sv-active');
+        if (state.svItems) renderStudentVoice(state.svItems);
+      });
+      if (elements.svTabO) elements.svTabO.addEventListener('click', () => {
+        sv.kind = 'opinion';
+        elements.svTabO.classList.add('sv-active'); elements.svTabQ.classList.remove('sv-active');
+        if (state.svItems) renderStudentVoice(state.svItems);
+      });
+      if (elements.mossInput) elements.mossInput.addEventListener('confirm', (e) => { if (e.detail.value) sendMossChat(); });
       // v1.5 门禁：点击遮罩与 Esc 不再允许跳过登录
     }
 
