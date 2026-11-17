@@ -987,7 +987,7 @@
 
 
     // ---------- v2.13 TRTC 语音教室（凭证经 SCF /trtc/join，SDK 走腾讯云 v5） ----------
-    const trtcState = { client: null, inRoom: false, muted: false, videoOn: false, remote: new Set() };
+    const trtcState = { client: null, inRoom: false, muted: false, micStarted: false, videoOn: false, remote: new Set() };
     // v2.16.2：优先加载本站自托管 trtc.js，失败再试两个公共 CDN
     async function trtcLoadSdk() {
       if (window.TRTC) return;
@@ -1021,7 +1021,7 @@
         joinBtn.hidden = true; muteBtn.hidden = false; leaveBtn.hidden = false;
         const camBtn = document.getElementById('trtcCam');
         if (camBtn) camBtn.hidden = false;
-        muteBtn.textContent = trtcState.muted ? '取消静音' : '静音';
+        muteBtn.textContent = !trtcState.micStarted ? '开启麦克风' : (trtcState.muted ? '取消静音' : '静音');
         count.textContent = '在线 ' + (trtcState.remote.size + 1) + ' 人';
       } else {
         panel.classList.remove('live');
@@ -1049,7 +1049,18 @@
         });
         client.on(TRTC.EVENT.REMOTE_VIDEO_UNAVAILABLE, (e) => trtcRemoveTile('r-' + e.userId));
         await client.enterRoom({ sdkAppId: d.sdk_app_id, userId: d.user_id, userSig: d.user_sig, strRoomId: String(d.room_id) }); // v5：字符串房间号用平级 strRoomId 键
-        await client.startLocalAudio();
+        // v2.17.1：先显式申请麦克风权限（触发浏览器授权框），成功才开麦；失败留房旁听
+        try {
+          await navigator.mediaDevices.getUserMedia({ audio: true });
+          await client.startLocalAudio();
+          trtcState.muted = false;
+          trtcState.micStarted = true;
+        } catch (micErr) {
+          console.warn('[trtc] 麦克风未授权/不可用', micErr);
+          showToast('麦克风未授权：已进房（旁听）。点面板上「开启麦克风」重新授权', true);
+          trtcState.muted = true;
+          trtcState.micStarted = false;
+        }
         trtcState.client = client;
         trtcState.inRoom = true;
         trtcState.remote.clear();
@@ -1066,6 +1077,7 @@
       trtcState.client = null;
       trtcState.inRoom = false;
       trtcState.muted = false;
+      trtcState.micStarted = false;
       trtcState.videoOn = false;
       trtcState.remote.clear();
       document.getElementById('trtcVideoWall').innerHTML = '';
@@ -1118,6 +1130,21 @@
 
     async function trtcToggleMute() {
       if (!trtcState.inRoom || !trtcState.client) return;
+      // v2.17.1：从未开麦成功 → 走授权重试流程
+      if (!trtcState.micStarted) {
+        try {
+          await navigator.mediaDevices.getUserMedia({ audio: true });
+          await trtcState.client.startLocalAudio();
+          trtcState.micStarted = true;
+          trtcState.muted = false;
+          showToast('麦克风已开启');
+        } catch (e) {
+          console.warn('[trtc] 重试开麦失败', e);
+          showToast('仍无法开启麦克风：请检查浏览器地址栏的麦克风权限（锁图标→网站设置→麦克风→允许）', true);
+        }
+        trtcUpdatePanel();
+        return;
+      }
       try {
         if (trtcState.muted) { await trtcState.client.unmuteLocalAudio(); trtcState.muted = false; }
         else { await trtcState.client.muteLocalAudio(); trtcState.muted = true; }
