@@ -1048,7 +1048,7 @@
           try { await client.startRemoteVideo({ userId: e.userId, view: tile }); } catch (err) { console.warn('[trtc] 远程视频订阅失败', err); }
         });
         client.on(TRTC.EVENT.REMOTE_VIDEO_UNAVAILABLE, (e) => trtcRemoveTile('r-' + e.userId));
-        await client.enterRoom({ sdkAppId: d.sdk_app_id, userId: d.user_id, userSig: d.user_sig, roomId: { strRoomId: String(d.room_id) } });
+        await client.enterRoom({ sdkAppId: d.sdk_app_id, userId: d.user_id, userSig: d.user_sig, strRoomId: String(d.room_id) }); // v5：字符串房间号用平级 strRoomId 键
         await client.startLocalAudio();
         trtcState.client = client;
         trtcState.inRoom = true;
