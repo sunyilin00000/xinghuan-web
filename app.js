@@ -929,8 +929,9 @@
     // v1.4 教师后端权限门：仅管理员/授课教师可见；普通成员登录后不可见
     function canSeeTeacherBackend() {
       const u = state.user || {};
-      const isAdminUser = u.super_admin === true || u.role === 'admin' || u.course_teacher === true;
-      return isAdminUser && state.classroom.role === 'teacher';
+      // v2.12.4 全局管理员（含超级管理员）不受课堂角色限制；其他教师仍要求授课身份
+      if (u.super_admin === true || u.role === 'admin') return true;
+      return u.course_teacher === true && state.classroom.role === 'teacher';
     }
 
     function updateTeacherControls() {
