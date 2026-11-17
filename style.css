@@ -6543,3 +6543,36 @@ body.join-open {
   background:rgba(6,11,20,.98);border-left:1px solid rgba(124,199,255,.2);box-shadow:-30px 0 80px rgba(0,0,0,.5);
   transform:translateX(105%);transition:transform .45s cubic-bezier(.22,1,.36,1)}
 #hubAiDrawer.open{transform:none}
+
+/* ===== v2.20 天文社区 ===== */
+.community-page{margin-top:0}
+.cm-composer{margin:16px 18px;padding:16px;border:1px solid rgba(124,167,220,.16);border-radius:14px;background:rgba(255,255,255,.015)}
+.cm-composer textarea{width:100%;min-height:90px;padding:12px 14px;border:1px solid rgba(124,167,220,.2);border-radius:10px;background:rgba(255,255,255,.03);color:#eaf2fb;font-size:13px;outline:none;resize:vertical;font-family:inherit}
+.cm-composer textarea:focus{border-color:#7cc7ff}
+.cm-composer input{padding:9px 12px;border:1px solid rgba(124,167,220,.2);border-radius:9px;background:rgba(255,255,255,.03);color:#eaf2fb;font-size:12px;outline:none;font-family:inherit}
+.cm-composer input:focus{border-color:#7cc7ff}
+.cm-actions{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
+.cm-post{border:1px solid rgba(124,167,220,.14);border-radius:14px;padding:14px 16px;margin-bottom:14px;background:rgba(255,255,255,.015)}
+.cm-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.cm-ava{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#1c3a63,#0c1830);color:#7cc7ff;font-size:13px;border:1px solid rgba(124,167,220,.2)}
+.cm-author{font-size:13px;font-weight:600;color:#eaf2fb}
+.cm-orgtag{font-size:9px;padding:2px 8px;border-radius:999px;border:1px solid rgba(124,167,220,.3);color:#93a7c4}
+.cm-time{margin-left:auto;font-size:10px;color:#5c7194}
+.cm-text{font-size:13px;color:#d8dee6;line-height:1.7;white-space:pre-wrap;word-break:break-word}
+.cm-media{display:grid;gap:8px;margin-top:10px}
+.cm-media img{width:100%;max-width:360px;border-radius:10px;border:1px solid rgba(124,167,220,.15)}
+.cm-media video{width:100%;max-width:360px;border-radius:10px;background:#000}
+.cm-media audio{width:100%;max-width:320px}
+.cm-meta{margin-top:10px;font-size:11px;color:#e6c78f;background:rgba(230,199,143,.06);border:1px solid rgba(230,199,143,.2);border-radius:8px;padding:8px 12px;line-height:1.7}
+.cm-foot{display:flex;align-items:center;gap:14px;margin-top:12px}
+.cm-like{background:none;border:0;color:#93a7c4;font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px}
+.cm-like:hover{color:#e6c78f}
+.cm-like.liked{color:#e6c78f}
+.cm-comments{margin-top:10px;border-top:1px dashed rgba(124,167,220,.12);padding-top:10px;display:grid;gap:8px}
+.cm-comment{font-size:12px;color:#c9d6e8;line-height:1.6}
+.cm-comment b{color:#eaf2fb}
+.cm-comment.ai b{color:#7cc7ff}
+.cm-comment time{color:#5c7194;font-size:10px;margin-left:8px}
+.cm-crow{display:flex;gap:8px;margin-top:4px}
+.cm-crow input{flex:1;padding:8px 12px;border:1px solid rgba(124,167,220,.18);border-radius:999px;background:rgba(255,255,255,.03);color:#eaf2fb;font-size:12px;outline:none;font-family:inherit}
+.cm-crow .btn{min-height:32px;font-size:11px}

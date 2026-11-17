@@ -285,6 +285,7 @@
           <button class="page-tab" data-tab="resources" type="button">学习资源</button>
           <button class="page-tab" data-tab="console" type="button">控制台</button>
       <button class="page-tab" data-tab="workbench" type="button">工作台</button>
+      <button class="page-tab" data-tab="community" type="button" id="communityTab" hidden>天文社区</button>
         </nav>
 
         <section class="identity-strip" aria-label="登录状态">
@@ -801,6 +802,40 @@
         </div>
       </div>
     </section>
+    <!-- v2.20 天文社区（仅海大/南开天协成员可见） -->
+    <section id="communityPage" class="panel community-page" hidden aria-label="天文社区">
+      <header class="panel-head">
+        <div class="panel-title-wrap">
+          <h2 class="panel-title">天文社区</h2>
+          <p class="panel-subtitle">海大天协 × 南开天协 · 知识探讨 / 摄影观测 · @星环AI 即可召唤</p>
+        </div>
+      </header>
+      <div class="cm-body">
+        <div class="wb-tabs" style="padding-bottom:0">
+          <button class="wb-tab active" data-cmt="discuss" type="button">天文知识探讨</button>
+          <button class="wb-tab" data-cmt="photo" type="button">天文摄影观测</button>
+        </div>
+        <div class="cm-composer">
+          <textarea id="cmContent" maxlength="1000" placeholder="分享天文日常…（@星环AI 它会回答；探讨区 AI 自动参与）"></textarea>
+          <div id="cmPhotoMeta" hidden style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:8px">
+            <input id="cmMetaLoc" placeholder="拍摄地址" maxlength="80" />
+            <input id="cmMetaTime" placeholder="拍摄时间" maxlength="40" />
+            <input id="cmMetaTarget" placeholder="拍摄目标" maxlength="60" />
+            <input id="cmMetaDevice" placeholder="设备" maxlength="80" />
+            <input id="cmMetaParams" placeholder="参数（ISO/快门/光圈/张数…）" maxlength="200" />
+          </div>
+          <div class="cm-actions">
+            <input type="file" id="cmFile" accept="image/*,video/*,audio/*" multiple hidden />
+            <button class="btn" id="cmAttach" type="button">附图片/视频/语音</button>
+            <span id="cmAttachInfo" style="font-size:11px;color:var(--faint)"></span>
+            <span style="flex:1"></span>
+            <button class="btn btn-gold" id="cmPost" type="button">发布</button>
+          </div>
+        </div>
+        <div id="cmFeed" style="padding:0 18px 18px"></div>
+      </div>
+    </section>
+
 
 
         <footer class="console-strip">

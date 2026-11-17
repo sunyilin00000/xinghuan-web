@@ -228,6 +228,7 @@
       checkLiveLecture();
       document.getElementById('hubAiFloat').hidden = false;
       wbSetup();
+      if (canSeeAstroRes()) document.getElementById('communityTab').hidden = false;
       closeLogin();
       syncVoiceEnrollButton();
     }
@@ -1797,6 +1798,141 @@
       if (document.getElementById('onlineClass').classList.contains('open')) grpLoad();
     };
 
+
+    // ---------- v2.20 天文社区（仅海大/南开天协成员；AI 参与讨论） ----------
+    const cmState = { section: 'discuss', posts: [], media: [], timer: null, expanded: new Set() };
+    async function cmApi(path, body) { return apiFetch(path, { method: 'POST', body: body || {} }); }
+    async function cmLoad() {
+      const r = await cmApi('/astro/posts', { section: cmState.section });
+      if (r && r.code === 403) { switchPage('classroom'); showToast('仅天文协会成员可见社区', true); return; }
+      cmState.posts = (r && r.data) || [];
+      cmRender();
+    }
+    async function cmMediaUrl(fileId) {
+      const key = 'mu_' + fileId;
+      if (cmState[key]) return cmState[key];
+      const r = await cmApi('/astro/media_url', { file_id: fileId });
+      const url = (r && r.data && r.data.url) || '';
+      cmState[key] = url;
+      return url;
+    }
+    function cmRender() {
+      const feed = document.getElementById('cmFeed');
+      if (!feed) return;
+      feed.innerHTML = cmState.posts.map(p => {
+        const likedKey = p._id + '_' + (state.user || {})._id;
+        const meta = p.section === 'photo' && p.photo_meta ? p.photo_meta : null;
+        return '<article class="cm-post" data-id="' + p._id + '">' +
+          '<div class="cm-head"><div class="cm-ava">' + String(p.author_name || '?').slice(0, 1) + '</div>' +
+          '<span class="cm-author">' + p.author_name + '</span>' +
+          '<span class="cm-orgtag">' + (p.org === 'nankai_astro' ? '南开天协' : '海大天协') + '</span>' +
+          (p.ai_answered ? '<span class="cm-orgtag" style="border-color:rgba(124,199,255,.4);color:#7cc7ff">AI 已参与</span>' : '') +
+          '<span class="cm-time">' + new Date(p.at).toLocaleString('zh-CN', { hour12: false }) + '</span></div>' +
+          (p.content ? '<div class="cm-text"></div>' : '') +
+          '<div class="cm-media"></div>' +
+          (meta ? '<div class="cm-meta">【观测档案】' + [meta.location && '地址 ' + meta.location, meta.time && '时间 ' + meta.time, meta.target && '目标 ' + meta.target, meta.device && '设备 ' + meta.device, meta.params && '参数 ' + meta.params].filter(Boolean).join(' · ') + '</div>' : '') +
+          '<div class="cm-foot"><button class="cm-like" data-like="' + p._id + '">♡ <span>' + (p.likes || 0) + '</span></button>' +
+          '<button class="cm-like" data-cmt="' + p._id + '">评论</button></div>' +
+          '<div class="cm-comments" hidden></div>' +
+          '<div class="cm-crow" hidden><input placeholder="友善评论，@星环AI 召唤 AI…" maxlength="300" /><button class="btn btn-gold" data-send="' + p._id + '">发送</button></div>' +
+          '</article>';
+      }).join('') || '<p style="color:var(--faint);font-size:13px;text-align:center;padding:30px">还没有帖子，来发第一帖</p>';
+      // 填文本
+      feed.querySelectorAll('.cm-post').forEach((el) => {
+        const p = cmState.posts.find(x => String(x._id) === el.dataset.id);
+        if (p && p.content) el.querySelector('.cm-text').textContent = p.content;
+        if (p && p.media && p.media.length) {
+          const box = el.querySelector('.cm-media');
+          p.media.forEach(m => {
+            cmMediaUrl(m.file_id).then(url => {
+              if (!url) return;
+              if (m.type === 'image') { const img = document.createElement('img'); img.src = url; box.appendChild(img); }
+              else if (m.type === 'video') { const v = document.createElement('video'); v.src = url; v.controls = true; box.appendChild(v); }
+              else { const a = document.createElement('audio'); a.src = url; a.controls = true; box.appendChild(a); }
+            });
+          });
+        }
+        const likeBtn = el.querySelector('[data-like]');
+        if (likeBtn) likeBtn.onclick = async () => {
+          const r = await cmApi('/astro/like', { post_id: p._id });
+          if (r && r.code === 0) { likeBtn.classList.toggle('liked', r.data.liked); cmLoad(); }
+        };
+        const cmtBtn = el.querySelector('[data-cmt]');
+        if (cmtBtn) cmtBtn.onclick = () => {
+          const box = el.querySelector('.cm-comments');
+          const row = el.querySelector('.cm-crow');
+          box.hidden = !box.hidden; row.hidden = box.hidden;
+          if (!box.hidden) cmLoadComments(p._id, box);
+        };
+        const sendBtn = el.querySelector('[data-send]');
+        if (sendBtn) sendBtn.onclick = async () => {
+          const input = el.querySelector('.cm-crow input');
+          const content = input.value.trim();
+          if (!content) return;
+          const r = await cmApi('/astro/comment', { post_id: p._id, content });
+          if (r && r.code === 0) { input.value = ''; cmLoadComments(p._id, el.querySelector('.cm-comments')); if (/@(星环AI|MOSS|moss)/.test(content)) setTimeout(cmLoad, 3000); }
+          else showToast((r && r.message) || '评论失败', true);
+        };
+      });
+    }
+    async function cmLoadComments(pid, box) {
+      const r = await cmApi('/astro/comments', { post_id: pid });
+      const list = (r && r.data) || [];
+      box.innerHTML = list.map(x =>
+        '<div class="cm-comment' + (x.is_ai ? ' ai' : '') + '"><b>' + x.author_name + '</b>' + String(x.content).replace(/</g, '&lt;') +
+        '<time>' + new Date(x.at).toLocaleTimeString('zh-CN', { hour12: false }) + '</time></div>').join('') || '<div class="cm-comment" style="color:#5c7194">还没有评论</div>';
+    }
+    async function cmPublish() {
+      const content = document.getElementById('cmContent').value.trim();
+      if (!content && !cmState.media.length) { showToast('写点什么或附上媒体', true); return; }
+      let media = cmState.media;
+      if (cmState.media.length) {
+        showToast('正在上传媒体…');
+        media = [];
+        for (const m of cmState.media) {
+          const b64 = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.readAsDataURL(m.file); });
+          const ext = (m.file.name.split('.').pop() || 'bin').slice(0, 5);
+          const up = await cmApi('/astro/media_upload', { data_base64: b64, ext });
+          if (up && up.code === 0) media.push({ type: m.type, file_id: up.data.file_id });
+        }
+      }
+      const body = { section: cmState.section, content, media };
+      if (cmState.section === 'photo') {
+        body.photo_meta = {
+          location: document.getElementById('cmMetaLoc').value,
+          time: document.getElementById('cmMetaTime').value,
+          target: document.getElementById('cmMetaTarget').value,
+          device: document.getElementById('cmMetaDevice').value,
+          params: document.getElementById('cmMetaParams').value
+        };
+      }
+      const r = await cmApi('/astro/post_add', body);
+      if (r && r.code === 0) {
+        document.getElementById('cmContent').value = '';
+        cmState.media = [];
+        document.getElementById('cmAttachInfo').textContent = '';
+        ['cmMetaLoc', 'cmMetaTime', 'cmMetaTarget', 'cmMetaDevice', 'cmMetaParams'].forEach(id => document.getElementById(id).value = '');
+        showToast('已发布，AI 正在赶来讨论…');
+        setTimeout(cmLoad, 1500);
+        cmLoad();
+      } else showToast((r && r.message) || '发布失败', true);
+    }
+    function cmBind() {
+      document.querySelectorAll('[data-cmt]').forEach(t => t.onclick = () => {
+        document.querySelectorAll('[data-cmt]').forEach(x => x.classList.toggle('active', x === t));
+        cmState.section = t.dataset.cmt;
+        document.getElementById('cmPhotoMeta').hidden = cmState.section !== 'photo';
+        cmLoad();
+      });
+      document.getElementById('cmAttach').onclick = () => document.getElementById('cmFile').click();
+      document.getElementById('cmFile').onchange = () => {
+        const files = Array.from(document.getElementById('cmFile').files || []);
+        cmState.media = files.map(f => ({ type: f.type.startsWith('video') ? 'video' : f.type.startsWith('audio') ? 'voice' : 'image', file: f })).slice(0, 6);
+        document.getElementById('cmAttachInfo').textContent = cmState.media.length ? '已选 ' + cmState.media.length + ' 个媒体' : '';
+      };
+      document.getElementById('cmPost').onclick = cmPublish;
+    }
+
     function canSeeTeacherBackend() {
       const u = state.user || {};
       // v2.12.4 全局管理员（含超级管理员）不受课堂角色限制；其他教师仍要求授课身份
@@ -2551,6 +2687,10 @@
       if (document.getElementById('workbenchPage')) {
         document.getElementById('workbenchPage').hidden = tab !== 'workbench';
         if (tab === 'workbench') { wbSetup(); wbLoad(); }
+      }
+      if (document.getElementById('communityPage')) {
+        document.getElementById('communityPage').hidden = tab !== 'community';
+        if (tab === 'community') { cmBind(); cmLoad(); }
       }
       if (elements.consolePage) {
         elements.consolePage.hidden = tab !== 'console';
