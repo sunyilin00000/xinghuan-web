@@ -695,6 +695,16 @@
               </div>
             </article>
           </div>
+
+          <!-- v2.12.5 天文资料分支：仅天文协会成员（海大天协/南开天协）可见 -->
+          <div id="astroResPanel" hidden style="margin:0 16px 16px;padding:18px;border:1px solid rgba(124,199,255,.28);border-radius:14px;background:linear-gradient(145deg,rgba(124,199,255,.06),rgba(255,255,255,.012))">
+            <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+              <span style="font-size:16px;letter-spacing:.18em;color:#7cc7ff">天文资料 · 协会成员专属（海大天协 / 南开天协）</span>
+              <span style="flex:1;height:1px;background:rgba(124,167,220,.14)"></span>
+            </div>
+            <div id="astroResList" class="res-grid"></div>
+            <p id="astroResHint" hidden style="color:#5c7194;font-size:12px;margin-top:4px">本板块仅天文协会成员可见，请使用天文协会成员账号登录。</p>
+          </div>
         </section>
 
         <!-- v2.12 控制台页：教师可见控制条；学生/匿名显示"您暂无权限" -->

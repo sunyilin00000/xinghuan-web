@@ -224,6 +224,7 @@
       elements.headerLoginButton.textContent = name;
       elements.headerLoginButton.disabled = false;
       elements.addRecordButton.disabled = false;
+      renderAstroRes();
       closeLogin();
       syncVoiceEnrollButton();
     }
@@ -927,6 +928,62 @@
     }
 
     // v1.4 教师后端权限门：仅管理员/授课教师可见；普通成员登录后不可见
+
+    // ---------- v2.12.5 天文资料分支：仅天文协会成员（海大/南开）可见 ----------
+    const ASTRO_RES = [
+      // 在此追加资料：{ tag, title, desc, url, code }
+    ];
+    function canSeeAstroRes() {
+      const u = state.user || {};
+      if (!u || !u.org) return false;
+      if (u.super_admin === true || u.role === 'admin') return true;
+      const org = normalizeOrg(u.org);
+      return org === 'astro' || org === 'nankai_astro';
+    }
+    function renderAstroRes() {
+      const panel = document.getElementById('astroResPanel');
+      const list = document.getElementById('astroResList');
+      const hint = document.getElementById('astroResHint');
+      if (!panel) return;
+      if (canSeeAstroRes()) {
+        panel.hidden = false;
+        hint.hidden = true;
+        list.innerHTML = ASTRO_RES.length ? ASTRO_RES.map(r =>
+          '<article class="res-card"><div class="res-tag-row"><span class="res-tag">' + (r.tag || '天文资料') + '</span>' +
+          (r.url && r.url.indexOf('baidu') !== -1 ? '<span class="res-tag tag-baidu">百度网盘</span>' : '') + '</div>' +
+          '<h3 class="res-title">' + r.title + '</h3><p class="res-desc">' + (r.desc || '') + '</p>' +
+          '<div class="res-actions">' +
+          (r.url ? '<a class="btn btn-gold res-link" href="' + r.url + '" target="_blank" rel="noopener">打开网盘</a>' : '') +
+          (r.code ? '<button class="btn res-code" type="button" data-code="' + r.code + '">提取码 ' + r.code + ' · 点击复制</button>' : '') +
+          '</div></article>').join('')
+          : '<p style="color:var(--faint);font-size:13px;padding:12px 4px">资料筹备中，协会管理员确定内容后上架。</p>';
+      } else if (state.mode === 'custom') {
+        panel.hidden = false;   // 已登录但非天文协会成员：显示提示
+        hint.hidden = false;
+        list.innerHTML = '';
+      } else {
+        panel.hidden = true;    // 未登录：完全隐藏
+      }
+    }
+
+
+    // ---------- v2.12.6 跨站 SSO：协会官网跳转带 #sso=令牌，自动登录 ----------
+    async function trySsoLogin() {
+      const m = (location.hash || '').match(/#sso=([A-Za-z0-9]+)/);
+      if (!m) return false;
+      try {
+        const payload = await apiFetch('/me', { method: 'POST', body: { token: m[1] } });
+        if (!payload || payload.code !== 0) return false;
+        const u = payload.data || {};
+        setLoggedIn({ ...u, token: m[1] });
+        history.replaceState(null, '', location.pathname + location.search); // 抹掉令牌
+        setConnection('online', '已连接');
+        showToast('已通过协会官网登录，欢迎 ' + (u.name || u.username || '成员'));
+        await Promise.allSettled([loadRecords(), loadClassroomCourses()]);
+        return true;
+      } catch (e) { console.warn('[sso] 自动登录失败', e); return false; }
+    }
+
     function canSeeTeacherBackend() {
       const u = state.user || {};
       // v2.12.4 全局管理员（含超级管理员）不受课堂角色限制；其他教师仍要求授课身份
@@ -2646,8 +2703,8 @@
         elements.consoleMessage.textContent = '初始化失败 · ' + getErrorMessage(error);
         showToast('初始化失败：' + getErrorMessage(error), true);
       }
-      // v1.4 默认进入登录页：任何身份都先登录，取消可回匿名看板
-      openLogin();
+      // v1.4 默认进入登录页；v2.12.6 若从协会官网 SSO 跳转则跳过
+      if (!(await trySsoLogin())) openLogin();
     }
 
     boot();
