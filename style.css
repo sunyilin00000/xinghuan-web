@@ -1314,7 +1314,9 @@
     }
 
 
-    .tab-classroom[hidden],
+    .console-denied[hidden],
+.console-slot[hidden],
+.tab-classroom[hidden],
 .resources-page[hidden],
 .console-page[hidden],
 .teacher-control-bar[hidden],
