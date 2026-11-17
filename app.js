@@ -1186,13 +1186,6 @@
     function caBind() {
       const sel = document.getElementById('caSeries');
       if (sel) sel.onchange = () => { caState.seriesId = sel.value; caLoadLectures(); };
-      const addSeries = document.getElementById('caSeriesAdd');
-      if (addSeries) addSeries.onclick = async () => {
-        const name = document.getElementById('caSeriesName').value.trim();
-        if (!name) { showToast('请输入系列名称', true); return; }
-        const r = await caApi('/lecture/series/save', { title: name });
-        if (r && r.code === 0) { document.getElementById('caSeriesName').value = ''; caState.seriesId = r.data._id; await caLoadSeries(); }
-      };
       const addLec = document.getElementById('caLectureAdd');
       if (addLec) addLec.onclick = async () => {
         if (!caState.seriesId) { showToast('请先选择/新建系列', true); return; }
@@ -3095,6 +3088,28 @@
       elements.micToggle.addEventListener('click', toggleMic);
       const gateBtn = document.getElementById('gateGoConsole');
       if (gateBtn) gateBtn.addEventListener('click', () => switchPage('console'));
+      // v2.16.4 新建系列：全局健壮绑定（任何状态都可用，失败必弹原因）
+      const caSeriesAddBtn = document.getElementById('caSeriesAdd');
+      if (caSeriesAddBtn) caSeriesAddBtn.onclick = async () => {
+        try {
+          const nameEl = document.getElementById('caSeriesName');
+          const name = (nameEl.value || '').trim();
+          if (!name) { showToast('请输入系列名称', true); return; }
+          const r = await caApi('/lecture/series/save', { title: name });
+          console.warn('[ca] 新建系列返回', JSON.stringify(r));
+          if (r && r.code === 0) {
+            nameEl.value = '';
+            caState.seriesId = r.data._id;
+            await caLoadSeries();
+            showToast('系列已创建');
+          } else {
+            showToast('创建失败：' + ((r && r.message) || '未知错误'), true);
+          }
+        } catch (e) {
+          console.error('[ca] 新建系列异常', e);
+          showToast('创建异常：' + (e.message || e), true);
+        }
+      };
       const ljo = document.getElementById('lectureJoinOnline');
       if (ljo) ljo.addEventListener('click', () => ocJoin('online'));
       const ljc = document.getElementById('lectureJoinCheckin');
