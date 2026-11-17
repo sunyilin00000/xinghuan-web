@@ -284,6 +284,7 @@
           <button class="page-tab active" data-tab="classroom" type="button">课堂看板</button>
           <button class="page-tab" data-tab="resources" type="button">学习资源</button>
           <button class="page-tab" data-tab="console" type="button">控制台</button>
+      <button class="page-tab" data-tab="workbench" type="button">工作台</button>
         </nav>
 
         <section class="identity-strip" aria-label="登录状态">
@@ -752,6 +753,55 @@
             <p class="denied-sub">控制台仅管理员与授课教师可用</p>
           </div>
         </section>
+    <!-- v2.18 工作台：按组织换 logo · 成员管理 · 资料管理 · 操作日志 -->
+    <section id="workbenchPage" class="panel workbench-page" hidden aria-label="工作台">
+      <header class="panel-head">
+        <div class="panel-title-wrap" style="display:flex;align-items:center;gap:14px">
+          <img id="wbLogo" src="logo.png" alt="组织徽标" style="width:44px;height:44px;border-radius:50%;box-shadow:0 0 0 1px rgba(230,199,143,.3)" />
+          <div>
+            <h2 class="panel-title" id="wbTitle">工作台</h2>
+            <p class="panel-subtitle" id="wbOrgName">—</p>
+          </div>
+        </div>
+      </header>
+      <div class="wb-body">
+        <div class="wb-tabs">
+          <button class="wb-tab active" data-wbt="members" type="button">成员管理</button>
+          <button class="wb-tab" data-wbt="res" type="button">资料管理</button>
+          <button class="wb-tab" data-wbt="logs" type="button">操作日志</button>
+        </div>
+        <div id="wbMembers" style="padding:16px 18px">
+          <div class="ap-toolbar">
+            <input id="wbSearch" placeholder="搜索姓名 / 账号 / 部门 / 校区" />
+            <button class="btn btn-gold" id="wbAddMember" type="button" style="min-height:34px;font-size:12px">新建账号</button>
+            <span id="wbCount"></span>
+          </div>
+          <div class="ap-table-wrap">
+            <table class="ap-table">
+              <thead><tr><th>姓名</th><th>账号</th><th>组织</th><th>部门</th><th>身份</th><th style="width:250px">操作</th></tr></thead>
+              <tbody id="wbTbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="wbRes" style="padding:16px 18px" hidden>
+          <div class="ap-toolbar">
+            <span style="color:var(--faint);font-size:12px">「天文资料」对海大天协与南开天协共享可见；其他协会登录后不可见</span>
+            <span style="flex:1"></span>
+            <button class="btn btn-gold" id="wbResAdd" type="button" style="min-height:34px;font-size:12px">上传资料</button>
+          </div>
+          <div id="wbResList" class="ap-list"></div>
+        </div>
+        <div id="wbLogs" style="padding:16px 18px" hidden>
+          <div class="ap-toolbar">
+            <span style="color:var(--faint);font-size:12px">所有管理员操作留痕 · 海大/南开一视同仁</span>
+            <span style="flex:1"></span>
+            <button class="res-btn" id="wbLogRefresh" type="button">刷新</button>
+          </div>
+          <div id="wbLogList" class="ap-list"></div>
+        </div>
+      </div>
+    </section>
+
 
         <footer class="console-strip">
           <span id="consoleMessage" class="console-message">初始化 CloudBase Web SDK</span>
@@ -892,6 +942,10 @@
       <div id="ocQuizBox"></div>
     </div>
     <div class="oc-sec">
+      <div class="oc-kicker">我的小组（舰队分组）</div>
+      <div id="ocGroupBox"></div>
+    </div>
+    <div class="oc-sec">
       <div class="oc-kicker">连麦</div>
       <div id="ocMicBox"></div>
     </div>
@@ -914,8 +968,10 @@
         <div id="lsQuiz"></div>
       </div>
       <div class="ls-col">
-        <div class="oc-kicker">连麦申请与管理</div>
+        <div class="oc-kicker">连麦申请与管理 <button class="res-btn" id="lsGroupBtn" type="button" style="margin-left:8px">随机分组</button></div>
         <div id="lsMics" class="oc-roster"></div>
+        <div class="oc-kicker" style="margin-top:16px">舰队分组 · 小组结果</div>
+        <div id="lsGroups"></div>
       </div>
     </div>
   </div>
@@ -966,7 +1022,19 @@
     </div>
   </div>
 
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  
+    <!-- v2.18 星环 AI -->
+    <button id="hubAiFloat" hidden title="星环 AI">✦</button>
+    <div id="hubAiDrawer">
+      <div class="ai-head"><span>✦ 星环 AI</span><button id="hubAiClose" type="button">×</button></div>
+      <div class="ai-msgs" id="hubAiMsgs"></div>
+      <div class="ai-input">
+        <input id="hubAiText" maxlength="500" placeholder="问点什么…" />
+        <button id="hubAiSend" type="button">发送</button>
+      </div>
+    </div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="script.js"></script>
   <script src="echarts.min.js"></script>

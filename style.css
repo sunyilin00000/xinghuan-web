@@ -6529,3 +6529,17 @@ body.join-open {
 .ui-card .field input{width:100%;padding:11px 14px;border:1px solid rgba(124,167,220,.2);border-radius:11px;
   background:rgba(255,255,255,.03);color:#eaf2fb;font-size:14px;outline:none;font-family:inherit}
 .ui-card .field input:focus{border-color:#7cc7ff}
+
+/* ===== v2.18 工作台 + 星环 AI ===== */
+.workbench-page{margin-top:0}
+.wb-tabs{display:flex;gap:8px;padding:14px 18px 0}
+.wb-tab{padding:9px 24px;border:1px solid var(--line);border-radius:999px;background:none;color:var(--muted);font-size:13px;cursor:pointer;font-family:inherit}
+.wb-tab.active{border-color:rgba(230,199,143,.55);color:var(--gold);background:rgba(230,199,143,.07)}
+#hubAiFloat{position:fixed;right:26px;bottom:26px;z-index:66;width:56px;height:56px;border-radius:50%;border:1px solid rgba(124,199,255,.5);
+  background:radial-gradient(circle at 30% 30%,#123055,#070d1a);color:#7cc7ff;font-size:20px;cursor:pointer;
+  box-shadow:0 0 28px rgba(124,199,255,.35);font-family:inherit}
+#hubAiFloat:hover{transform:scale(1.07)}
+#hubAiDrawer{position:fixed;top:0;right:0;bottom:0;z-index:91;width:min(400px,92vw);display:flex;flex-direction:column;
+  background:rgba(6,11,20,.98);border-left:1px solid rgba(124,199,255,.2);box-shadow:-30px 0 80px rgba(0,0,0,.5);
+  transform:translateX(105%);transition:transform .45s cubic-bezier(.22,1,.36,1)}
+#hubAiDrawer.open{transform:none}

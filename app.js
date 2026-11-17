@@ -226,6 +226,8 @@
       elements.addRecordButton.disabled = false;
       renderAstroRes();
       checkLiveLecture();
+      document.getElementById('hubAiFloat').hidden = false;
+      wbSetup();
       closeLogin();
       syncVoiceEnrollButton();
     }
@@ -958,12 +960,8 @@
           (r.code ? '<button class="btn res-code" type="button" data-code="' + r.code + '">提取码 ' + r.code + ' · 点击复制</button>' : '') +
           '</div></article>').join('')
           : '<p style="color:var(--faint);font-size:13px;padding:12px 4px">资料筹备中，协会管理员确定内容后上架。</p>';
-      } else if (state.mode === 'custom') {
-        panel.hidden = false;   // 已登录但非天文协会成员：显示提示
-        hint.hidden = false;
-        list.innerHTML = '';
       } else {
-        panel.hidden = true;    // 未登录：完全隐藏
+        panel.hidden = true;    // v2.18：非海大/南开（含其他协会与未登录）：彻底隐藏，不给任何提示
       }
     }
 
@@ -1313,6 +1311,8 @@
       if (document.getElementById('lectureScreen') && !document.getElementById('lectureScreen').hidden) lsRender(list, people);
       qzStudentRender();
       lsQuizRender();
+      grpLoad();
+      if (document.getElementById('lectureScreen') && !document.getElementById('lectureScreen').hidden) lsGroupsRender();
     }
     // 教师大屏
     async function lsOpen(lecture) {
@@ -1543,6 +1543,259 @@
       document.getElementById('uiModal').onclick = e => { if (e.target.id === 'uiModal') uiClose(); };
       uiOpen();
     }
+
+
+    // ---------- v2.18 工作台（成员管理/资料管理/日志，多组织） ----------
+    const ORG_DEFS = {
+      astro: { name: '中国海洋大学天文协会', logo: 'logo.png' },
+      nankai_astro: { name: '南开大学天文协会', logo: 'nankai-logo.png' }
+    };
+    const wbState = { members: [], isAdmin: false };
+    // 经 SCF /member-bridge 中转调用 memberService（鉴权透传）
+    async function wbCall(action, data) {
+      const response = await fetch(SCF_API + '/member-bridge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Member-Token': state.user.token },
+        body: JSON.stringify({ action, data: data || {} })
+      });
+      return response.json();
+    }
+    function wbSetup() {
+      const u = state.user || {};
+      const orgKey = normalizeOrg(u.org || 'astro');
+      const def = ORG_DEFS[orgKey] || ORG_DEFS.astro;
+      const logoEl = document.getElementById('wbLogo');
+      if (logoEl) logoEl.src = def.logo;
+      const titleEl = document.getElementById('wbTitle');
+      if (titleEl) titleEl.textContent = def.name + ' · 工作台';
+      const orgEl = document.getElementById('wbOrgName');
+      if (orgEl) orgEl.textContent = 'ORG / ' + orgKey + (wbState.isAdmin ? ' · 管理员视图' : ' · 只读视图');
+    }
+    async function wbLoad() {
+      await Promise.allSettled([wbLoadMembers(), wbLoadRes(), wbLoadLogs()]);
+    }
+    async function wbLoadMembers() {
+      const r = await wbCall('web_am_list');
+      if (r && r.code === 403) { wbState.isAdmin = false; wbSetup(); document.getElementById('wbMembers').innerHTML = '<p style="padding:20px;color:var(--faint);font-size:13px">仅组织管理员可管理成员</p>'; return; }
+      wbState.isAdmin = true; wbSetup();
+      wbState.members = (r && r.data) || [];
+      wbRenderMembers();
+    }
+    function wbRenderMembers() {
+      const q = (document.getElementById('wbSearch').value || '').trim();
+      const rows = wbState.members.filter(m => !q || [m.name, m.username, m.department, m.campus].join('|').indexOf(q) !== -1);
+      document.getElementById('wbCount').textContent = rows.length + ' / ' + wbState.members.length;
+      document.getElementById('wbTbody').innerHTML = rows.map(m => {
+        const tags = [];
+        if (m.role === 'admin') tags.push('<span class="ap-tag">管理员</span>');
+        if (m.subadmin) tags.push('<span class="ap-tag sub">次级管理员</span>');
+        return '<tr><td>' + (m.name || '-') + '</td><td>' + (m.username || '-') + '</td><td>' + (m.org || '-') + '</td><td>' +
+          (m.department || '-') + '</td><td>' + (tags.join('') || '成员') + '</td>' +
+          '<td><div class="ap-rowbtns">' +
+          '<button class="ap-mini" onclick="wbResetPwd(\'' + m._id + '\',\'' + (m.name || m.username) + '\')">改密</button>' +
+          '<button class="ap-mini" onclick="wbSubAdmin(\'' + m._id + '\',\'' + (m.name || m.username) + '\')">次级权限</button>' +
+          (String(m.username).indexOf('test') === 0 || m.role !== 'admin' ? '<button class="ap-mini danger" onclick="wbDelMember(\'' + m._id + '\',\'' + (m.name || m.username) + '\')">删除</button>' : '') +
+          '</div></td></tr>';
+      }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--faint)">无成员</td></tr>';
+    }
+    window.wbResetPwd = async (id, name) => {
+      const pwd = await uiPrompt({ title: '重置密码 · ' + name, fields: [{ id: 'p', label: '新密码（至少 4 位）', password: true }] });
+      if (!pwd || !pwd.p) return;
+      const r = await wbCall('web_am_reset_pwd', { member_id: id, new_password: pwd.p });
+      showToast((r && r.code === 0) ? '密码已重置' : ('失败：' + ((r && r.message) || '')), !(r && r.code === 0));
+    };
+    window.wbDelMember = async (id, name) => {
+      if (!(await uiConfirm('删除成员「' + name + '」？此操作会记入日志。', '删除成员'))) return;
+      const r = await wbCall('web_am_delete', { member_id: id });
+      showToast((r && r.code === 0) ? '已删除' : ('失败：' + ((r && r.message) || '')), !(r && r.code === 0));
+      wbLoadMembers();
+    };
+    window.wbSubAdmin = async (id, name) => {
+      const on = await uiConfirm('将「' + name + '」设为次级管理员？（拥有成员编辑/删除、改密、活动管理权限）', '次级管理员');
+      if (on === null) return;
+      const perms = { member_edit: true, member_delete: true, password_reset: true, activity_manage: true, subadmin_manage: false };
+      const r = await wbCall('web_am_set_subadmin', { member_id: id, subadmin: on, perms });
+      showToast((r && r.code === 0) ? '已保存' : ('失败：' + ((r && r.message) || '')), !(r && r.code === 0));
+      wbLoadMembers();
+    };
+    document.getElementById('wbAddMember').onclick = async () => {
+      const v = await uiPrompt({
+        title: '新建成员账号（创建即为本组织管理员）',
+        fields: [
+          { id: 'name', label: '姓名', placeholder: '如：孙颢函' },
+          { id: 'username', label: '账号（拼音小写全拼）', placeholder: 'sunhaohan' },
+          { id: 'password', label: '密码', placeholder: '如 sunhaohan', password: true },
+          { id: 'org', label: '组织（全局管理员可指定：astro 海大 / nankai_astro 南开）', placeholder: 'astro' }
+        ]
+      });
+      if (!v || !v.username || !v.password) return;
+      const r = await wbCall('web_am_member_add', { name: v.name || v.username, username: v.username, password: v.password, org: v.org || 'astro' });
+      showToast((r && r.code === 0) ? '账号已创建（已是本组织管理员）' : ('创建失败：' + ((r && r.message) || '')), !(r && r.code === 0));
+      wbLoadMembers();
+    };
+    async function wbLoadRes() {
+      const r = await apiFetch('/res/list', { method: 'POST', body: {} });
+      const list = (r && r.data) || [];
+      document.getElementById('wbResList').innerHTML = list.map(d =>
+        '<div class="ap-li"><span class="grow"><b>' + d.title + '</b> <span style="color:var(--faint)">' +
+        ({ theory: '理论', observe: '观测', astro: '天文资料' }[d.cat] || d.cat) + ' · ' + (d.by || '') + '</span></span>' +
+        (wbState.isAdmin ? '<button class="ap-mini danger" onclick="wbResDel(\'' + d._id + '\')">删除</button>' : '') + '</div>'
+      ).join('') || '<div class="ap-li" style="color:var(--faint)">暂无资料</div>';
+    }
+    window.wbResDel = async (id) => {
+      if (!(await uiConfirm('删除该资料？', '删除资料'))) return;
+      await apiFetch('/res/del', { method: 'POST', body: { id } });
+      wbLoadRes();
+    };
+    document.getElementById('wbResAdd').onclick = async () => {
+      const v = await uiPrompt({
+        title: '上传资料（海大/南开管理员均可，天文资料两组织共享）',
+        fields: [
+          { id: 'title', label: '标题', placeholder: '如：梅西耶天体观测指南' },
+          { id: 'cat', label: '分类（theory 理论 / observe 观测 / astro 天文资料）', placeholder: 'astro' },
+          { id: 'url', label: '网盘链接（可空，空则走文件）', placeholder: 'https://...' },
+          { id: 'code', label: '提取码（可空）', placeholder: '' }
+        ]
+      });
+      if (!v || !v.title) return;
+      let data = { title: v.title, cat: v.cat || 'observe', kind: 'link', url: v.url, code: v.code };
+      if (!v.url) {
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        const file = await new Promise(res => { fileInput.onchange = () => res(fileInput.files[0] || null); fileInput.click(); });
+        if (!file) { showToast('未选择文件', true); return; }
+        if (file.size > 8 * 1024 * 1024) { showToast('文件超过 8MB', true); return; }
+        const b64 = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.readAsDataURL(file); });
+        data = { title: v.title, cat: v.cat || 'observe', kind: 'file', filename: file.name, data_base64: b64 };
+      }
+      const r = await apiFetch('/res/add', { method: 'POST', body: data });
+      showToast((r && r.code === 0) ? '已上传' : ('失败：' + ((r && r.message) || '')), !(r && r.code === 0));
+      wbLoadRes();
+    };
+    async function wbLoadLogs() {
+      const r = await wbCall('web_am_logs', { type: 'admin' });
+      const list = (r && r.data) || [];
+      const actName = { web_am_update: '编辑成员', web_am_delete: '删除成员', web_am_reset_pwd: '重置密码', web_am_set_subadmin: '调整次级权限', web_am_member_add: '新建账号', web_am_activity_add: '发起活动', web_am_activity_del: '删除活动', res_add: '上传资料' };
+      document.getElementById('wbLogList').innerHTML = list.map(d =>
+        '<div class="ap-li"><time>' + new Date(d.at).toLocaleString('zh-CN', { hour12: false }) + '</time>' +
+        '<span class="grow"><b>' + (d.actor_name || '-') + '</b>（' + (d.org || '-') + '）' + (actName[d.action] || d.action) +
+        (d.target_name ? ' → ' + d.target_name : '') + (d.detail ? ' · ' + d.detail : '') + '</span></div>'
+      ).join('') || '<div class="ap-li" style="color:var(--faint)">暂无日志</div>';
+    }
+    document.getElementById('wbLogRefresh').onclick = wbLoadLogs;
+
+    // ---------- v2.18 星环 AI 抽屉 ----------
+    const hubAiHistory = [];
+    document.getElementById('hubAiFloat').onclick = () => {
+      if (!classroomIsReady()) { showToast('请先登录', true); return; }
+      document.getElementById('hubAiDrawer').classList.toggle('open');
+    };
+    document.getElementById('hubAiClose').onclick = () => document.getElementById('hubAiDrawer').classList.remove('open');
+    function hubAiPush(role, text) {
+      const box = document.getElementById('hubAiMsgs');
+      const div = document.createElement('div');
+      div.className = 'ai-msg ' + (role === 'user' ? 'user' : 'bot');
+      div.textContent = text;
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+    }
+    async function hubAiAsk() {
+      const input = document.getElementById('hubAiText');
+      const q = input.value.trim();
+      if (!q || !state.user) return;
+      input.value = '';
+      hubAiPush('user', q);
+      hubAiHistory.push({ role: 'user', content: q });
+      hubAiPush('bot', '思考中…');
+      const thinking = document.getElementById('hubAiMsgs').lastChild;
+      try {
+        const r = await apiFetch('/ai/chat', { method: 'POST', body: { messages: hubAiHistory } });
+        const reply = (r && r.data && r.data.reply) || '';
+        thinking.textContent = reply || ('暂时没有回应：' + ((r && r.message) || ''));
+        if (reply) hubAiHistory.push({ role: 'assistant', content: reply });
+      } catch (e) { thinking.textContent = '连接失败：' + (e.message || e); }
+    }
+    document.getElementById('hubAiSend').onclick = hubAiAsk;
+    document.getElementById('hubAiText').addEventListener('keydown', e => { if (e.key === 'Enter') hubAiAsk(); });
+
+
+    // ---------- v2.19 三体舰队分组：学生组内讨论（私密）+ 结果上大屏 ----------
+    const grpState = { grouping: null, myGroup: null };
+    async function grpLoad() {
+      if (!ocState.lecture) return;
+      const r = await apiFetch('/lecture/group/get', { method: 'POST', body: { lecture_id: ocState.lecture._id } });
+      grpState.grouping = (r && r.data) || null;
+      const box = document.getElementById('ocGroupBox');
+      if (!box) return;
+      if (!grpState.grouping) { box.innerHTML = '<p style="color:#5c7194;font-size:12px">教师尚未分组</p>'; return; }
+      const myId = String((state.user || {})._id);
+      grpState.myGroup = (grpState.grouping.groups || []).find(g => g.members.some(m => String(m.id) === myId)) || null;
+      if (!grpState.myGroup) { box.innerHTML = '<p style="color:#5c7194;font-size:12px">你不在本轮分组中</p>'; return; }
+      const g = grpState.myGroup;
+      box.innerHTML =
+        '<div class="oc-person"><span class="tag live" style="border-color:rgba(230,199,143,.55);color:#e6c78f;font-size:12px;padding:4px 14px">' + g.name + '</span>' +
+        '<span style="color:var(--faint);font-size:11px">' + (g.mode === 'online' ? '线上组' : '现场组') + ' · ' + g.members.length + ' 人</span></div>' +
+        '<div style="font-size:11px;color:#93a7c4;margin:8px 0">' + g.members.map(m => m.name).join('、') + '</div>' +
+        '<div class="oc-chats" id="grpChats" style="max-height:140px;margin-bottom:8px"></div>' +
+        '<div class="oc-askrow"><input id="grpChatInput" placeholder="组内讨论（仅本组可见，不上大屏）" /><button class="btn btn-gold" style="min-height:36px;font-size:11px" id="grpChatBtn">发送</button></div>' +
+        '<div class="oc-askrow"><input id="grpResultInput" placeholder="提交小组结果（教师大屏展示）" /><button class="btn" style="min-height:36px;font-size:11px" id="grpResultBtn">提交结果</button></div>';
+      document.getElementById('grpChatBtn').onclick = grpSendChat;
+      document.getElementById('grpResultBtn').onclick = grpSendResult;
+      grpRenderChats();
+    }
+    async function grpRenderChats() {
+      const el = document.getElementById('grpChats');
+      if (!el || !grpState.myGroup || !ocState.lecture) return;
+      const r = await apiFetch('/lecture/group/msgs', { method: 'POST', body: { lecture_id: ocState.lecture._id, group_name: grpState.myGroup.name } });
+      const list = (r && r.data) || [];
+      el.innerHTML = list.map(m =>
+        '<div class="oc-chat"><b>' + (m.kind === 'result' ? '[结果] ' : '') + m.member_name + '</b>' +
+        String(m.content).replace(/</g, '&lt;') + '<time>' + new Date(m.at).toLocaleTimeString('zh-CN', { hour12: false }) + '</time></div>'
+      ).join('') || '<div class="oc-chat" style="color:#5c7194">组内还没有消息</div>';
+      el.scrollTop = el.scrollHeight;
+    }
+    async function grpSend(kind) {
+      const input = document.getElementById(kind === 'result' ? 'grpResultInput' : 'grpChatInput');
+      const content = (input.value || '').trim();
+      if (!content || !grpState.myGroup || !ocState.lecture) return;
+      const r = await apiFetch('/lecture/group/send', { method: 'POST', body: { lecture_id: ocState.lecture._id, group_name: grpState.myGroup.name, kind, content } });
+      if (!r || r.code !== 0) { showToast((r && r.message) || '发送失败', true); return; }
+      input.value = '';
+      grpRenderChats();
+      if (kind === 'result' && document.getElementById('lectureScreen') && !document.getElementById('lectureScreen').hidden) lsGroupsRender();
+    }
+    function grpSendChat() { grpSend('chat'); }
+    function grpSendResult() { grpSend('result'); }
+
+    // 大屏：分组墙 + 各组结果（讨论不上大屏）
+    async function lsGroupsRender() {
+      const box = document.getElementById('lsGroups');
+      if (!box || !ocState.lecture) return;
+      const r = await apiFetch('/lecture/group/results', { method: 'POST', body: { lecture_id: ocState.lecture._id } });
+      const d = (r && r.data) || { groups: [], results: [] };
+      if (!d.groups.length) { box.innerHTML = '<p style="color:#5c7194;font-size:12px">尚未分组（点上方"随机分组"）</p>'; return; }
+      let html = '';
+      d.groups.forEach(g => {
+        const res = d.results.filter(x => x.group_name === g.name);
+        html += '<div style="border:1px solid rgba(124,167,220,.14);border-radius:10px;padding:10px 12px;margin-bottom:8px">' +
+          '<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px"><b style="color:#e6c78f;font-size:13px">' + g.name + '</b>' +
+          '<span class="tag ' + (g.mode === 'online' ? 'online' : '') + '" style="font-size:9px;padding:2px 8px;border-radius:999px;border:1px solid rgba(124,167,220,.3);color:#93a7c4">' + (g.mode === 'online' ? '线上组' : '现场组') + '</span>' +
+          '<span style="color:#5c7194;font-size:11px">' + g.members.map(m => m.name).join('、') + '</span></div>' +
+          (res.length ? res.map(x => '<div style="font-size:12px;color:#d8dee6;margin-top:4px;padding:8px 10px;background:rgba(230,199,143,.06);border-radius:8px;border:1px solid rgba(230,199,143,.2)"><b style="color:#e6c78f">[结果]</b> ' + String(x.content).replace(/</g, '&lt;') + '<span style="color:#5c7194;font-size:10px;margin-left:8px">' + x.member_name + '</span></div>').join('') : '<div style="font-size:11px;color:#5c7194">等待小组提交结果</div>') +
+          '</div>';
+      });
+      box.innerHTML = html;
+    }
+    document.getElementById('lsGroupBtn').onclick = async () => {
+      if (!ocState.lecture) return;
+      const v = await uiPrompt({ title: '三体舰队随机分组', sub: '线上同学与现场同学各自成组；组名按舰队序列命名', fields: [{ id: 'size', label: '每组人数', placeholder: '4', value: '4' }] });
+      if (!v || !v.size) return;
+      const r = await apiFetch('/lecture/group/generate', { method: 'POST', body: { lecture_id: ocState.lecture._id, size: Number(v.size) || 4 } });
+      if (!r || r.code !== 0) { showToast((r && r.message) || '分组失败', true); return; }
+      showToast('已分成 ' + r.data.length + ' 个舰队小组');
+      lsGroupsRender();
+      if (document.getElementById('onlineClass').classList.contains('open')) grpLoad();
+    };
 
     function canSeeTeacherBackend() {
       const u = state.user || {};
@@ -2295,6 +2548,10 @@
         el.hidden = tab !== 'classroom';
       });
       if (elements.resourcesPage) elements.resourcesPage.hidden = tab !== 'resources';
+      if (document.getElementById('workbenchPage')) {
+        document.getElementById('workbenchPage').hidden = tab !== 'workbench';
+        if (tab === 'workbench') { wbSetup(); wbLoad(); }
+      }
       if (elements.consolePage) {
         elements.consolePage.hidden = tab !== 'console';
         if (tab === 'console') {
@@ -3207,6 +3464,16 @@
           showToast('创建异常：' + (e.message || e), true);
         }
       };
+      document.querySelectorAll('.wb-tab').forEach(t => t.onclick = () => {
+        document.querySelectorAll('.wb-tab').forEach(x => x.classList.toggle('active', x === t));
+        document.getElementById('wbMembers').hidden = t.dataset.wbt !== 'members';
+        document.getElementById('wbRes').hidden = t.dataset.wbt !== 'res';
+        document.getElementById('wbLogs').hidden = t.dataset.wbt !== 'logs';
+        if (t.dataset.wbt === 'logs') wbLoadLogs();
+        if (t.dataset.wbt === 'res') wbLoadRes();
+      });
+      const wbSearchEl = document.getElementById('wbSearch');
+      if (wbSearchEl) wbSearchEl.oninput = wbRenderMembers;
       const ljo = document.getElementById('lectureJoinOnline');
       if (ljo) ljo.addEventListener('click', () => ocJoin('online'));
       const ljc = document.getElementById('lectureJoinCheckin');
