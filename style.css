@@ -6474,3 +6474,38 @@ body.join-open {
 .trtc-tile video{width:100%;height:100%;object-fit:cover}
 .trtc-tile .tile-name{position:absolute;left:8px;bottom:6px;font-size:10px;color:#eaf2fb;
   background:rgba(0,0,0,.5);padding:2px 8px;border-radius:999px}
+
+/* ===== v2.15 线上课堂抽屉 + 教师大屏 ===== */
+#onlineClass{position:fixed;top:70px;right:0;bottom:0;z-index:75;width:min(380px,92vw);display:flex;flex-direction:column;
+  background:rgba(6,11,20,.98);border-left:1px solid rgba(124,167,220,.18);box-shadow:-30px 0 80px rgba(0,0,0,.5);
+  transform:translateX(105%);transition:transform .45s cubic-bezier(.22,1,.36,1)}
+#onlineClass.open{transform:none}
+.oc-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid rgba(124,167,220,.14);font-size:15px;letter-spacing:.12em;color:#7cc7ff}
+.oc-head button{background:none;border:0;color:#5c7194;font-size:22px;cursor:pointer}
+.oc-sec{padding:14px 18px;border-bottom:1px solid rgba(124,167,220,.08)}
+.oc-kicker{font-size:10px;letter-spacing:.25em;color:#5c7194;text-transform:uppercase;margin-bottom:10px}
+.oc-chats{display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto}
+.oc-chats.tall{max-height:52vh}
+.oc-chat{padding:9px 12px;border:1px solid rgba(124,167,220,.12);border-radius:10px;background:rgba(255,255,255,.02);font-size:12px;color:#d8dee6;line-height:1.6}
+.oc-chat b{color:#eaf2fb;margin-right:6px}
+.oc-chat time{color:#5c7194;font-size:10px;margin-left:8px}
+.oc-askrow{display:flex;gap:8px;margin-top:10px}
+.oc-askrow input{flex:1;min-width:0;padding:10px 14px;border:1px solid rgba(124,167,220,.2);border-radius:999px;background:rgba(255,255,255,.03);color:#eaf2fb;font-size:12px;outline:none}
+.oc-askrow .btn{min-height:36px;font-size:12px}
+.oc-roster{display:flex;flex-direction:column;gap:8px;max-height:200px;overflow-y:auto}
+.oc-person{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid rgba(124,167,220,.1);border-radius:10px;background:rgba(255,255,255,.015);font-size:12px;color:#d8dee6}
+.oc-person .tag{font-size:9px;padding:2px 8px;border-radius:999px;border:1px solid rgba(124,167,220,.3);color:#93a7c4;white-space:nowrap}
+.oc-person .tag.online{border-color:rgba(134,181,160,.45);color:#86b5a0}
+.oc-person .tag.live{border-color:rgba(230,199,143,.5);color:#e6c78f}
+.oc-person .tag.muted{border-color:rgba(255,139,139,.5);color:#f0a8a8}
+.oc-person .tag.req{border-color:rgba(124,199,255,.55);color:#7cc7ff}
+.oc-person .grow{flex:1}
+.oc-person button{padding:4px 10px;border:1px solid rgba(124,167,220,.25);border-radius:999px;background:none;color:#93a7c4;font-size:10px;cursor:pointer;font-family:inherit}
+.oc-person button:hover{color:#7cc7ff;border-color:#7cc7ff}
+#lectureScreen{position:fixed;inset:70px 0 0 0;z-index:74;background:rgba(4,7,15,.98);padding:24px 4vw;overflow-y:auto}
+.ls-head{display:flex;align-items:center;gap:18px;margin-bottom:20px}
+.ls-head span:first-child{font-size:18px;letter-spacing:.15em;color:#e6c78f}
+#lsCode{font-size:15px;color:#7cc7ff;letter-spacing:.2em}
+.ls-head button{margin-left:auto;background:none;border:0;color:#5c7194;font-size:26px;cursor:pointer}
+.ls-cols{display:grid;grid-template-columns:1.2fr .8fr;gap:24px}
+@media(max-width:900px){.ls-cols{grid-template-columns:1fr}}

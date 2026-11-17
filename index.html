@@ -387,7 +387,10 @@
                 <option value="">登录后选择进行中的课堂</option>
               </select>
               <button id="classroomRefreshButton" class="btn" type="button" disabled>同步课堂</button>
-              <button id="micToggle" class="btn btn-gold" type="button" disabled>开启收音</button>
+              <input id="lectureCode" placeholder="课堂邀请码" maxlength="12" style="width:110px;height:38px;padding:0 12px;border:1px solid rgba(124,167,220,.25);border-radius:8px;background:#0a1220;color:#eaf2fb;font-size:12px;outline:none" />
+          <button id="lectureJoinOnline" class="btn" type="button">线上进入</button>
+          <button id="lectureJoinCheckin" class="btn" type="button">现场签到</button>
+<button id="micToggle" class="btn btn-gold" type="button" disabled>开启收音</button>
           <button id="trtcButton" class="btn" type="button" hidden>语音教室</button>
               <button id="mossVoiceToggle" class="btn" type="button" hidden>MOSS 语音：开</button>
               <button id="generateDiagnosisButton" class="btn btn-gold diagnosis-button" type="button" hidden>生成 AI 诊断</button>
@@ -717,6 +720,22 @@
             </div>
           </header>
           <div id="consoleSlot" class="console-slot"></div>
+
+      <div id="courseAdmin" style="margin:14px;display:none">
+        <div style="border:1px solid rgba(124,167,220,.18);border-radius:14px;background:rgba(255,255,255,.015);overflow:hidden">
+          <div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.06);flex-wrap:wrap">
+            <strong style="font-size:14px;letter-spacing:.1em;color:#ebe0cc">课程管理</strong>
+            <select id="caSeries" style="min-width:200px;padding:8px 12px;border:1px solid rgba(124,167,220,.2);border-radius:9px;background:#0a1220;color:#eaf2fb;font-size:12px"></select>
+            <input id="caSeriesName" placeholder="新系列名称" style="width:160px;padding:8px 12px;border:1px solid rgba(124,167,220,.2);border-radius:9px;background:#0a1220;color:#eaf2fb;font-size:12px" />
+            <button class="btn" id="caSeriesAdd" type="button" style="min-height:34px;font-size:12px">新建系列</button>
+            <button class="btn btn-gold" id="caLectureAdd" type="button" style="min-height:34px;font-size:12px">新建讲次</button>
+          </div>
+          <div style="padding:14px 18px">
+            <div id="caLectures" style="display:grid;gap:10px"></div>
+          </div>
+        </div>
+      </div>
+
           <div id="consoleDenied" class="console-denied" hidden>
             <div class="denied-mark">!</div>
             <p class="denied-title">您暂无权限</p>
@@ -848,6 +867,79 @@
 
   <!-- v2.13 视频墙：本地 + 远程画面 -->
   <div id="trtcVideoWall" class="trtc-wall" hidden></div>
+
+
+  <!-- v2.15 线上课堂抽屉 -->
+  <div id="onlineClass">
+    <div class="oc-head"><span id="ocTitle">线上课堂</span><button id="ocClose" type="button">×</button></div>
+    <div class="oc-sec">
+      <div class="oc-kicker">课堂提问（全员可见，同步教师大屏）</div>
+      <div id="ocChats" class="oc-chats"></div>
+      <div class="oc-askrow"><input id="ocAsk" maxlength="300" placeholder="向课堂提问…" /><button id="ocAskBtn" class="btn btn-gold" type="button">发送</button></div>
+    </div>
+    <div class="oc-sec">
+      <div class="oc-kicker">课堂题目</div>
+      <div id="ocQuizBox"></div>
+    </div>
+    <div class="oc-sec">
+      <div class="oc-kicker">连麦</div>
+      <div id="ocMicBox"></div>
+    </div>
+    <div class="oc-sec">
+      <div class="oc-kicker">在场名单</div>
+      <div id="ocRoster" class="oc-roster"></div>
+    </div>
+  </div>
+
+  <!-- v2.15 教师大屏：提问墙 + 连麦管理 -->
+  <div id="lectureScreen" hidden>
+    <div class="ls-head"><span id="lsTitle">课堂大屏</span><span id="lsCode"></span><button id="lsClose" type="button">×</button></div>
+    <div class="ls-cols">
+      <div class="ls-col">
+        <div class="oc-kicker">提问墙（实时）</div>
+        <div id="lsChats" class="oc-chats tall"></div>
+      </div>
+      <div class="ls-col">
+        <div class="oc-kicker">课堂题目</div>
+        <div id="lsQuiz"></div>
+      </div>
+      <div class="ls-col">
+        <div class="oc-kicker">连麦申请与管理</div>
+        <div id="lsMics" class="oc-roster"></div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- v2.16 题目管理弹窗 -->
+  <div class="modal" id="qModal">
+    <div class="modal-card modal-wrap" style="width:min(640px,94vw)">
+      <button class="modal-close" data-close>×</button>
+      <h3 id="qModalTitle">题目管理</h3>
+      <p class="sub">课前预录或现场管理 · 发布后学生可作答</p>
+      <form id="qForm" style="margin-bottom:18px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <select id="qType" style="padding:10px 12px;border:1px solid rgba(124,167,220,.2);border-radius:10px;background:#0b1526;color:#eaf2fb;font-size:13px">
+            <option value="choice">选择题</option><option value="judge">判断题</option><option value="vote">投票</option><option value="blank">填空题</option>
+          </select>
+          <input id="qTitle" placeholder="题干" maxlength="200" style="flex:1;min-width:200px;padding:10px 14px;border:1px solid rgba(124,167,220,.2);border-radius:10px;background:rgba(255,255,255,.03);color:#eaf2fb;font-size:13px;outline:none" />
+          <label style="display:flex;align-items:center;gap:6px;color:#93a7c4;font-size:12px"><input type="checkbox" id="qAnon" /> 匿名</label>
+          <button class="btn btn-gold" type="submit" style="min-height:36px;font-size:12px">保存题目</button>
+        </div>
+        <div id="qOptionsRow" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+          <input class="q-opt" placeholder="选项A" maxlength="80" style="flex:1;min-width:140px;padding:9px 12px;border:1px solid rgba(124,167,220,.2);border-radius:10px;background:rgba(255,255,255,.03);color:#eaf2fb;font-size:12px;outline:none" />
+          <input class="q-opt" placeholder="选项B" maxlength="80" style="flex:1;min-width:140px;padding:9px 12px;border:1px solid rgba(124,167,220,.2);border-radius:10px;background:rgba(255,255,255,.03);color:#eaf2fb;font-size:12px;outline:none" />
+          <input class="q-opt" placeholder="选项C（可空）" maxlength="80" style="flex:1;min-width:140px;padding:9px 12px;border:1px solid rgba(124,167,220,.2);border-radius:10px;background:rgba(255,255,255,.03);color:#eaf2fb;font-size:12px;outline:none" />
+          <input class="q-opt" placeholder="选项D（可空）" maxlength="80" style="flex:1;min-width:140px;padding:9px 12px;border:1px solid rgba(124,167,220,.2);border-radius:10px;background:rgba(255,255,255,.03);color:#eaf2fb;font-size:12px;outline:none" />
+        </div>
+        <div id="qAnswerRow" style="margin-top:10px;display:none">
+          <input id="qAnswer" placeholder="正确答案（选择题填选项字母如 A / CD；判断题填 T 或 F）" maxlength="10" style="width:100%;padding:9px 14px;border:1px solid rgba(124,167,220,.2);border-radius:10px;background:rgba(255,255,255,.03);color:#eaf2fb;font-size:12px;outline:none" />
+        </div>
+      </form>
+      <div id="qList" class="oc-roster" style="max-height:300px"></div>
+      <div class="modal-msg" id="qMsg"></div>
+    </div>
+  </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 

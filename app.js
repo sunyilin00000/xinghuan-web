@@ -1108,6 +1108,314 @@
       trtcUpdatePanel();
     }
 
+
+    // ---------- v2.14 课程管理（系列/讲次/上课/邀请码） ----------
+    const caState = { series: [], lectures: [], seriesId: '', liveLecture: null };
+    async function caApi(path, body) {
+      return apiFetch(path, { method: 'POST', body: body || {} });
+    }
+    async function caLoadSeries() {
+      const r = await caApi('/lecture/series/list');
+      caState.series = (r && r.data) || [];
+      const sel = document.getElementById('caSeries');
+      sel.innerHTML = '<option value="">选择系列课程</option>' + caState.series.map(s =>
+        '<option value="' + s._id + '">' + s.title + '</option>').join('');
+      if (caState.seriesId) sel.value = caState.seriesId;
+      else if (caState.series.length) { caState.seriesId = caState.series[0]._id; sel.value = caState.seriesId; }
+      await caLoadLectures();
+    }
+    async function caLoadLectures() {
+      if (!caState.seriesId) { document.getElementById('caLectures').innerHTML = '<p style="color:#5c7194;font-size:12px">请先新建系列课程</p>'; return; }
+      const r = await caApi('/lecture/list', { series_id: caState.seriesId });
+      caState.lectures = (r && r.data) || [];
+      const statusName = { scheduled: '未开始', live: '上课中', ended: '已结束' };
+      document.getElementById('caLectures').innerHTML = caState.lectures.length ? caState.lectures.map(l => {
+        const live = l.status === 'live';
+        return '<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid rgba(124,167,220,.14);border-radius:11px;background:rgba(255,255,255,.015);flex-wrap:wrap">' +
+          '<span style="font-size:13px;color:#eaf2fb;min-width:200px"><b>' + l.title + '</b> <span style="color:#5c7194;font-size:11px">' + (l.date || '') + '</span></span>' +
+          '<span style="font-size:11px;padding:3px 12px;border-radius:999px;border:1px solid ' + (live ? 'rgba(134,181,160,.5);color:#86b5a0' : 'rgba(124,167,220,.25);color:#93a7c4') + '">' + (statusName[l.status] || l.status) + '</span>' +
+          (live ? '<span style="font-size:14px;color:#e6c78f;letter-spacing:.15em">邀请码 <b>' + l.invite_code + '</b></span>' : '') +
+          '<span style="flex:1"></span>' +
+          (l.status !== 'live' ? '<button class="btn btn-gold" style="min-height:32px;font-size:12px" onclick="caStart(\'' + l._id + '\')">开始上课</button>' : '<button class="btn" style="min-height:32px;font-size:12px" onclick="caEnd(\'' + l._id + '\')">结束上课</button>') +
+          '<button class="btn" style="min-height:32px;font-size:12px" onclick="caQuestions(\'' + l._id + '\',\'' + String(l.title).replace(/'/g, '&#39;') + '\')">题目</button>' +
+          '<button class="btn" style="min-height:32px;font-size:12px" onclick="caDelLecture(\'' + l._id + '\',\'' + l.title + '\')">删除</button>' +
+          '</div>';
+      }).join('') : '<p style="color:#5c7194;font-size:12px">该系列还没有讲次，点"新建讲次"</p>';
+    }
+    window.caStart = async (id) => {
+      const custom = prompt('输入自定义邀请码（留空则自动生成 4 位数字）：');
+      if (custom === null) return;
+      const r = await caApi('/lecture/start', { lecture_id: id, invite_code: custom });
+      if (!r || r.code !== 0) { showToast((r && r.message) || '开始上课失败', true); return; }
+      showToast('上课已开始，邀请码：' + r.data.invite_code);
+      state.classroom.sessionId = 'lecture_' + r.data.lecture_id; // 语音教室房间
+      await caLoadLectures();
+      trtcJoin(); // 默认打开语音教室
+      lsOpen({ _id: r.data.lecture_id, title: (caState.lectures.find(l => String(l._id) === String(r.data.lecture_id)) || {}).title || '课堂', invite_code: r.data.invite_code });
+    };
+    window.caEnd = async (id) => {
+      if (!confirm('结束本次上课？')) return;
+      const r = await caApi('/lecture/end', { lecture_id: id });
+      if (r && r.code === 0) { showToast('已结束'); if (trtcState.inRoom) trtcLeave(); await caLoadLectures(); }
+    };
+    window.caDelLecture = async (id, title) => {
+      if (!confirm('删除讲次「' + title + '」？')) return;
+      await caApi('/lecture/del', { lecture_id: id });
+      await caLoadLectures();
+    };
+    function caBind() {
+      const sel = document.getElementById('caSeries');
+      if (sel) sel.onchange = () => { caState.seriesId = sel.value; caLoadLectures(); };
+      const addSeries = document.getElementById('caSeriesAdd');
+      if (addSeries) addSeries.onclick = async () => {
+        const name = document.getElementById('caSeriesName').value.trim();
+        if (!name) { showToast('请输入系列名称', true); return; }
+        const r = await caApi('/lecture/series/save', { title: name });
+        if (r && r.code === 0) { document.getElementById('caSeriesName').value = ''; caState.seriesId = r.data._id; await caLoadSeries(); }
+      };
+      const addLec = document.getElementById('caLectureAdd');
+      if (addLec) addLec.onclick = async () => {
+        if (!caState.seriesId) { showToast('请先选择/新建系列', true); return; }
+        const title = prompt('讲次标题（如：恒星专题第一讲）：');
+        if (!title) return;
+        const date = prompt('日期（YYYY-MM-DD，可空）：') || '';
+        const code = prompt('自定义邀请码（可空，开始上课时可再设）：') || '';
+        const r = await caApi('/lecture/save', { series_id: caState.seriesId, title, date, invite_code: code });
+        if (r && r.code === 0) await caLoadLectures(); else showToast((r && r.message) || '创建失败', true);
+      };
+    }
+
+
+    // ---------- v2.15 线上课堂：邀请码进入 / 提问墙 / 连麦申请 / 禁言体系 ----------
+    const ocState = { lecture: null, timer: null, myMic: 'normal' };
+    function ocOpen() { document.getElementById('onlineClass').classList.add('open'); ocPoll(true); }
+    function ocClose() {
+      document.getElementById('onlineClass').classList.remove('open');
+      if (ocState.lecture && trtcState.inRoom && ocState.myMic !== 'normal') trtcLeave();
+      clearInterval(ocState.timer);
+      ocState.lecture = null; ocState.myMic = 'normal';
+    }
+    async function ocJoin(mode) {
+      if (!classroomIsReady()) { showToast('请先登录成员账号', true); return; }
+      const code = (document.getElementById('lectureCode').value || '').trim();
+      if (!code) { showToast('请输入邀请码', true); return; }
+      const r = await apiFetch(mode === 'checkin' ? '/lecture/checkin' : '/lecture/join', { method: 'POST', body: { code } });
+      if (!r || r.code !== 0) { showToast((r && r.message) || '进入失败', true); return; }
+      ocState.lecture = r.data.lecture;
+      document.getElementById('ocTitle').textContent = ocState.lecture.title + (mode === 'checkin' ? ' · 已签到' : '');
+      ocOpen();
+      showToast(mode === 'checkin' ? '签到成功' : '已进入线上课堂');
+    }
+    async function ocAsk() {
+      const input = document.getElementById('ocAsk');
+      const content = input.value.trim();
+      if (!content || !ocState.lecture) return;
+      const r = await apiFetch('/lecture/ask', { method: 'POST', body: { lecture_id: ocState.lecture._id, content } });
+      if (!r || r.code !== 0) { showToast((r && r.message) || '发送失败', true); return; }
+      input.value = '';
+      ocPoll(true);
+    }
+    async function ocMicRequest() {
+      if (!ocState.lecture) return;
+      const r = await apiFetch('/lecture/mic_request', { method: 'POST', body: { lecture_id: ocState.lecture._id } });
+      if (!r || r.code !== 0) { showToast((r && r.message) || '申请失败', true); return; }
+      showToast('连麦申请已发送，等待教师批准');
+      ocPoll(true);
+    }
+    async function ocPoll(force) {
+      if (!ocState.lecture) return;
+      const id = ocState.lecture._id;
+      const [chats, roster] = await Promise.all([
+        apiFetch('/lecture/chats', { method: 'POST', body: { lecture_id: id } }),
+        apiFetch('/lecture/attendance', { method: 'POST', body: { lecture_id: id } })
+      ]);
+      const list = (chats && chats.data) || [];
+      document.getElementById('ocChats').innerHTML = list.map(x =>
+        '<div class="oc-chat"><b>' + x.member_name + '</b>' + String(x.content).replace(/</g, '&lt;') +
+        '<time>' + new Date(x.at).toLocaleTimeString('zh-CN', { hour12: false }) + '</time></div>').join('')
+        || '<div class="oc-chat" style="color:#5c7194">还没有提问</div>';
+      const people = (roster && roster.data) || [];
+      const me = people.find(p => String(p.member_id) === String((state.user || {})._id));
+      ocState.myMic = me ? (me.mic || 'normal') : 'normal';
+      document.getElementById('ocMicBox').innerHTML = ocState.myMic === 'normal'
+        ? '<button class="btn btn-gold" style="min-height:34px;font-size:12px" id="ocMicBtn">申请连麦</button>'
+        : '<span class="oc-person"><span class="tag ' + (ocState.myMic === 'muted' ? 'muted' : ocState.myMic === 'live' ? 'live' : 'req') + '">' +
+          ({ requesting: '申请中，等待批准', live: '连麦中', muted: '已被禁言' }[ocState.myMic] || ocState.myMic) + '</span></span>';
+      const mb = document.getElementById('ocMicBtn');
+      if (mb) mb.onclick = ocMicRequest;
+      document.getElementById('ocRoster').innerHTML = people.map(p =>
+        '<div class="oc-person"><span>' + p.member_name + '</span>' +
+        '<span class="tag ' + (p.mode === 'online' ? 'online' : '') + '">' + (p.mode === 'online' ? '线上' : '现场') + '</span>' +
+        (p.mic && p.mic !== 'normal' ? '<span class="tag ' + (p.mic === 'live' ? 'live' : p.mic === 'muted' ? 'muted' : 'req') + '">' +
+          ({ requesting: '申请连麦', live: '连麦中', muted: '禁言中' }[p.mic]) + '</span>' : '') +
+        '</div>').join('') || '<div class="oc-person" style="color:#5c7194">暂无成员</div>';
+      // 连麦状态驱动本地音频 + 全员屏蔽被禁言者
+      if (ocState.myMic === 'live' && !trtcState.inRoom && ocState.lecture) {
+        state.classroom.sessionId = 'lecture_' + ocState.lecture._id;
+        trtcJoin();
+      }
+      if (trtcState.client && trtcState.inRoom) {
+        if (ocState.myMic === 'live' && !trtcState.muted) { try { await trtcState.client.unmuteLocalAudio(); } catch (e) {} }
+        else { try { await trtcState.client.muteLocalAudio(); } catch (e) {} }
+        for (const p of people) {
+          if (String(p.member_id) === String((state.user || {})._id)) continue;
+          if (!p.mic || p.mic !== 'live') { try { trtcState.client.muteRemoteAudio({ userId: String(p.member_id) }); } catch (e) {} }
+          else { try { trtcState.client.unmuteRemoteAudio({ userId: String(p.member_id) }); } catch (e) {} }
+        }
+      }
+      // 教师端：同步刷新大屏
+      if (document.getElementById('lectureScreen') && !document.getElementById('lectureScreen').hidden) lsRender(list, people);
+      qzStudentRender();
+      lsQuizRender();
+    }
+    // 教师大屏
+    async function lsOpen(lecture) {
+      ocState.lecture = lecture;
+      document.getElementById('lsTitle').textContent = lecture.title;
+      document.getElementById('lsCode').textContent = '邀请码 ' + lecture.invite_code;
+      document.getElementById('lectureScreen').hidden = false;
+      ocState.timer = setInterval(() => ocPoll(), 4000);
+      ocPoll(true);
+    }
+    function lsClose() {
+      document.getElementById('lectureScreen').hidden = true;
+      clearInterval(ocState.timer);
+      ocState.lecture = null;
+    }
+    function lsRender(list, people) {
+      document.getElementById('lsChats').innerHTML = list.map(x =>
+        '<div class="oc-chat"><b>' + x.member_name + '</b>' + String(x.content).replace(/</g, '&lt;') +
+        '<time>' + new Date(x.at).toLocaleTimeString('zh-CN', { hour12: false }) + '</time></div>').join('')
+        || '<div class="oc-chat" style="color:#5c7194">还没有提问</div>';
+      const micName = { requesting: '申请连麦', live: '连麦中', muted: '禁言中', normal: '' };
+      document.getElementById('lsMics').innerHTML = people.map(p =>
+        '<div class="oc-person"><span class="grow">' + p.member_name + '</span>' +
+        (p.mic && p.mic !== 'normal' ? '<span class="tag ' + (p.mic === 'live' ? 'live' : p.mic === 'muted' ? 'muted' : 'req') + '">' + micName[p.mic] + '</span>' : '') +
+        (p.mic === 'requesting' ? '<button onclick="ocMicSet(\'' + p._id + '\',\'live\')">批准</button>' : '') +
+        (p.mic === 'live' ? '<button onclick="ocMicSet(\'' + p._id + '\',\'muted\')">禁言</button>' : '') +
+        (p.mic === 'muted' ? '<button onclick="ocMicSet(\'' + p._id + '\',\'live\')">解除禁言</button>' : '') +
+        (p.mic !== 'normal' ? '<button onclick="ocMicSet(\'' + p._id + '\',\'normal\')">下麦</button>' : '') +
+        '</div>').join('') || '<div class="oc-person" style="color:#5c7194">暂无成员</div>';
+    }
+    window.ocMicSet = async (pid, mic) => {
+      await apiFetch('/lecture/mic_set', { method: 'POST', body: { participant_id: pid, mic } });
+      ocPoll(true);
+    };
+
+
+    // ---------- v2.16 题目系统：教师出题/发布/结果 + 学生作答 + 大屏人员墙 ----------
+    const qzState = { lectureId: '', answered: new Set() };
+    function qzApi(path, body) { return apiFetch(path, { method: 'POST', body: body || {} }); }
+    // 教师：打开管理弹窗
+    window.caQuestions = async (lectureId, title) => {
+      qzState.lectureId = lectureId;
+      document.getElementById('qModalTitle').textContent = '题目管理 · ' + title;
+      document.getElementById('qModal').classList.add('open');
+      await qzLoad();
+    };
+    async function qzLoad() {
+      const r = await qzApi('/lecture/q/list', { lecture_id: qzState.lectureId });
+      const list = (r && r.data) || [];
+      const typeName = { choice: '选择', judge: '判断', vote: '投票', blank: '填空' };
+      const stName = { draft: '草稿', published: '已发布', closed: '已结束' };
+      document.getElementById('qList').innerHTML = list.map(q =>
+        '<div class="oc-person"><span class="grow"><b>' + q.title + '</b> ' +
+        '<span class="tag">' + typeName[q.type] + '</span>' + (q.anonymous ? '<span class="tag">匿名</span>' : '') + '</span>' +
+        '<span class="tag ' + (q.status === 'published' ? 'live' : '') + '">' + stName[q.status] + '</span>' +
+        (q.status !== 'published' ? '<button onclick="qzPublish(\'' + q._id + '\')">发布</button>' : '<button onclick="qzClose(\'' + q._id + '\')">结束</button>') +
+        '<button onclick="qzResults(\'' + q._id + '\')">结果</button>' +
+        '<button onclick="qzDel(\'' + q._id + '\')">删除</button></div>'
+      ).join('') || '<p style="color:#5c7194;font-size:12px">还没有题目，在上方创建</p>';
+    }
+    window.qzPublish = async (id) => { await qzApi('/lecture/q/publish', { question_id: id }); qzLoad(); showToast('题目已发布'); };
+    window.qzClose = async (id) => { await qzApi('/lecture/q/close', { question_id: id }); qzLoad(); };
+    window.qzDel = async (id) => { if (confirm('删除题目？')) { await qzApi('/lecture/q/del', { question_id: id }); qzLoad(); } };
+    window.qzResults = async (id) => {
+      const r = await qzApi('/lecture/q/results', { question_id: id });
+      if (!r || r.code !== 0) return;
+      alert(qzFormatResults(r.data));
+    };
+    function qzFormatResults(d) {
+      let s = d.question.title + '\n共 ' + d.total + ' 人作答' + (d.question.anonymous ? '（匿名模式）' : '') + '\n';
+      if (d.per_option && d.per_option.length) d.per_option.forEach(o => { s += o.key + '. ' + o.text + ' — ' + o.count + ' 人' + (o.names && o.names.length ? '：' + o.names.join('、') : '') + '\n'; });
+      if (d.question.type === 'judge') s += '对 ' + d.judge.T + ' 人 / 错 ' + d.judge.F + ' 人\n';
+      if (d.blanks && d.blanks.length) s += '\n填空作答：\n' + d.blanks.map(b => b.name + '：' + b.content).join('\n');
+      return s;
+    }
+    // 学生：拉已发布题目并渲染作答
+    async function qzStudentRender() {
+      const box = document.getElementById('ocQuizBox');
+      if (!box || !ocState.lecture) return;
+      const r = await qzApi('/lecture/q/list', { lecture_id: ocState.lecture._id });
+      const list = ((r && r.data) || []).filter(q => q.status === 'published');
+      if (!list.length) { box.innerHTML = '<p style="color:#5c7194;font-size:12px">教师还未发布题目</p>'; return; }
+      box.innerHTML = list.map(q => {
+        if (qzState.answered.has(q._id)) return '<div class="oc-person"><span class="grow"><b>' + q.title + '</b></span><span class="tag live">已作答</span></div>';
+        if (q.type === 'blank') {
+          return '<div style="border:1px solid rgba(124,167,220,.14);border-radius:10px;padding:10px 12px;margin-bottom:8px">' +
+            '<div style="font-size:12px;color:#eaf2fb;margin-bottom:8px"><b>填空</b> · ' + q.title + '</div>' +
+            '<div style="display:flex;gap:6px"><input id="qb-' + q._id + '" placeholder="你的答案" style="flex:1;padding:8px 12px;border:1px solid rgba(124,167,220,.2);border-radius:999px;background:rgba(255,255,255,.03);color:#eaf2fb;font-size:12px;outline:none" />' +
+            '<button class="btn btn-gold" style="min-height:32px;font-size:11px" onclick="qzAnswerBlank(\'' + q._id + '\')">提交</button></div></div>';
+        }
+        if (q.type === 'judge') {
+          return '<div style="border:1px solid rgba(124,167,220,.14);border-radius:10px;padding:10px 12px;margin-bottom:8px">' +
+            '<div style="font-size:12px;color:#eaf2fb;margin-bottom:8px"><b>判断</b> · ' + q.title + '</div>' +
+            '<div style="display:flex;gap:6px"><button class="btn btn-gold" style="min-height:32px;font-size:11px" onclick="qzAnswer(\'' + q._id + '\',null,\'T\')">对</button>' +
+            '<button class="btn" style="min-height:32px;font-size:11px" onclick="qzAnswer(\'' + q._id + '\',null,\'F\')">错</button></div></div>';
+        }
+        const multi = q.type === 'choice';
+        return '<div style="border:1px solid rgba(124,167,220,.14);border-radius:10px;padding:10px 12px;margin-bottom:8px">' +
+          '<div style="font-size:12px;color:#eaf2fb;margin-bottom:8px"><b>' + (multi ? '选择' : '投票') + '</b> · ' + q.title + (multi ? '（可多选）' : '') + '</div>' +
+          '<div style="display:flex;flex-wrap:wrap;gap:6px">' + (q.options || []).map(o =>
+            '<button class="btn" style="min-height:32px;font-size:11px" onclick="qzAnswer(\'' + q._id + '\',[\'' + o.key + '\'],null)">' + o.key + '. ' + o.text + '</button>').join('') + '</div></div>';
+      }).join('');
+    }
+    window.qzAnswer = async (qid, keys, judge) => {
+      const r = await qzApi('/lecture/q/answer', { question_id: qid, option_keys: keys || [], judge: judge || '' });
+      if (!r || r.code !== 0) { showToast((r && r.message) || '提交失败', true); return; }
+      qzState.answered.add(qid);
+      showToast('已提交');
+      qzStudentRender();
+    };
+    window.qzAnswerBlank = async (qid) => {
+      const v = (document.getElementById('qb-' + qid) || {}).value || '';
+      const r = await qzApi('/lecture/q/answer', { question_id: qid, content: v });
+      if (!r || r.code !== 0) { showToast((r && r.message) || '提交失败', true); return; }
+      qzState.answered.add(qid);
+      showToast('已提交');
+      qzStudentRender();
+    };
+    // 大屏：展示当前发布题的结果（每选项人员名单，匿名只显示人数）
+    async function lsQuizRender() {
+      const box = document.getElementById('lsQuiz');
+      if (!box) return;
+      if (!ocState.lecture) { box.innerHTML = ''; return; }
+      const r = await qzApi('/lecture/q/list', { lecture_id: ocState.lecture._id });
+      const live = ((r && r.data) || []).filter(q => q.status === 'published');
+      if (!live.length) { box.innerHTML = '<p style="color:#5c7194;font-size:12px">暂无进行中的题目</p>'; return; }
+      let html = '';
+      for (const q of live) {
+        const res = await qzApi('/lecture/q/results', { question_id: q._id });
+        const d = (res && res.data) || { total: 0, per_option: [], judge: { T: 0, F: 0 }, blanks: [] };
+        html += '<div style="border:1px solid rgba(124,167,220,.16);border-radius:12px;padding:14px;margin-bottom:10px">' +
+          '<div style="font-size:14px;color:#eaf2fb;margin-bottom:4px"><b>' + q.title + '</b>' + (q.anonymous ? '<span class="tag" style="margin-left:8px">匿名</span>' : '') + '</div>' +
+          '<div style="font-size:11px;color:#5c7194;margin-bottom:10px">已作答 ' + d.total + ' 人 · 实时刷新</div>';
+        if (d.per_option && d.per_option.length) {
+          const max = Math.max(1, ...d.per_option.map(o => o.count));
+          d.per_option.forEach(o => {
+            html += '<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;color:#d8dee6"><span>' + o.key + '. ' + o.text + '</span><span>' + o.count + ' 人</span></div>' +
+              '<div style="height:6px;border-radius:999px;background:rgba(255,255,255,.06);margin-top:4px"><div style="height:100%;width:' + Math.round(o.count / max * 100) + '%;border-radius:999px;background:linear-gradient(90deg,#2f7fe0,#7cc7ff)"></div></div>' +
+              (o.names && o.names.length ? '<div style="font-size:11px;color:#93a7c4;margin-top:4px">' + o.names.join('、') + '</div>' : '') + '</div>';
+          });
+        } else if (q.type === 'judge') {
+          html += '<div style="font-size:13px;color:#d8dee6">对 ' + d.judge.T + ' 人 / 错 ' + d.judge.F + ' 人</div>';
+        }
+        if (d.blanks && d.blanks.length) html += '<div style="font-size:11px;color:#93a7c4;margin-top:6px">' + d.blanks.map(b => b.name + '：' + b.content).join('<br>') + '</div>';
+        html += '</div>';
+      }
+      box.innerHTML = html;
+    }
+
     function canSeeTeacherBackend() {
       const u = state.user || {};
       // v2.12.4 全局管理员（含超级管理员）不受课堂角色限制；其他教师仍要求授课身份
@@ -1867,6 +2175,9 @@
             elements.consoleSlot.hidden = false;
             moveTeacherBar(elements.consoleSlot);
             elements.teacherControlBar.hidden = false;
+            document.getElementById('courseAdmin').style.display = 'block';
+            caBind();
+            caLoadSeries();
           } else {
             elements.consoleSlot.hidden = true;
             elements.consoleDenied.hidden = false;
@@ -2744,6 +3055,16 @@
       elements.resetStageButton.addEventListener('click', () => runTeacherControl('reset'));
       elements.generateDiagnosisButton.addEventListener('click', generateAIDiagnosis);
       elements.micToggle.addEventListener('click', toggleMic);
+      const ljo = document.getElementById('lectureJoinOnline');
+      if (ljo) ljo.addEventListener('click', () => ocJoin('online'));
+      const ljc = document.getElementById('lectureJoinCheckin');
+      if (ljc) ljc.addEventListener('click', () => ocJoin('checkin'));
+      const ocCloseBtn = document.getElementById('ocClose');
+      if (ocCloseBtn) ocCloseBtn.addEventListener('click', ocClose);
+      const ocAskBtn = document.getElementById('ocAskBtn');
+      if (ocAskBtn) ocAskBtn.addEventListener('click', ocAsk);
+      const lsCloseBtn = document.getElementById('lsClose');
+      if (lsCloseBtn) lsCloseBtn.addEventListener('click', lsClose);
       const trtcBtn = document.getElementById('trtcButton');
       if (trtcBtn) trtcBtn.addEventListener('click', () => {
         const panel = document.getElementById('trtcPanel');
