@@ -1048,7 +1048,7 @@
           try { await client.startRemoteVideo({ userId: e.userId, view: tile }); } catch (err) { console.warn('[trtc] 远程视频订阅失败', err); }
         });
         client.on(TRTC.EVENT.REMOTE_VIDEO_UNAVAILABLE, (e) => trtcRemoveTile('r-' + e.userId));
-        await client.enterRoom({ sdkAppId: d.sdk_app_id, userId: d.user_id, userSig: d.user_sig, roomId: { strRoomId: String(d.room_id) } });
+        await client.enterRoom({ sdkAppId: d.sdk_app_id, userId: d.user_id, userSig: d.user_sig, roomId: String(d.room_id) }); /* v5：字符串房间号直接传字符串 */
         await client.startLocalAudio();
         trtcState.client = client;
         trtcState.inRoom = true;
@@ -1160,7 +1160,7 @@
       }).join('') : '<p style="color:#5c7194;font-size:12px">该系列还没有讲次，点"新建讲次"</p>';
     }
     window.caStart = async (id) => {
-      const custom = prompt('输入自定义邀请码（留空则自动生成 4 位数字）：');
+      const custom = await uiPrompt({ title: '开始上课', sub: '邀请码留空则自动生成 4 位数字', fields: [{ id: 'code', label: '邀请码（可自定义）', placeholder: '如 8848' }] });
       if (custom === null) return;
       const r = await caApi('/lecture/start', { lecture_id: id, invite_code: custom });
       if (!r || r.code !== 0) { showToast((r && r.message) || '开始上课失败', true); return; }
@@ -1174,12 +1174,12 @@
       lsOpen({ _id: r.data.lecture_id, title: (caState.lectures.find(l => String(l._id) === String(r.data.lecture_id)) || {}).title || '课堂', invite_code: r.data.invite_code });
     };
     window.caEnd = async (id) => {
-      if (!confirm('结束本次上课？')) return;
+      if (!(await uiConfirm('结束本次上课？语音教室与大屏将关闭。', '结束上课'))) return;
       const r = await caApi('/lecture/end', { lecture_id: id });
       if (r && r.code === 0) { showToast('已结束'); if (trtcState.inRoom) trtcLeave(); liveLecture = null; applyLectureGate(); lsClose(); await caLoadLectures(); }
     };
     window.caDelLecture = async (id, title) => {
-      if (!confirm('删除讲次「' + title + '」？')) return;
+      if (!(await uiConfirm('删除讲次「' + title + '」？删除后不可恢复。', '删除讲次'))) return;
       await caApi('/lecture/del', { lecture_id: id });
       await caLoadLectures();
     };
@@ -1189,11 +1189,17 @@
       const addLec = document.getElementById('caLectureAdd');
       if (addLec) addLec.onclick = async () => {
         if (!caState.seriesId) { showToast('请先选择/新建系列', true); return; }
-        const title = prompt('讲次标题（如：恒星专题第一讲）：');
-        if (!title) return;
-        const date = prompt('日期（YYYY-MM-DD，可空）：') || '';
-        const code = prompt('自定义邀请码（可空，开始上课时可再设）：') || '';
-        const r = await caApi('/lecture/save', { series_id: caState.seriesId, title, date, invite_code: code });
+        const v = await uiPrompt({
+          title: '新建讲次',
+          fields: [
+            { id: 'title', label: '讲次标题', placeholder: '如：恒星专题第一讲' },
+            { id: 'date', label: '日期（YYYY-MM-DD，可空）', placeholder: '2026-11-21' },
+            { id: 'code', label: '自定义邀请码（可空，开始上课时可再设）', placeholder: '如 8848' }
+          ]
+        });
+        if (!v) return;
+        if (!v.title) { showToast('请填写讲次标题', true); return; }
+        const r = await caApi('/lecture/save', { series_id: caState.seriesId, title: v.title, date: v.date, invite_code: v.code });
         if (r && r.code === 0) await caLoadLectures(); else showToast((r && r.message) || '创建失败', true);
       };
     }
@@ -1346,7 +1352,7 @@
     window.qzResults = async (id) => {
       const r = await qzApi('/lecture/q/results', { question_id: id });
       if (!r || r.code !== 0) return;
-      alert(qzFormatResults(r.data));
+      uiInfo('题目结果', qzFormatResults(r.data));
     };
     function qzFormatResults(d) {
       let s = d.question.title + '\n共 ' + d.total + ' 人作答' + (d.question.anonymous ? '（匿名模式）' : '') + '\n';
@@ -1447,6 +1453,70 @@
       gate.hidden = !isT || Boolean(liveLecture); // 教师且没有进行中的课 → 显示闸门
     }
 
+
+    // ---------- v2.16.5 通用模态框（替代原生 prompt/confirm/alert） ----------
+    function uiOpen() { document.getElementById('uiModal').classList.add('open'); }
+    function uiClose() { document.getElementById('uiModal').classList.remove('open'); }
+    // fields: [{id,label,placeholder,value,password}]
+    function uiPrompt(opts) {
+      return new Promise(resolve => {
+        document.getElementById('uiTitle').textContent = opts.title || '';
+        document.getElementById('uiSub').textContent = opts.sub || '';
+        document.getElementById('uiInfoBody').style.display = 'none';
+        const box = document.getElementById('uiFields');
+        box.style.display = 'grid';
+        box.innerHTML = (opts.fields || []).map(f =>
+          '<div class="field"><label>' + (f.label || '') + '</label><input id="' + f.id + '" placeholder="' + (f.placeholder || '') +
+          '" value="' + String(f.value || '').replace(/"/g, '&quot;') + '"' + (f.password ? ' type="password"' : '') + ' /></div>').join('');
+        const cancel = document.getElementById('uiCancel');
+        const ok = document.getElementById('uiOk');
+        cancel.style.display = '';
+        cancel.textContent = '取 消';
+        ok.textContent = opts.okText || '确 定';
+        cancel.onclick = () => { uiClose(); resolve(null); };
+        ok.onclick = () => {
+          const vals = {};
+          (opts.fields || []).forEach(f => vals[f.id] = (document.getElementById(f.id).value || '').trim());
+          uiClose();
+          resolve((opts.fields || []).length <= 1 ? vals[(opts.fields[0] || {}).id] : vals);
+        };
+        document.getElementById('uiModal').onclick = e => { if (e.target.id === 'uiModal') { uiClose(); resolve(null); } };
+        uiOpen();
+        const first = box.querySelector('input');
+        if (first) setTimeout(() => first.focus(), 60);
+      });
+    }
+    function uiConfirm(text, title) {
+      return new Promise(resolve => {
+        document.getElementById('uiTitle').textContent = title || '请确认';
+        document.getElementById('uiSub').textContent = text || '';
+        document.getElementById('uiInfoBody').style.display = 'none';
+        document.getElementById('uiFields').style.display = 'none';
+        const cancel = document.getElementById('uiCancel');
+        const ok = document.getElementById('uiOk');
+        cancel.style.display = ''; ok.textContent = '确 定';
+        cancel.onclick = () => { uiClose(); resolve(false); };
+        ok.onclick = () => { uiClose(); resolve(true); };
+        document.getElementById('uiModal').onclick = e => { if (e.target.id === 'uiModal') { uiClose(); resolve(false); } };
+        uiOpen();
+      });
+    }
+    function uiInfo(title, content) {
+      document.getElementById('uiTitle').textContent = title || '';
+      document.getElementById('uiSub').textContent = '';
+      const info = document.getElementById('uiInfoBody');
+      info.style.display = 'block';
+      info.textContent = content || '';
+      document.getElementById('uiFields').style.display = 'none';
+      const cancel = document.getElementById('uiCancel');
+      const ok = document.getElementById('uiOk');
+      cancel.style.display = 'none';
+      ok.textContent = '关 闭';
+      ok.onclick = () => uiClose();
+      document.getElementById('uiModal').onclick = e => { if (e.target.id === 'uiModal') uiClose(); };
+      uiOpen();
+    }
+
     function canSeeTeacherBackend() {
       const u = state.user || {};
       // v2.12.4 全局管理员（含超级管理员）不受课堂角色限制；其他教师仍要求授课身份
@@ -1472,7 +1542,7 @@
         return;
       }
       if (state.classroom.controlBusy) return;
-      if (command === 'reset' && !window.confirm('重置当前环节会清空本轮作答统计，并进入下一轮。确定继续吗？')) return;
+      if (command === 'reset' && !(await uiConfirm('重置当前环节会清空本轮作答统计，并进入下一轮。确定继续吗？', '重置环节'))) return;
       state.classroom.controlBusy = true;
       applySessionStatus(state.classroom.sessionStatus);
       const labels = { pause: '正在暂停', resume: '正在恢复', reset: '正在重置' };

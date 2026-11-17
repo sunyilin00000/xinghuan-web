@@ -6518,3 +6518,14 @@ body.join-open {
 .gate-mark{font-size:44px;color:#5c7194;margin-bottom:14px}
 .gate-title{font-size:19px;letter-spacing:.15em;color:#eaf2fb;margin:0 0 10px}
 .gate-sub{font-size:12px;color:#93a7c4;line-height:1.8;margin:0 0 24px}
+
+/* ===== v2.16.5 通用模态框 ===== */
+#uiModal{display:none;place-items:center}
+#uiModal.open{display:grid}
+.ui-card{width:min(460px,92vw);padding:26px 28px;border:1px solid rgba(124,167,220,.22);border-radius:18px;
+  background:linear-gradient(170deg,#0b1526,#070d1a);box-shadow:0 40px 100px rgba(0,0,0,.6)}
+.ui-card .ui-sub{margin:0;color:#5c7194;font-size:12px}
+.ui-card .field label{display:block;font-size:10px;letter-spacing:.25em;color:#5c7194;text-transform:uppercase;margin-bottom:6px}
+.ui-card .field input{width:100%;padding:11px 14px;border:1px solid rgba(124,167,220,.2);border-radius:11px;
+  background:rgba(255,255,255,.03);color:#eaf2fb;font-size:14px;outline:none;font-family:inherit}
+.ui-card .field input:focus{border-color:#7cc7ff}

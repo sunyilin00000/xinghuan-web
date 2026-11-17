@@ -951,6 +951,21 @@
     </div>
   </div>
 
+
+  <!-- v2.16.5 通用模态框（替换原生 prompt/confirm/alert） -->
+  <div class="modal" id="uiModal">
+    <div class="ui-card">
+      <h3 id="uiTitle" style="margin:0 0 6px;font-size:18px;letter-spacing:.1em;color:#eaf2fb"></h3>
+      <p class="ui-sub" id="uiSub"></p>
+      <div id="uiFields" style="display:grid;gap:12px;margin:16px 0"></div>
+      <div id="uiInfoBody" style="display:none;max-height:50vh;overflow:auto;white-space:pre-wrap;font-size:13px;color:#d8dee6;line-height:1.8;background:rgba(255,255,255,.03);border:1px solid rgba(124,167,220,.14);border-radius:10px;padding:14px;margin:16px 0"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+        <button class="btn" id="uiCancel" type="button" style="min-height:36px;font-size:13px">取 消</button>
+        <button class="btn btn-gold" id="uiOk" type="button" style="min-height:36px;font-size:13px">确 定</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="script.js"></script>
