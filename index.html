@@ -388,6 +388,7 @@
               </select>
               <button id="classroomRefreshButton" class="btn" type="button" disabled>同步课堂</button>
               <button id="micToggle" class="btn btn-gold" type="button" disabled>开启收音</button>
+          <button id="trtcButton" class="btn" type="button" hidden>语音教室</button>
               <button id="mossVoiceToggle" class="btn" type="button" hidden>MOSS 语音：开</button>
               <button id="generateDiagnosisButton" class="btn btn-gold diagnosis-button" type="button" hidden>生成 AI 诊断</button>
             </div>
@@ -831,6 +832,22 @@
       </div>
     </div>
   </div>
+
+
+  <!-- v2.13 TRTC 语音教室悬浮面板 -->
+  <div id="trtcPanel" class="trtc-panel" hidden>
+    <div class="trtc-head"><span class="trtc-dot"></span>语音教室 <span id="trtcStatus">未连接</span></div>
+    <div class="trtc-body"><span id="trtcInfo">加入后可与课堂实时连麦</span><span id="trtcCount"></span></div>
+    <div class="trtc-actions">
+      <button id="trtcJoin" class="btn btn-gold" type="button">加入教室</button>
+      <button id="trtcMute" class="btn" type="button" hidden>静音</button>
+      <button id="trtcCam" class="btn" type="button" hidden>摄像头</button>
+      <button id="trtcLeave" class="btn" type="button" hidden>离开</button>
+    </div>
+  </div>
+
+  <!-- v2.13 视频墙：本地 + 远程画面 -->
+  <div id="trtcVideoWall" class="trtc-wall" hidden></div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 

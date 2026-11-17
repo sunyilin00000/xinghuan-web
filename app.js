@@ -984,6 +984,130 @@
       } catch (e) { console.warn('[sso] 自动登录失败', e); return false; }
     }
 
+
+    // ---------- v2.13 TRTC 语音教室（凭证经 SCF /trtc/join，SDK 走腾讯云 v5） ----------
+    const trtcState = { client: null, inRoom: false, muted: false, videoOn: false, remote: new Set() };
+    function trtcLoadSdk() {
+      return loadScriptOnce('https://web.sdk.qcloud.com/trtc/webrtc/v5/latest/trtc.js', () => Boolean(window.TRTC));
+    }
+    function trtcUpdatePanel() {
+      const panel = document.getElementById('trtcPanel');
+      const status = document.getElementById('trtcStatus');
+      const joinBtn = document.getElementById('trtcJoin');
+      const muteBtn = document.getElementById('trtcMute');
+      const leaveBtn = document.getElementById('trtcLeave');
+      const count = document.getElementById('trtcCount');
+      if (!panel) return;
+      if (trtcState.inRoom) {
+        panel.classList.add('live');
+        status.textContent = trtcState.muted ? '已静音' : '连麦中';
+        joinBtn.hidden = true; muteBtn.hidden = false; leaveBtn.hidden = false;
+        const camBtn = document.getElementById('trtcCam');
+        if (camBtn) camBtn.hidden = false;
+        muteBtn.textContent = trtcState.muted ? '取消静音' : '静音';
+        count.textContent = '在线 ' + (trtcState.remote.size + 1) + ' 人';
+      } else {
+        panel.classList.remove('live');
+        status.textContent = '未连接';
+        joinBtn.hidden = false; muteBtn.hidden = true; leaveBtn.hidden = true;
+        const camBtn2 = document.getElementById('trtcCam');
+        if (camBtn2) camBtn2.hidden = true;
+        count.textContent = '';
+      }
+    }
+    async function trtcJoin() {
+      if (trtcState.inRoom) return;
+      if (!state.classroom.sessionId || !classroomIsReady()) { showToast('请先连接课堂', true); return; }
+      try {
+        await trtcLoadSdk();
+        const cred = await apiFetch('/trtc/join', { method: 'POST', body: { session_id: state.classroom.sessionId } });
+        if (!cred || cred.code !== 0 || !cred.data) { showToast((cred && cred.message) || '语音教室凭证获取失败（检查 SCF /trtc/join 与 TRTC 环境变量）', true); return; }
+        const d = cred.data;
+        const client = TRTC.create();
+        client.on(TRTC.EVENT.REMOTE_AUDIO_AVAILABLE, async (e) => { try { await client.startRemoteAudio({ userId: e.userId }); } catch (err) {} trtcState.remote.add(e.userId); trtcUpdatePanel(); });
+        client.on(TRTC.EVENT.REMOTE_AUDIO_UNAVAILABLE, (e) => { trtcState.remote.delete(e.userId); trtcUpdatePanel(); });
+        client.on(TRTC.EVENT.REMOTE_VIDEO_AVAILABLE, async (e) => {
+          const tile = trtcTile('r-' + e.userId, e.userId.slice(-4));
+          try { await client.startRemoteVideo({ userId: e.userId, view: tile }); } catch (err) { console.warn('[trtc] 远程视频订阅失败', err); }
+        });
+        client.on(TRTC.EVENT.REMOTE_VIDEO_UNAVAILABLE, (e) => trtcRemoveTile('r-' + e.userId));
+        await client.enterRoom({ sdkAppId: d.sdk_app_id, userId: d.user_id, userSig: d.user_sig, roomId: { strRoomId: String(d.room_id) } });
+        await client.startLocalAudio();
+        trtcState.client = client;
+        trtcState.inRoom = true;
+        trtcState.remote.clear();
+        trtcUpdatePanel();
+        showToast('已进入语音教室');
+      } catch (e) {
+        console.error('[trtc] 加入失败', e);
+        showToast('加入语音教室失败：' + (e.message || e), true);
+      }
+    }
+    async function trtcLeave() {
+      if (!trtcState.inRoom) return;
+      try { if (trtcState.client) await trtcState.client.exitRoom(); } catch (e) {}
+      trtcState.client = null;
+      trtcState.inRoom = false;
+      trtcState.muted = false;
+      trtcState.videoOn = false;
+      trtcState.remote.clear();
+      document.getElementById('trtcVideoWall').innerHTML = '';
+      document.getElementById('trtcVideoWall').hidden = true;
+      trtcUpdatePanel();
+      showToast('已离开语音教室');
+    }
+
+    // ---------- v2.13 视频：本地摄像头 + 远程画面订阅 ----------
+    function trtcTile(id, name) {
+      const wall = document.getElementById('trtcVideoWall');
+      let tile = document.getElementById('tile-' + id);
+      if (tile) return tile;
+      tile = document.createElement('div');
+      tile.className = 'trtc-tile';
+      tile.id = 'tile-' + id;
+      tile.innerHTML = '<div class="tile-name">' + (name || id) + '</div>';
+      wall.appendChild(tile);
+      wall.hidden = false;
+      return tile;
+    }
+    function trtcRemoveTile(id) {
+      const tile = document.getElementById('tile-' + id);
+      if (tile) tile.remove();
+      const wall = document.getElementById('trtcVideoWall');
+      if (wall && !wall.children.length) wall.hidden = true;
+    }
+    async function trtcToggleCamera() {
+      if (!trtcState.inRoom || !trtcState.client) return;
+      const camBtn = document.getElementById('trtcCam');
+      try {
+        if (trtcState.videoOn) {
+          await trtcState.client.stopLocalVideo();
+          trtcRemoveTile('local');
+          trtcState.videoOn = false;
+          camBtn.textContent = '摄像头';
+        } else {
+          const tile = trtcTile('local', '我');
+          await trtcState.client.startLocalVideo({ view: tile });
+          trtcState.videoOn = true;
+          camBtn.textContent = '关摄像头';
+        }
+      } catch (e) {
+        console.error('[trtc] 摄像头切换失败', e);
+        showToast('摄像头开启失败：' + (e.message || e), true);
+        trtcRemoveTile('local');
+        trtcState.videoOn = false;
+      }
+    }
+
+    async function trtcToggleMute() {
+      if (!trtcState.inRoom || !trtcState.client) return;
+      try {
+        if (trtcState.muted) { await trtcState.client.unmuteLocalAudio(); trtcState.muted = false; }
+        else { await trtcState.client.muteLocalAudio(); trtcState.muted = true; }
+      } catch (e) {}
+      trtcUpdatePanel();
+    }
+
     function canSeeTeacherBackend() {
       const u = state.user || {};
       // v2.12.4 全局管理员（含超级管理员）不受课堂角色限制；其他教师仍要求授课身份
@@ -2438,6 +2562,10 @@
         mEmpty.textContent = 'MOSS 正在旁听课堂，关键时机会自动介入';
         elements.mossFeed.appendChild(mEmpty);
       }
+      trtcLeave();
+      document.getElementById('trtcPanel').hidden = true;
+      const tb2 = document.getElementById('trtcButton');
+      if (tb2) tb2.hidden = true;
       if (typeof mic !== 'undefined' && mic.on) toggleMic();
       if (elements.micToggle) elements.micToggle.disabled = true;
       if (elements.studentConsole) elements.studentConsole.hidden = true;
@@ -2479,6 +2607,8 @@
       state.classroom.diagnosis = null;
       elements.classroomRefreshButton.disabled = false;
       elements.micToggle.disabled = false;
+      const tb = document.getElementById('trtcButton');
+      if (tb) tb.hidden = false;
       elements.answerTableEmpty.hidden = false;
       elements.answerTableWrap.hidden = true;
       elements.answerTableEmpty.textContent = '正在连接课堂实时数据...';
@@ -2614,6 +2744,20 @@
       elements.resetStageButton.addEventListener('click', () => runTeacherControl('reset'));
       elements.generateDiagnosisButton.addEventListener('click', generateAIDiagnosis);
       elements.micToggle.addEventListener('click', toggleMic);
+      const trtcBtn = document.getElementById('trtcButton');
+      if (trtcBtn) trtcBtn.addEventListener('click', () => {
+        const panel = document.getElementById('trtcPanel');
+        panel.hidden = !panel.hidden;
+        if (!panel.hidden) trtcUpdatePanel();
+      });
+      const trtcJoinBtn = document.getElementById('trtcJoin');
+      if (trtcJoinBtn) trtcJoinBtn.addEventListener('click', trtcJoin);
+      const trtcLeaveBtn = document.getElementById('trtcLeave');
+      if (trtcLeaveBtn) trtcLeaveBtn.addEventListener('click', trtcLeave);
+      const trtcMuteBtn = document.getElementById('trtcMute');
+      if (trtcMuteBtn) trtcMuteBtn.addEventListener('click', trtcToggleMute);
+      const trtcCamBtn = document.getElementById('trtcCam');
+      if (trtcCamBtn) trtcCamBtn.addEventListener('click', trtcToggleCamera);
       if (elements.mossVoiceToggle) {
         syncMossVoiceBtn();
         elements.mossVoiceToggle.addEventListener('click', () => {
