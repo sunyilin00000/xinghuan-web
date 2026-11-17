@@ -377,6 +377,16 @@
         </section>
 
         <section id="classroomBoard" class="tab-classroom panel classroom-board" aria-labelledby="classroomBoardTitle">
+      <!-- v2.16.3 监控中枢闸门：必须先创建并开始课堂 -->
+      <div id="lectureGate" class="lecture-gate" hidden>
+        <div class="gate-card">
+          <div class="gate-mark">◌</div>
+          <p class="gate-title">监控中枢未激活</p>
+          <p class="gate-sub">请先在「控制台」创建系列课程与讲次，点击「开始上课」后进入课堂监控中枢</p>
+          <button class="btn btn-gold" id="gateGoConsole" type="button">前往创建课堂</button>
+        </div>
+      </div>
+
           <header class="panel-head">
             <div class="panel-title-wrap">
               <h2 id="classroomBoardTitle" class="panel-title">课堂答题与提问广场</h2>

@@ -225,6 +225,7 @@
       elements.headerLoginButton.disabled = false;
       elements.addRecordButton.disabled = false;
       renderAstroRes();
+      checkLiveLecture();
       closeLogin();
       syncVoiceEnrollButton();
     }
@@ -987,8 +988,24 @@
 
     // ---------- v2.13 TRTC 语音教室（凭证经 SCF /trtc/join，SDK 走腾讯云 v5） ----------
     const trtcState = { client: null, inRoom: false, muted: false, videoOn: false, remote: new Set() };
-    function trtcLoadSdk() {
-      return loadScriptOnce('https://web.sdk.qcloud.com/trtc/webrtc/v5/latest/trtc.js', () => Boolean(window.TRTC));
+    // v2.16.2：优先加载本站自托管 trtc.js，失败再试两个公共 CDN
+    async function trtcLoadSdk() {
+      if (window.TRTC) return;
+      const sources = ['trtc.js', 'https://cdn.jsdelivr.net/npm/trtc-sdk-v5@latest/trtc.js', 'https://web.sdk.qcloud.com/trtc/webrtc/v5/latest/trtc.js'];
+      for (const src of sources) {
+        try {
+          await new Promise((res, rej) => {
+            const old = document.querySelector('script[data-trtc]');
+            if (old) old.remove();
+            const s = document.createElement('script');
+            s.src = src; s.dataset.trtc = '1';
+            s.onload = res; s.onerror = () => rej(new Error(src));
+            document.head.appendChild(s);
+          });
+          if (window.TRTC) return;
+        } catch (e) { console.warn('[trtc] SDK 源失败', src); }
+      }
+      throw new Error('TRTC SDK 加载失败：请把 trtc.js 下载放到网站根目录（推荐），或检查网络');
     }
     function trtcUpdatePanel() {
       const panel = document.getElementById('trtcPanel');
@@ -1147,6 +1164,9 @@
       if (custom === null) return;
       const r = await caApi('/lecture/start', { lecture_id: id, invite_code: custom });
       if (!r || r.code !== 0) { showToast((r && r.message) || '开始上课失败', true); return; }
+      liveLecture = { _id: r.data.lecture_id };
+      applyLectureGate();
+      switchPage('classroom'); // 直接进入监控中枢
       showToast('上课已开始，邀请码：' + r.data.invite_code);
       state.classroom.sessionId = 'lecture_' + r.data.lecture_id; // 语音教室房间
       await caLoadLectures();
@@ -1156,7 +1176,7 @@
     window.caEnd = async (id) => {
       if (!confirm('结束本次上课？')) return;
       const r = await caApi('/lecture/end', { lecture_id: id });
-      if (r && r.code === 0) { showToast('已结束'); if (trtcState.inRoom) trtcLeave(); await caLoadLectures(); }
+      if (r && r.code === 0) { showToast('已结束'); if (trtcState.inRoom) trtcLeave(); liveLecture = null; applyLectureGate(); lsClose(); await caLoadLectures(); }
     };
     window.caDelLecture = async (id, title) => {
       if (!confirm('删除讲次「' + title + '」？')) return;
@@ -1414,6 +1434,24 @@
         html += '</div>';
       }
       box.innerHTML = html;
+    }
+
+
+    // ---------- v2.16.3 监控中枢闸门：必须先创建并开始课堂 ----------
+    let liveLecture = null;
+    async function checkLiveLecture() {
+      try {
+        const r = await apiFetch('/lecture/live', { method: 'POST', body: {} });
+        liveLecture = ((r && r.data) || [])[0] || null;
+      } catch (e) { liveLecture = null; }
+      applyLectureGate();
+    }
+    function applyLectureGate() {
+      const u = state.user || {};
+      const isT = u.super_admin === true || u.role === 'admin' || u.course_teacher === true;
+      const gate = document.getElementById('lectureGate');
+      if (!gate) return;
+      gate.hidden = !isT || Boolean(liveLecture); // 教师且没有进行中的课 → 显示闸门
     }
 
     function canSeeTeacherBackend() {
@@ -3055,6 +3093,8 @@
       elements.resetStageButton.addEventListener('click', () => runTeacherControl('reset'));
       elements.generateDiagnosisButton.addEventListener('click', generateAIDiagnosis);
       elements.micToggle.addEventListener('click', toggleMic);
+      const gateBtn = document.getElementById('gateGoConsole');
+      if (gateBtn) gateBtn.addEventListener('click', () => switchPage('console'));
       const ljo = document.getElementById('lectureJoinOnline');
       if (ljo) ljo.addEventListener('click', () => ocJoin('online'));
       const ljc = document.getElementById('lectureJoinCheckin');
