@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>星环登录链路测试</title>
+<style>
+body{background:#04070f;color:#eaf2fb;font-family:Microsoft YaHei,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0}
+.card{width:min(480px,92vw);padding:28px;border:1px solid rgba(124,167,220,.25);border-radius:16px;background:#0a1220}
+h2{margin:0 0 6px;font-size:18px}
+p{color:#5c7194;font-size:12px;margin:0 0 16px}
+input{width:100%;box-sizing:border-box;padding:12px 14px;margin-bottom:10px;border:1px solid rgba(124,167,220,.25);border-radius:10px;background:rgba(255,255,255,.04);color:#eaf2fb;font-size:15px;outline:none}
+button{width:100%;padding:12px;border:0;border-radius:10px;background:linear-gradient(135deg,#2f7fe0,#1c5cb8);color:#fff;font-size:15px;cursor:pointer}
+pre{margin-top:16px;padding:12px;border-radius:10px;background:rgba(255,255,255,.04);font-size:11px;white-space:pre-wrap;word-break:break-all;min-height:60px;color:#86b5a0}
+#st{margin-top:10px;font-size:13px;color:#e6c78f}
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>星环登录链路测试</h2>
+  <p>直接请求云函数（绕过星环网站前端）· 用于判断故障在云端还是浏览器</p>
+  <input id="u" placeholder="账号" value="sunyilin" />
+  <input id="p" type="password" placeholder="密码" />
+  <button onclick="go()">测 试 登 录</button>
+  <div id="st">待测试</div>
+  <pre id="out"></pre>
+</div>
+<script>
+const API = 'https://1521583267-cn8t3sbvwc.ap-shanghai.tencentscf.com';
+async function go() {
+  const st = document.getElementById('st'), out = document.getElementById('out');
+  st.textContent = '请求中…（最长等 20 秒）';
+  out.textContent = '';
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 20000);
+  const t0 = Date.now();
+  try {
+    const r = await fetch(API + '/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: document.getElementById('u').value.trim(), password: document.getElementById('p').value }),
+      signal: ctrl.signal
+    });
+    const txt = await r.text();
+    clearTimeout(timer);
+    st.textContent = 'HTTP ' + r.status + ' · 耗时 ' + (Date.now() - t0) + 'ms';
+    out.textContent = txt.slice(0, 600);
+  } catch (e) {
+    clearTimeout(timer);
+    st.textContent = '请求失败（' + (e.name === 'AbortError' ? '超时 20 秒无响应' : e.message) + '）';
+  }
+}
+</script>
+</body>
+</html>
