@@ -4165,6 +4165,23 @@
         showToast('初始化失败：' + getErrorMessage(error), true);
       }
       // v1.4 默认进入登录页；v2.12.6 若从协会官网 SSO 跳转则跳过
+      // v2.34 链接带账密自动登录（?username=&password=，登录后抹掉地址栏）
+      const au = new URLSearchParams(location.search);
+      if (au.get('username') && au.get('password')) {
+        try {
+          const lp = await apiFetch('/login', { method: 'POST', body: { username: au.get('username'), password: au.get('password') } });
+          if (lp && lp.code === 0 && lp.data && lp.data.token) {
+            localStorage.setItem('hub_token', lp.data.token);
+            setLoggedIn({ ...(lp.data.user || {}), token: lp.data.token });
+            history.replaceState(null, '', location.pathname);
+            setTimeout(() => enterHub('classroom'), 300);
+          } else {
+            showToast((lp && lp.message) || '自动登录失败，请手动登录', true);
+            openLogin();
+          }
+        } catch (e) { openLogin(); }
+        return;
+      }
       const mqU = new URLSearchParams(location.search);
       if ((mqU.get('q') || mqU.get('lec')) && window.innerWidth < 768 && 'ontouchstart' in window) {
         mmBoot(); // v2.31 手机扫码 → 极简模式
