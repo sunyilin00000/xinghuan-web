@@ -59,8 +59,8 @@
     </div>
 
     <nav class="top-nav" aria-label="页面快捷导航">
-      <button class="top-nav-link active" type="button" data-scroll="#hero">星环</button>
-      <button class="top-nav-link" type="button" data-scroll="#partners">入驻星系</button>
+      <button class="top-nav-link active" type="button" data-scroll="#hero" id="navHome">星环</button>
+      <button class="top-nav-link" type="button" data-scroll="#partners" id="navPartners">入驻星系</button>
       <button class="top-nav-link" type="button" id="navShop">文创商城</button>
       <button class="top-nav-link" type="button" id="navMonitor" hidden>监控中枢</button>
       <span class="top-nav-sep" hidden id="navHubSep"></span>
@@ -286,6 +286,21 @@
           <span class="rail-line"></span>
           <span class="rail-item">UEG / 212</span>
         </div>
+        <!-- identity-strip 已移入中枢区 -->
+
+        
+    <!-- v2.24 文创商城（公开可见） -->
+    <section id="shopPage" class="panel shop-page" hidden aria-label="文创商城">
+      <header class="panel-head">
+        <div class="panel-title-wrap">
+          <h2 class="panel-title">星环文创商城</h2>
+          <p class="panel-subtitle">会员积分兑换 · 线下领取 · 每份都是社团的星光</p>
+        </div>
+      </header>
+      <div id="shopGrid" style="padding:18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px"></div>
+    </section>
+
+        <div id="hubArea" hidden>
 
         
 
@@ -303,20 +318,6 @@
             <button id="sessionLoginButton" class="btn btn-gold" type="button">登录</button>
           </div>
         </section>
-
-        
-    <!-- v2.24 文创商城（公开可见） -->
-    <section id="shopPage" class="panel shop-page" hidden aria-label="文创商城">
-      <header class="panel-head">
-        <div class="panel-title-wrap">
-          <h2 class="panel-title">星环文创商城</h2>
-          <p class="panel-subtitle">会员积分兑换 · 线下领取 · 每份都是社团的星光</p>
-        </div>
-      </header>
-      <div id="shopGrid" style="padding:18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px"></div>
-    </section>
-
-        <div id="hubArea" hidden>
 
         <section class="tab-classroom stats-grid" aria-label="数据概览">
           <article class="stat-card">
@@ -784,12 +785,12 @@
         <div class="wb-tabs">
           <button class="wb-tab active" data-wbt="members" type="button">成员管理</button>
           <button class="wb-tab" data-wbt="res" type="button">资料管理</button>
-          <button class="wb-tab" data-wbt="logs" type="button">操作日志</button>
         </div>
         <div id="wbMembers" style="padding:16px 18px">
           <div class="ap-toolbar">
             <input id="wbSearch" placeholder="搜索姓名 / 账号 / 部门 / 校区" />
             <button class="btn btn-gold" id="wbAddMember" type="button" style="min-height:34px;font-size:12px">新建账号</button>
+            <button class="btn" id="wbBatchAdd" type="button" style="min-height:34px;font-size:12px">批量导入</button>
             <span id="wbCount"></span>
           </div>
           <div class="ap-table-wrap">
@@ -807,14 +808,7 @@
           </div>
           <div id="wbResList" class="ap-list"></div>
         </div>
-        <div id="wbLogs" style="padding:16px 18px" hidden>
-          <div class="ap-toolbar">
-            <span style="color:var(--faint);font-size:12px">所有管理员操作留痕 · 海大/南开一视同仁</span>
-            <span style="flex:1"></span>
-            <button class="res-btn" id="wbLogRefresh" type="button">刷新</button>
-          </div>
-          <div id="wbLogList" class="ap-list"></div>
-        </div>
+        
       </div>
     </section>
     <!-- v2.20 天文社区（仅海大/南开天协成员可见） -->
@@ -1018,7 +1012,7 @@
 
   <!-- v2.15 教师大屏：提问墙 + 连麦管理 -->
   <div id="lectureScreen" hidden>
-    <div class="ls-head"><span id="lsTitle">课堂大屏</span><span id="lsCode"></span><button id="lsClose" type="button">×</button></div>
+    <div class="ls-head"><span id="lsTitle">课堂大屏</span><span id="lsCode"></span><span id="lsCheats" style="margin-left:14px;font-size:12px;color:#f0a8a8"></span><button id="lsClose" type="button">×</button></div>
     <div class="ls-cols">
       <div class="ls-col">
         <div class="oc-kicker">提问墙（实时）</div>
@@ -1112,6 +1106,30 @@
         <p class="sub">手机扫码登录后作答；首次登录后，后续题目自动推送到手机</p>
         <div id="qrBox" style="display:grid;place-items:center;padding:14px;background:#fff;border-radius:14px;margin:10px 0"></div>
         <div id="qrUrl" style="font-size:10px;color:var(--faint);word-break:break-all"></div>
+      </div>
+    </div>
+
+
+    <!-- v2.31 扫码手机模式：极简答题界面 -->
+    <div id="mobileMode" hidden>
+      <div class="mm-wrap">
+        <div class="mm-head">
+          <img src="logo.png" alt="星环" />
+          <span>星环课堂 · 移动答题</span>
+          <span id="mmWho" style="margin-left:auto;font-size:12px;color:#93a7c4"></span>
+        </div>
+        <div id="mmLogin" class="mm-card" hidden>
+          <h3 style="margin:0 0 6px;color:#eaf2fb">登录后作答</h3>
+          <p style="margin:0 0 14px;color:#5c7194;font-size:12px">使用星环终端成员账号</p>
+          <input id="mmUser" placeholder="账号" autocomplete="username" style="margin-bottom:10px" />
+          <input id="mmPwd" type="password" placeholder="密码" autocomplete="current-password" style="margin-bottom:14px" />
+          <button class="mq-send" id="mmLoginBtn">登 录</button>
+          <div id="mmLoginMsg" style="min-height:18px;margin-top:8px;font-size:12px;text-align:center;color:#f0a8a8"></div>
+        </div>
+        <div id="mmBody" class="mm-card" hidden></div>
+        <div id="mmIdle" class="mm-card" hidden>
+          <p style="margin:0;color:#93a7c4;font-size:13px;text-align:center;line-height:2">已就绪。<br />教师发布新题目后会自动弹出，<br />无需再扫码。</p>
+        </div>
       </div>
     </div>
 
