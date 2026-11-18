@@ -1012,7 +1012,7 @@
 
   <!-- v2.15 教师大屏：提问墙 + 连麦管理 -->
   <div id="lectureScreen" hidden>
-    <div class="ls-head"><span id="lsTitle">课堂大屏</span><span id="lsCode"></span><span id="lsCheats" style="margin-left:14px;font-size:12px;color:#f0a8a8"></span><button id="lsClose" type="button">×</button></div>
+    <div class="ls-head"><span id="lsTitle">课堂大屏</span><span id="lsCode"></span><button id="lsClose" type="button">×</button></div>
     <div class="ls-cols">
       <div class="ls-col">
         <div class="oc-kicker">提问墙（实时）</div>
@@ -1106,30 +1106,6 @@
         <p class="sub">手机扫码登录后作答；首次登录后，后续题目自动推送到手机</p>
         <div id="qrBox" style="display:grid;place-items:center;padding:14px;background:#fff;border-radius:14px;margin:10px 0"></div>
         <div id="qrUrl" style="font-size:10px;color:var(--faint);word-break:break-all"></div>
-      </div>
-    </div>
-
-
-    <!-- v2.31 扫码手机模式：极简答题界面 -->
-    <div id="mobileMode" hidden>
-      <div class="mm-wrap">
-        <div class="mm-head">
-          <img src="logo.png" alt="星环" />
-          <span>星环课堂 · 移动答题</span>
-          <span id="mmWho" style="margin-left:auto;font-size:12px;color:#93a7c4"></span>
-        </div>
-        <div id="mmLogin" class="mm-card" hidden>
-          <h3 style="margin:0 0 6px;color:#eaf2fb">登录后作答</h3>
-          <p style="margin:0 0 14px;color:#5c7194;font-size:12px">使用星环终端成员账号</p>
-          <input id="mmUser" placeholder="账号" autocomplete="username" style="margin-bottom:10px" />
-          <input id="mmPwd" type="password" placeholder="密码" autocomplete="current-password" style="margin-bottom:14px" />
-          <button class="mq-send" id="mmLoginBtn">登 录</button>
-          <div id="mmLoginMsg" style="min-height:18px;margin-top:8px;font-size:12px;text-align:center;color:#f0a8a8"></div>
-        </div>
-        <div id="mmBody" class="mm-card" hidden></div>
-        <div id="mmIdle" class="mm-card" hidden>
-          <p style="margin:0;color:#93a7c4;font-size:13px;text-align:center;line-height:2">已就绪。<br />教师发布新题目后会自动弹出，<br />无需再扫码。</p>
-        </div>
       </div>
     </div>
 

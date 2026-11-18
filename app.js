@@ -1320,7 +1320,7 @@
       qzStudentRender();
       lsQuizRender();
       grpLoad();
-      if (document.getElementById('lectureScreen') && !document.getElementById('lectureScreen').hidden) { lsGroupsRender(); lsCheatsRender(); }
+      if (document.getElementById('lectureScreen') && !document.getElementById('lectureScreen').hidden) lsGroupsRender();
     }
     // 教师大屏
     async function lsOpen(lecture) {
@@ -2189,155 +2189,6 @@
         showToast((r && r.message) || '题目不可用', true);
       }
       mqStartPush();
-    }
-
-
-    // ---------- v2.30 网页切屏检测：切走 3 秒记一次（教师豁免，60 秒节流），大屏公示 ----------
-    let cheatHiddenAt = 0, cheatReportedAt = 0;
-    async function reportCheatIfNeeded() {
-      const lecId = (ocState.lecture && ocState.lecture._id) || (liveLecture && liveLecture._id) || mqState.lec;
-      if (!lecId) return;
-      const u = state.user || {};
-      const isTeacher = u.super_admin === true || u.role === 'admin' || u.course_teacher === true;
-      if (isTeacher || !u.token) return;
-      if (Date.now() - cheatReportedAt < 60000) return;
-      cheatReportedAt = Date.now();
-      try { await apiFetch('/lecture/cheat', { method: 'POST', body: { lecture_id: lecId } }); } catch (e) {}
-    }
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) cheatHiddenAt = Date.now();
-      else if (cheatHiddenAt && Date.now() - cheatHiddenAt > 3000) reportCheatIfNeeded();
-    });
-    window.addEventListener('blur', () => { cheatHiddenAt = Date.now(); });
-    window.addEventListener('focus', () => {
-      if (cheatHiddenAt && Date.now() - cheatHiddenAt > 3000) reportCheatIfNeeded();
-    });
-    async function lsCheatsRender() {
-      const el = document.getElementById('lsCheats');
-      if (!el) return;
-      const lecId = ocState.lecture && ocState.lecture._id;
-      if (!lecId) { el.textContent = ''; return; }
-      const r = await apiFetch('/lecture/cheats', { method: 'POST', body: { lecture_id: lecId } });
-      const rows = (r && r.data) || [];
-      if (!rows.length) { el.textContent = ''; return; }
-      el.textContent = '切屏警报 ' + rows.length + ' 人：' + rows.slice(0, 4).map(x => x.name + '（' + x.count + '次）').join('、') + (rows.length > 4 ? ' 等' : '');
-    }
-
-
-    // ---------- v2.31 扫码手机模式：极简登录+答题+推送 ----------
-    const mm = { on: false, lec: '', answered: new Set(), pushTimer: null, lastAt: 0, q: null };
-    function mmEnter() {
-      mm.on = true;
-      document.body.classList.add('mm-on');
-      document.getElementById('mobileMode').hidden = false;
-    }
-    async function mmBoot() {
-      const u = new URLSearchParams(location.search);
-      const qid = u.get('q');
-      mm.lec = u.get('lec') || localStorage.getItem('hub_lec') || '';
-      if (mm.lec) localStorage.setItem('hub_lec', mm.lec);
-      mmEnter();
-      const saved = localStorage.getItem('hub_token');
-      if (saved) {
-        try {
-          const r = await apiFetch('/me', { method: 'POST', body: { token: saved } });
-          if (r && r.code === 0) {
-            state.user = { ...r.data, token: saved };
-            document.getElementById('mmWho').textContent = r.data.name || r.data.username;
-            if (qid) { mmLoadQ(qid); return; }
-            mmIdle(); mmStartPush(); return;
-          }
-          localStorage.removeItem('hub_token');
-        } catch (e) {}
-      }
-      // 未登录：极简登录卡
-      document.getElementById('mmLogin').hidden = false;
-      const doLogin = async () => {
-        const msg = document.getElementById('mmLoginMsg');
-        msg.textContent = '';
-        const username = document.getElementById('mmUser').value.trim();
-        const password = document.getElementById('mmPwd').value;
-        if (!username || !password) { msg.textContent = '请输入账号和密码'; return; }
-        msg.textContent = '登录中…'; msg.style.color = '#93a7c4';
-        try {
-          const payload = await apiFetch('/login', { method: 'POST', body: { username, password } });
-          if (!payload || payload.code !== 0) { msg.textContent = (payload && payload.message) || '登录失败'; msg.style.color = '#f0a8a8'; return; }
-          const tk = payload.data.token;
-          localStorage.setItem('hub_token', tk);
-          state.user = { ...(payload.data.user || {}), token: tk };
-          document.getElementById('mmLogin').hidden = true;
-          document.getElementById('mmWho').textContent = (payload.data.user && (payload.data.user.name || payload.data.user.username)) || username;
-          if (qid) mmLoadQ(qid); else { mmIdle(); mmStartPush(); }
-        } catch (e) { msg.textContent = '网络异常，请重试'; msg.style.color = '#f0a8a8'; }
-      };
-      document.getElementById('mmLoginBtn').onclick = doLogin;
-      document.getElementById('mmPwd').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
-    }
-    function mmIdle() {
-      document.getElementById('mmBody').hidden = true;
-      document.getElementById('mmIdle').hidden = false;
-    }
-    async function mmLoadQ(qid) {
-      const r = await apiFetch('/lecture/q/get', { method: 'POST', body: { question_id: qid } });
-      if (!r || r.code !== 0) { mmIdle(); return; }
-      mmRenderQ(r.data);
-    }
-    function mmRenderQ(q) {
-      mm.q = q;
-      document.getElementById('mmIdle').hidden = true;
-      const body = document.getElementById('mmBody');
-      body.hidden = false;
-      let inner = '<div class="mm-tag">' + ({ choice: '选择题', judge: '判断题', vote: '投票', blank: '填空题' }[q.type] || '题目') + (q.anonymous ? ' · 匿名' : '') + '</div>' +
-        '<div class="mm-title">' + String(q.title).replace(/</g, '&lt;') + '</div><div id="mmOpts"></div>' +
-        '<div class="mm-msg" id="mmMsg"></div>';
-      body.innerHTML = inner;
-      const opts = document.getElementById('mmOpts');
-      const msg = document.getElementById('mmMsg');
-      const done = () => { msg.textContent = '已提交'; setTimeout(() => { mm.q = null; mmIdle(); }, 800); };
-      if (q.type === 'blank') {
-        opts.innerHTML = '<input class="mm-q-input" id="mmBlank" placeholder="你的答案" /><button class="mq-send" id="mmSend" style="margin-top:12px">提交答案</button>';
-        document.getElementById('mmSend').onclick = async () => {
-          const r = await apiFetch('/lecture/q/answer', { method: 'POST', body: { question_id: q._id, content: document.getElementById('mmBlank').value } });
-          if (r && r.code === 0) { mm.answered.add(q._id); done(); } else { msg.textContent = (r && r.message) || '提交失败'; msg.style.color = '#f0a8a8'; }
-        };
-      } else if (q.type === 'judge') {
-        opts.innerHTML = '<button class="mm-opt" data-j="T">对</button><button class="mm-opt" data-j="F">错</button>';
-        opts.querySelectorAll('.mm-opt').forEach(b => b.onclick = async () => {
-          const r = await apiFetch('/lecture/q/answer', { method: 'POST', body: { question_id: q._id, judge: b.dataset.j } });
-          if (r && r.code === 0) { mm.answered.add(q._id); done(); } else { msg.textContent = (r && r.message) || '提交失败'; msg.style.color = '#f0a8a8'; }
-        });
-      } else {
-        const multi = q.type === 'choice';
-        const sel = new Set();
-        opts.innerHTML = (q.options || []).map(o => '<button class="mm-opt" data-k="' + o.key + '">' + o.key + '. ' + String(o.text).replace(/</g, '&lt;') + '</button>').join('') +
-          (multi ? '<button class="mq-send" id="mmSend">提交答案</button>' : '');
-        opts.querySelectorAll('.mm-opt').forEach(b => b.onclick = async () => {
-          if (multi) {
-            sel.has(b.dataset.k) ? sel.delete(b.dataset.k) : sel.add(b.dataset.k);
-            b.classList.toggle('sel');
-          } else {
-            const r = await apiFetch('/lecture/q/answer', { method: 'POST', body: { question_id: q._id, option_keys: [b.dataset.k] } });
-            if (r && r.code === 0) { mm.answered.add(q._id); done(); } else { msg.textContent = (r && r.message) || '提交失败'; msg.style.color = '#f0a8a8'; }
-          }
-        });
-        if (multi) document.getElementById('mmSend').onclick = async () => {
-          if (!sel.size) { msg.textContent = '请先选择'; return; }
-          const r = await apiFetch('/lecture/q/answer', { method: 'POST', body: { question_id: q._id, option_keys: Array.from(sel) } });
-          if (r && r.code === 0) { mm.answered.add(q._id); done(); } else { msg.textContent = (r && r.message) || '提交失败'; msg.style.color = '#f0a8a8'; }
-        };
-      }
-      window.scrollTo(0, 0);
-    }
-    function mmStartPush() {
-      if (!mm.lec || mm.pushTimer) return;
-      mm.pushTimer = setInterval(async () => {
-        if (document.hidden || mm.q) return;
-        const r = await apiFetch('/lecture/q/list', { method: 'POST', body: { lecture_id: mm.lec } });
-        const live = ((r && r.data) || []).filter(q => q.status === 'published');
-        const fresh = live.filter(q => !mm.answered.has(q._id) && Number(q.at || 0) > mm.lastAt);
-        if (fresh.length) mmRenderQ(fresh.sort((a, b) => Number(b.at || 0) - Number(a.at || 0))[0]);
-        else if (live.length) mm.lastAt = Math.max.apply(null, live.map(q => Number(q.at || 0)).concat([mm.lastAt]));
-      }, 6000);
     }
 
     function canSeeTeacherBackend() {
@@ -4167,13 +4018,8 @@
         showToast('初始化失败：' + getErrorMessage(error), true);
       }
       // v1.4 默认进入登录页；v2.12.6 若从协会官网 SSO 跳转则跳过
-      const mqU = new URLSearchParams(location.search);
-      if ((mqU.get('q') || mqU.get('lec')) && window.innerWidth < 768 && 'ontouchstart' in window) {
-        mmBoot(); // v2.31 手机扫码 → 极简模式
-      } else {
-        if (!(await trySsoLogin())) openLogin();
-        mqBootFromUrl();
-      }
+      if (!(await trySsoLogin())) openLogin();
+      mqBootFromUrl();
     }
 
     boot();
