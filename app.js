@@ -941,7 +941,13 @@
 
     // ---------- v2.12.5 天文资料分支：仅天文协会成员（海大/南开）可见 ----------
     const ASTRO_RES = [
-      // 在此追加资料：{ tag, title, desc, url, code }
+      // v2.33 原公开资源卡并入天文资料（仅海大/南开成员可见）
+      { tag: '仪器教学', title: '天文仪器简易操作教学', desc: '仪器入门（半成品，持续更新）· 感谢艾博宇学长制作', url: 'https://pan.baidu.com/s/13ToIQRvubydfxkz5GzPxug', code: 'ouc1' },
+      { tag: '星图软件', title: 'Stellarium 基础教学（5.29 更新）', desc: '免费强大的 PC 端星图软件入门', url: 'https://pan.baidu.com/s/1T35RXV_ZYkmDhy8ngStA_Q', code: 'ABYY' },
+      { tag: '摄影实战', title: '天文摄影基础 · 出摊实战流程', desc: 'zwo 天文盒子完整深空观测流程', url: 'https://pan.baidu.com/s/1tRZKvh2SA6jkO6wDWZaKXw', code: '6Tst' },
+      { tag: '后期处理', title: '月面叠加 & PixInsight', desc: '月面后期处理 · 夸克网盘', url: 'https://pan.quark.cn/s/4300c1b9a9fd', code: '' },
+      { tag: '实用软件', title: '郭辰洋学长的软件包（掩星/太阳）', desc: '观测小工具合集', url: 'https://pan.baidu.com/s/1hd2qpHovTHNVOounaqVcBQ', code: 'digy' },
+      { tag: '摄影教程', title: '摄影师看 Kan · NINA/SIRIL 教程', desc: '附练习素材', url: 'https://pan.baidu.com/s/1Vz-5RFwG0p3ZMe7IUKJ-Kw', code: 'uuhp' }
     ];
     function canSeeAstroRes() {
       const u = state.user || {};
@@ -1996,19 +2002,11 @@
 
 
     // ---------- v2.24 文创商城（公开可见；积分/支付宝双支付） ----------
-    const SHOP_PRODUCTS = [
-      { id: 'badge', ico: '✦', name: '星环纪念徽章', desc: ' enamel 工艺，深蓝星空底，会徽浮雕。', points: 30, pay: 'points' },
-      { id: 'mug', ico: '◎', name: 'MOSS 马克杯', desc: '变温显字：注入热水浮现 "MOSS 正在看着你"。', points: 60, pay: 'points' },
-      { id: 'cards', ico: '✧', name: '梅西耶天体明信片套装', desc: '24 张深空天体，附拍摄参数小册。', points: 25, pay: 'points' },
-      { id: 'scarf', ico: '≋', name: '冬季星图丝巾', desc: '12 月星图印花，观测保暖两用。', points: 90, pay: 'points' },
-      { id: 'journal', ico: '▤', name: '观测手账', desc: '皮质封面，内页含观测记录模板。', points: 45, pay: 'points' },
-      { id: 'hoodie', ico: '◍', name: '星环连帽卫衣', desc: '背后荧光星图，暗夜出摊辨识队友。', price: 89, pay: 'alipay' },
-      { id: 'model', ico: '♆', name: '信达小黑 3D 打印模型', desc: '按 1:8 复刻，含赤道仪可动关节。', price: 129, pay: 'alipay' },
-      { id: 'lamp', ico: '◐', name: '月相小夜灯', desc: '触控切换月相，红光模式保暗视。', price: 59, pay: 'alipay' }
-    ];
+    const SHOP_PRODUCTS = []; // v2.32.1 商品清空：待社团确定实物清单后再上架
     function renderShop() {
       const grid = document.getElementById('shopGrid');
       if (!grid) return;
+      if (!SHOP_PRODUCTS.length) { grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#5c7194;font-size:13px;padding:40px 0">货架筹备中，商品清单确定后上架</p>'; return; }
       grid.innerHTML = SHOP_PRODUCTS.map(p =>
         '<article class="shop-card"><div class="shop-ico">' + p.ico + '</div><div class="shop-body">' +
         '<div class="shop-name">' + p.name + '</div><div class="shop-desc">' + p.desc + '</div>' +
@@ -2073,7 +2071,7 @@
       if (saved) {
         try {
           const r = await apiFetch('/me', { method: 'POST', body: { token: saved } });
-          if (r && r.code === 0) { state.user = { ...r.data, token: saved }; return true; }
+          if (r && r.code === 0) { state.user = { ...r.data, token: saved }; setConnection('online', '已连接'); return true; }
           localStorage.removeItem('hub_token');
         } catch (e) {}
       }
@@ -4170,8 +4168,21 @@
       const mqU = new URLSearchParams(location.search);
       if ((mqU.get('q') || mqU.get('lec')) && window.innerWidth < 768 && 'ontouchstart' in window) {
         mmBoot(); // v2.31 手机扫码 → 极简模式
-      } else {
-        if (!(await trySsoLogin())) openLogin();
+      } else if (!(await trySsoLogin())) {
+        // v2.32 桌面端：本地令牌静默恢复，失败再弹登录
+        let restored = false;
+        const savedTok = localStorage.getItem('hub_token');
+        if (savedTok) {
+          try {
+            const meR = await apiFetch('/me', { method: 'POST', body: { token: savedTok } });
+            if (meR && meR.code === 0) {
+              state.user = { ...meR.data, token: savedTok };
+              setLoggedIn(state.user);
+              restored = true;
+            } else { localStorage.removeItem('hub_token'); }
+          } catch (e) {}
+        }
+        if (!restored) openLogin();
         mqBootFromUrl();
       }
     }
