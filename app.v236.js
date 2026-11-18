@@ -20,7 +20,8 @@
       const box = document.createElement('div');
       box.id = 'flightrecorder';
       box.style.cssText = 'position:fixed;left:8px;top:60px;z-index:99999;background:rgba(0,0,0,.82);color:#7CFC9A;font:11px/1.6 monospace;padding:8px 10px;border-radius:8px;max-width:60vw;white-space:pre-wrap;pointer-events:none';
-      document.addEventListener('DOMContentLoaded', () => document.body.appendChild(box));
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => document.body.appendChild(box));
+      else document.body.appendChild(box);
       window.__rec = (msg) => { const b = document.getElementById('flightrecorder'); if (b) b.textContent += '\n' + new Date().toLocaleTimeString('zh-CN', { hour12: false }) + ' ' + msg; };
       window.addEventListener('error', (e) => { window.__rec('ERROR: ' + e.message + ' @' + (e.filename || '').split('/').pop() + ':' + e.lineno); });
       window.addEventListener('unhandledrejection', (e) => { window.__rec('REJECT: ' + (e.reason && (e.reason.message || e.reason) || 'unknown')); });

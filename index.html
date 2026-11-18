@@ -286,7 +286,6 @@
           <span class="rail-line"></span>
           <span class="rail-item">UEG / 212</span>
         </div>
-        <!-- identity-strip 已移入中枢区 -->
 
         
     <!-- v2.24 文创商城（公开可见） -->
@@ -301,6 +300,34 @@
     </section>
 
         <div id="hubArea" hidden>
+        <section class="identity-strip" aria-label="登录状态">
+          <div class="identity-main">
+            <span id="identityBadge" class="identity-badge" aria-hidden="true">访</span>
+            <div class="identity-copy">
+              <p id="identityTitle" class="identity-title">匿名只读会话</p>
+              <p id="identitySubtitle" class="identity-subtitle">登录后可查看完整会员身份并使用数据写入能力</p>
+            </div>
+          </div>
+          <div class="session-actions">
+            <span id="sessionOrgChip" class="role-chip">未绑定社团</span>
+            <button id="sessionLoginButton" class="btn btn-gold" type="button">登录</button>
+          </div>
+        </section>
+
+        <section class="identity-strip" aria-label="登录状态">
+          <div class="identity-main">
+            <span id="identityBadge" class="identity-badge" aria-hidden="true">访</span>
+            <div class="identity-copy">
+              <p id="identityTitle" class="identity-title">匿名只读会话</p>
+              <p id="identitySubtitle" class="identity-subtitle">登录后可查看完整会员身份并使用数据写入能力</p>
+            </div>
+          </div>
+          <div class="session-actions">
+            <span id="sessionOrgChip" class="role-chip">未绑定社团</span>
+            <button id="sessionLoginButton" class="btn btn-gold" type="button">登录</button>
+          </div>
+        </section>
+
 
         
 
@@ -1083,6 +1110,6 @@
 
   <script src="script.js"></script>
   <script src="echarts.min.js"></script>
-  <script src="app.v236.js?v=236"></script>
+  <script src="app.v236.js?v=237"></script>
 </body>
 </html>
