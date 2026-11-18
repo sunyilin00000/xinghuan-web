@@ -61,7 +61,14 @@
     <nav class="top-nav" aria-label="页面快捷导航">
       <button class="top-nav-link active" type="button" data-scroll="#hero">星环</button>
       <button class="top-nav-link" type="button" data-scroll="#partners">入驻星系</button>
-      <button class="top-nav-link" type="button" data-console>监控中枢</button>
+      <button class="top-nav-link" type="button" id="navShop">文创商城</button>
+      <button class="top-nav-link" type="button" id="navMonitor" hidden>监控中枢</button>
+      <span class="top-nav-sep" hidden id="navHubSep"></span>
+      <button class="top-nav-link nav-hub-item" type="button" data-hub="classroom" hidden>课堂看板</button>
+      <button class="top-nav-link nav-hub-item" type="button" data-hub="resources" hidden>学习资源</button>
+      <button class="top-nav-link nav-hub-item" type="button" data-hub="console" hidden>控制台</button>
+      <button class="top-nav-link nav-hub-item" type="button" data-hub="workbench" hidden>工作台</button>
+      <button class="top-nav-link nav-hub-item" type="button" data-hub="community" hidden>天文社区</button>
     </nav>
 
     <div class="top-actions">
@@ -76,7 +83,7 @@
   <main class="app-main">
 
     <!-- ============ 首屏：星环 Hero + 登录 ============ -->
-    <section class="hero" id="hero" aria-labelledby="heroTitle">
+    <section class="landing-only" class="hero" id="hero" aria-labelledby="heroTitle">
       <div class="hero-aurora" aria-hidden="true"></div>
 
       <div class="hero-content" id="heroContent">
@@ -154,7 +161,7 @@
     </section>
 
     <!-- ============ 第二屏：已入驻星系 ============ -->
-    <section class="partners" id="partners" aria-labelledby="partnersTitle">
+    <section class="landing-only" class="partners" id="partners" aria-labelledby="partnersTitle">
       <div class="partners-inner">
         <header class="partners-head">
           <div class="partners-head-main">
@@ -280,13 +287,7 @@
           <span class="rail-item">UEG / 212</span>
         </div>
 
-        <nav class="page-tabs" aria-label="页面导航">
-          <button class="page-tab active" data-tab="classroom" type="button">课堂看板</button>
-          <button class="page-tab" data-tab="resources" type="button">学习资源</button>
-          <button class="page-tab" data-tab="console" type="button">控制台</button>
-      <button class="page-tab" data-tab="workbench" type="button">工作台</button>
-      <button class="page-tab" data-tab="community" type="button" id="communityTab" hidden>天文社区</button>
-        </nav>
+        
 
         <section class="identity-strip" aria-label="登录状态">
           <div class="identity-main">
@@ -302,6 +303,20 @@
             <button id="sessionLoginButton" class="btn btn-gold" type="button">登录</button>
           </div>
         </section>
+
+        
+    <!-- v2.24 文创商城（公开可见） -->
+    <section id="shopPage" class="panel shop-page" hidden aria-label="文创商城">
+      <header class="panel-head">
+        <div class="panel-title-wrap">
+          <h2 class="panel-title">星环文创商城</h2>
+          <p class="panel-subtitle">会员积分兑换 · 线下领取 · 每份都是社团的星光</p>
+        </div>
+      </header>
+      <div id="shopGrid" style="padding:18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px"></div>
+    </section>
+
+        <div id="hubArea" hidden>
 
         <section class="tab-classroom stats-grid" aria-label="数据概览">
           <article class="stat-card">
@@ -815,6 +830,15 @@
           <button class="wb-tab active" data-cmt="discuss" type="button">天文知识探讨</button>
           <button class="wb-tab" data-cmt="photo" type="button">天文摄影观测</button>
         </div>
+        <div id="cmBoard" style="margin:14px 18px 0;padding:14px 16px;border:1px solid rgba(230,199,143,.2);border-radius:12px;background:linear-gradient(145deg,rgba(230,199,143,.05),rgba(255,255,255,.01))">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <strong style="font-size:13px;letter-spacing:.1em;color:#e6c78f">积分总榜</strong>
+            <span style="font-size:10px;color:#5c7194">发帖 +10 · 评论 +3 · 获赞 +5 · 点赞 +1 · 两协会合并排名</span>
+            <span style="flex:1"></span>
+            <button class="res-btn" id="cmBoardRefresh" type="button">刷新</button>
+          </div>
+          <div id="cmBoardList" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+        </div>
         <div class="cm-composer">
           <textarea id="cmContent" maxlength="1000" placeholder="分享天文日常…（@星环AI 它会回答；探讨区 AI 自动参与）"></textarea>
           <div id="cmPhotoMeta" hidden style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:8px">
@@ -835,6 +859,8 @@
         <div id="cmFeed" style="padding:0 18px 18px"></div>
       </div>
     </section>
+
+        </div><!-- /hubArea -->
 
 
 
@@ -1066,6 +1092,26 @@
       <div class="ai-input">
         <input id="hubAiText" maxlength="500" placeholder="问点什么…" />
         <button id="hubAiSend" type="button">发送</button>
+      </div>
+    </div>
+
+
+    <!-- v2.26 手机扫码答题浮层 + 题目二维码 -->
+    <div id="mobileQuiz" class="mq-sheet" hidden>
+      <div class="mq-card">
+        <div class="mq-head"><span id="mqTag">课堂题目</span><button id="mqClose" type="button">×</button></div>
+        <div id="mqTitle" style="font-size:16px;color:#eaf2fb;line-height:1.7;margin:6px 0 14px"></div>
+        <div id="mqBody"></div>
+        <div id="mqMsg" style="min-height:20px;margin-top:10px;font-size:12px;text-align:center;color:#86b5a0"></div>
+      </div>
+    </div>
+    <div class="modal" id="qrModal">
+      <div class="modal-card modal-wrap" style="text-align:center">
+        <button class="modal-close" data-close>×</button>
+        <h3>扫码答题</h3>
+        <p class="sub">手机扫码登录后作答；首次登录后，后续题目自动推送到手机</p>
+        <div id="qrBox" style="display:grid;place-items:center;padding:14px;background:#fff;border-radius:14px;margin:10px 0"></div>
+        <div id="qrUrl" style="font-size:10px;color:var(--faint);word-break:break-all"></div>
       </div>
     </div>
 

@@ -225,8 +225,10 @@
       elements.headerLoginButton.disabled = false;
       elements.addRecordButton.disabled = false;
       renderAstroRes();
+      revealHubNav();
       checkLiveLecture();
       document.getElementById('hubAiFloat').hidden = false;
+      revealHubNav();
       wbSetup();
       if (canSeeAstroRes()) document.getElementById('communityTab').hidden = false;
       closeLogin();
@@ -564,6 +566,7 @@
       try {
         const data = await callWebLogin(username, password);
         console.log('[星环教学中枢] 登录成功，身份已建立');
+        localStorage.setItem('hub_token', data.token || (data.user && data.user.token) || '');
         setLoggedIn({ ...(data.user || { username }), token: data.token || (data.user && data.user.token) });
         setConnection('online', '已连接');
         showToast('登录成功');
@@ -975,7 +978,8 @@
         const payload = await apiFetch('/me', { method: 'POST', body: { token: m[1] } });
         if (!payload || payload.code !== 0) return false;
         const u = payload.data || {};
-        setLoggedIn({ ...u, token: m[1] });
+        localStorage.setItem('hub_token', m[1]);
+    setLoggedIn({ ...u, token: m[1] });
         history.replaceState(null, '', location.pathname + location.search); // 抹掉令牌
         setConnection('online', '已连接');
         showToast('已通过协会官网登录，欢迎 ' + (u.name || u.username || '成员'));
@@ -1369,6 +1373,7 @@
         '<div class="oc-person"><span class="grow"><b>' + q.title + '</b> ' +
         '<span class="tag">' + typeName[q.type] + '</span>' + (q.anonymous ? '<span class="tag">匿名</span>' : '') + '</span>' +
         '<span class="tag ' + (q.status === 'published' ? 'live' : '') + '">' + stName[q.status] + '</span>' +
+        (q.status === 'published' ? '<button onclick="showQr(\'' + qzState.lectureId + '\',\'' + q._id + '\')">二维码</button>' : '') +
         (q.status !== 'published' ? '<button onclick="qzPublish(\'' + q._id + '\')">发布</button>' : '<button onclick="qzClose(\'' + q._id + '\')">结束</button>') +
         '<button onclick="qzResults(\'' + q._id + '\')">结果</button>' +
         '<button onclick="qzDel(\'' + q._id + '\')">删除</button></div>'
@@ -1445,7 +1450,8 @@
         const res = await qzApi('/lecture/q/results', { question_id: q._id });
         const d = (res && res.data) || { total: 0, per_option: [], judge: { T: 0, F: 0 }, blanks: [] };
         html += '<div style="border:1px solid rgba(124,167,220,.16);border-radius:12px;padding:14px;margin-bottom:10px">' +
-          '<div style="font-size:14px;color:#eaf2fb;margin-bottom:4px"><b>' + q.title + '</b>' + (q.anonymous ? '<span class="tag" style="margin-left:8px">匿名</span>' : '') + '</div>' +
+          '<div style="font-size:14px;color:#eaf2fb;margin-bottom:4px"><b>' + q.title + '</b>' + (q.anonymous ? '<span class="tag" style="margin-left:8px">匿名</span>' : '') +
+          '<button class="res-btn" style="margin-left:10px" onclick="showQr(\'' + ocState.lecture._id + '\',\'' + q._id + '\')">投屏二维码</button></div>' +
           '<div style="font-size:11px;color:#5c7194;margin-bottom:10px">已作答 ' + d.total + ' 人 · 实时刷新</div>';
         if (d.per_option && d.per_option.length) {
           const max = Math.max(1, ...d.per_option.map(o => o.count));
@@ -1710,7 +1716,7 @@
       hubAiPush('bot', '思考中…');
       const thinking = document.getElementById('hubAiMsgs').lastChild;
       try {
-        const r = await apiFetch('/ai/chat', { method: 'POST', body: { messages: hubAiHistory } });
+        const r = await apiFetch('/ai/chat', { method: 'POST', body: { messages: hubAiHistory, channel: 'hub' } });
         const reply = (r && r.data && r.data.reply) || '';
         thinking.textContent = reply || ('暂时没有回应：' + ((r && r.message) || ''));
         if (reply) hubAiHistory.push({ role: 'assistant', content: reply });
@@ -1807,6 +1813,7 @@
       if (r && r.code === 403) { switchPage('classroom'); showToast('仅天文协会成员可见社区', true); return; }
       cmState.posts = (r && r.data) || [];
       cmRender();
+      cmLoadBoard();
     }
     async function cmMediaUrl(fileId) {
       const key = 'mu_' + fileId;
@@ -1825,7 +1832,7 @@
         return '<article class="cm-post" data-id="' + p._id + '">' +
           '<div class="cm-head"><div class="cm-ava">' + String(p.author_name || '?').slice(0, 1) + '</div>' +
           '<span class="cm-author">' + p.author_name + '</span>' +
-          '<span class="cm-orgtag">' + (p.org === 'nankai_astro' ? '南开天协' : '海大天协') + '</span>' +
+          cmOrgLabel(p) +
           (p.ai_answered ? '<span class="cm-orgtag" style="border-color:rgba(124,199,255,.4);color:#7cc7ff">AI 已参与</span>' : '') +
           '<span class="cm-time">' + new Date(p.at).toLocaleString('zh-CN', { hour12: false }) + '</span></div>' +
           (p.content ? '<div class="cm-text"></div>' : '') +
@@ -1879,7 +1886,7 @@
       const r = await cmApi('/astro/comments', { post_id: pid });
       const list = (r && r.data) || [];
       box.innerHTML = list.map(x =>
-        '<div class="cm-comment' + (x.is_ai ? ' ai' : '') + '"><b>' + x.author_name + '</b>' + String(x.content).replace(/</g, '&lt;') +
+        '<div class="cm-comment' + (x.is_ai ? ' ai' : '') + '"><b>' + x.author_name + '</b>' + cmOrgLabel(x) + String(x.content).replace(/</g, '&lt;') +
         '<time>' + new Date(x.at).toLocaleTimeString('zh-CN', { hour12: false }) + '</time></div>').join('') || '<div class="cm-comment" style="color:#5c7194">还没有评论</div>';
     }
     async function cmPublish() {
@@ -1931,6 +1938,242 @@
         document.getElementById('cmAttachInfo').textContent = cmState.media.length ? '已选 ' + cmState.media.length + ' 个媒体' : '';
       };
       document.getElementById('cmPost').onclick = cmPublish;
+      const br = document.getElementById('cmBoardRefresh');
+      if (br) br.onclick = cmLoadBoard;
+    }
+
+
+    // ---------- v2.22 中枢独立页：登录后顶栏出现入口，首页只留展示内容 ----------
+    let hubMode = false;
+    function enterHub(tab) {
+      if (!state.user || !state.user.token) { openLogin(); return; }
+      hubMode = true;
+      document.body.classList.add('hub-mode');
+      const area = document.getElementById('hubArea');
+      if (area) area.hidden = false;
+      document.querySelectorAll('.landing-only').forEach(el => { el.hidden = true; });
+      if (tab) switchPage(tab);
+      window.scrollTo({ top: 0 });
+      logStep('已进入中枢', tab || '');
+    }
+    function showLanding() {
+      hubMode = false;
+      document.body.classList.remove('hub-mode');
+      const area = document.getElementById('hubArea');
+      if (area) area.hidden = true;
+      document.querySelectorAll('.landing-only').forEach(el => { el.hidden = false; });
+      window.scrollTo({ top: 0 });
+    }
+    function revealHubNav() {
+      document.querySelectorAll('.nav-hub-item').forEach(b => { b.hidden = false; });
+      const sep = document.getElementById('navHubSep');
+      if (sep) sep.hidden = false;
+      const nm = document.getElementById('navMonitor');
+      if (nm) nm.hidden = false;
+    }
+    function hideHubNav() {
+      document.querySelectorAll('.nav-hub-item').forEach(b => { b.hidden = true; });
+      const sep = document.getElementById('navHubSep');
+      if (sep) sep.hidden = true;
+      const nm = document.getElementById('navMonitor');
+      if (nm) nm.hidden = true;
+    }
+
+
+    // ---------- v2.24 文创商城（公开可见；积分/支付宝双支付） ----------
+    const SHOP_PRODUCTS = [
+      { id: 'badge', ico: '✦', name: '星环纪念徽章', desc: ' enamel 工艺，深蓝星空底，会徽浮雕。', points: 30, pay: 'points' },
+      { id: 'mug', ico: '◎', name: 'MOSS 马克杯', desc: '变温显字：注入热水浮现 "MOSS 正在看着你"。', points: 60, pay: 'points' },
+      { id: 'cards', ico: '✧', name: '梅西耶天体明信片套装', desc: '24 张深空天体，附拍摄参数小册。', points: 25, pay: 'points' },
+      { id: 'scarf', ico: '≋', name: '冬季星图丝巾', desc: '12 月星图印花，观测保暖两用。', points: 90, pay: 'points' },
+      { id: 'journal', ico: '▤', name: '观测手账', desc: '皮质封面，内页含观测记录模板。', points: 45, pay: 'points' },
+      { id: 'hoodie', ico: '◍', name: '星环连帽卫衣', desc: '背后荧光星图，暗夜出摊辨识队友。', price: 89, pay: 'alipay' },
+      { id: 'model', ico: '♆', name: '信达小黑 3D 打印模型', desc: '按 1:8 复刻，含赤道仪可动关节。', price: 129, pay: 'alipay' },
+      { id: 'lamp', ico: '◐', name: '月相小夜灯', desc: '触控切换月相，红光模式保暗视。', price: 59, pay: 'alipay' }
+    ];
+    function renderShop() {
+      const grid = document.getElementById('shopGrid');
+      if (!grid) return;
+      grid.innerHTML = SHOP_PRODUCTS.map(p =>
+        '<article class="shop-card"><div class="shop-ico">' + p.ico + '</div><div class="shop-body">' +
+        '<div class="shop-name">' + p.name + '</div><div class="shop-desc">' + p.desc + '</div>' +
+        '<div class="shop-foot"><span class="shop-price">' + (p.pay === 'points' ? p.points + ' 积分' : '¥ ' + p.price) + '</span>' +
+        '<button class="shop-x" data-id="' + p.id + '">' + (p.pay === 'points' ? '积分兑换' : '支付宝购买') + '</button></div></div></article>').join('');
+      grid.querySelectorAll('.shop-x').forEach(btn => {
+        btn.onclick = async () => {
+          const p = SHOP_PRODUCTS.find(x => x.id === btn.dataset.id);
+          if (!state.user || !state.user.token) { openLogin(); showToast('登录后可兑换/购买', true); return; }
+          if (p.pay === 'points') {
+            if (!(await uiConfirm('用 ' + p.points + ' 积分兑换「' + p.name + '」？兑换后请到管理员处领取。', '积分兑换'))) return;
+            const r = await apiFetch('/shop/exchange', { method: 'POST', body: { product_id: p.id, product_name: p.name, points: p.points, pay_type: 'points' } });
+            showToast((r && r.code === 0) ? '兑换成功，请找管理员领取' : ((r && r.message) || '兑换失败'), !(r && r.code === 0));
+          } else {
+            if (!(await uiConfirm('下单「' + p.name + '」（¥' + p.price + '）？在线支付通道正在接入，当前请下单后联系管理员完成支付与领取。', '支付宝购买'))) return;
+            const r = await apiFetch('/shop/exchange', { method: 'POST', body: { product_id: p.id, product_name: p.name, points: p.price, pay_type: 'alipay' } });
+            showToast((r && r.code === 0) ? '订单已创建（待支付），请联系管理员' : ((r && r.message) || '下单失败'), !(r && r.code === 0));
+          }
+        };
+      });
+    }
+    function enterShop() {
+      document.querySelectorAll('.landing-only').forEach(el => { el.hidden = true; });
+      const area = document.getElementById('hubArea');
+      if (area) area.hidden = true;
+      const sp = document.getElementById('shopPage');
+      if (sp) sp.hidden = false;
+      renderShop();
+      window.scrollTo({ top: 0 });
+    }
+
+    // ---------- v2.25 社区：作者三标 + 积分总榜 ----------
+    function cmOrgLabel(p) {
+      return '<span class="cm-orgtag">' + (p.org === 'nankai_astro' ? '南开天协' : '海大天协') + '</span>' +
+        (p.campus ? '<span class="cm-orgtag">' + p.campus + '</span>' : '') +
+        (p.department ? '<span class="cm-orgtag">' + p.department + '</span>' : '');
+    }
+    async function cmLoadBoard() {
+      const box = document.getElementById('cmBoardList');
+      if (!box) return;
+      const r = await apiFetch('/astro/leaderboard', { method: 'POST', body: {} });
+      const rows = (r && r.data) || [];
+      box.innerHTML = rows.slice(0, 10).map((x, i) =>
+        '<span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border:1px solid ' +
+        (i < 3 ? 'rgba(230,199,143,.5)' : 'rgba(124,167,220,.2)') + ';border-radius:999px;font-size:11px;color:' +
+        (i < 3 ? '#e6c78f' : '#d8dee6') + '">' +
+        (i + 1) + '. ' + x.name + ' <span style="color:#5c7194">' + (x.org === 'nankai_astro' ? '南开' : '海大') +
+        (x.campus ? '·' + x.campus : '') + (x.department ? '·' + x.department : '') + '</span> <b>' + x.points + '</b></span>'
+      ).join('') || '<span style="color:#5c7194;font-size:12px">暂无积分数据</span>';
+    }
+
+
+    // ---------- v2.26 扫码答题：一次扫码，全程推送 ----------
+    const mqState = { q: null, lec: '', answered: new Set(), pushTimer: null, lastAt: 0 };
+    function mqUrl(lecId, qId) {
+      return 'https://sunyilin00000.github.io/xinghuan-web/?lec=' + lecId + '&q=' + qId;
+    }
+    async function mqEnsureLogin() {
+      if (state.user && state.user.token) return true;
+      // 本地记住的 token 静默恢复
+      const saved = localStorage.getItem('hub_token');
+      if (saved) {
+        try {
+          const r = await apiFetch('/me', { method: 'POST', body: { token: saved } });
+          if (r && r.code === 0) { state.user = { ...r.data, token: saved }; return true; }
+          localStorage.removeItem('hub_token');
+        } catch (e) {}
+      }
+      openLogin();
+      return false;
+    }
+    async function mqShow(q) {
+      mqState.q = q;
+      document.getElementById('mqTag').textContent = ({ choice: '选择题', judge: '判断题', vote: '投票', blank: '填空题' }[q.type] || '题目') + (q.anonymous ? ' · 匿名' : '');
+      document.getElementById('mqTitle').textContent = q.title;
+      const body = document.getElementById('mqBody');
+      const msg = document.getElementById('mqMsg');
+      msg.textContent = '';
+      if (q.type === 'blank') {
+        body.innerHTML = '<input class="mq-input" id="mqBlank" placeholder="你的答案" /><button class="mq-send" id="mqSend">提交答案</button>';
+        document.getElementById('mqSend').onclick = () => mqAnswer({ content: document.getElementById('mqBlank').value });
+      } else if (q.type === 'judge') {
+        body.innerHTML = '<button class="mq-opt" data-j="T">对</button><button class="mq-opt" data-j="F">错</button>';
+        body.querySelectorAll('.mq-opt').forEach(b => b.onclick = () => mqAnswer({ judge: b.dataset.j }));
+      } else {
+        const multi = q.type === 'choice';
+        const sel = new Set();
+        body.innerHTML = (q.options || []).map(o =>
+          '<button class="mq-opt" data-k="' + o.key + '">' + o.key + '. ' + o.text + '</button>').join('');
+        body.querySelectorAll('.mq-opt').forEach(b => b.onclick = () => {
+          if (multi) { sel.has(b.dataset.k) ? sel.delete(b.dataset.k) : sel.add(b.dataset.k); b.style.borderColor = sel.has(b.dataset.k) ? '#7cc7ff' : ''; }
+          else mqAnswer({ option_keys: [b.dataset.k] });
+        });
+        if (multi) {
+          const send = document.createElement('button');
+          send.className = 'mq-send'; send.textContent = '提交答案';
+          send.onclick = () => sel.size ? mqAnswer({ option_keys: Array.from(sel) }) : (msg.textContent = '请先选择');
+          body.appendChild(send);
+        }
+      }
+      document.getElementById('mobileQuiz').hidden = false;
+    }
+    async function mqAnswer(payload) {
+      if (!mqState.q) return;
+      const msg = document.getElementById('mqMsg');
+      const r = await apiFetch('/lecture/q/answer', { method: 'POST', body: Object.assign({ question_id: mqState.q._id }, payload) });
+      if (r && r.code === 0) {
+        mqState.answered.add(mqState.q._id);
+        msg.textContent = '已提交';
+        msg.style.color = '#86b5a0';
+        setTimeout(() => { document.getElementById('mobileQuiz').hidden = true; mqStartPush(); }, 700);
+      } else {
+        msg.textContent = (r && r.message) || '提交失败';
+        msg.style.color = '#f0a8a8';
+      }
+    }
+    document.getElementById('mqClose').onclick = () => { document.getElementById('mobileQuiz').hidden = true; mqStartPush(); };
+    // 新题推送：轮询课堂已发布题目，弹出最新未作答
+    function mqStartPush() {
+      if (!mqState.lec || mqState.pushTimer) return;
+      mqState.pushTimer = setInterval(async () => {
+        if (document.hidden) return;
+        const r = await apiFetch('/lecture/q/list', { method: 'POST', body: { lecture_id: mqState.lec } });
+        const live = ((r && r.data) || []).filter(q => q.status === 'published');
+        const fresh = live.filter(q => !mqState.answered.has(q._id) && Number(q.at || 0) > mqState.lastAt);
+        if (fresh.length) {
+          const latest = fresh.sort((a, b) => Number(b.at || 0) - Number(a.at || 0))[0];
+          mqState.lastAt = Number(latest.at || 0);
+          mqShow(latest);
+        } else if (live.length) {
+          mqState.lastAt = Math.max.apply(null, live.map(q => Number(q.at || 0)).concat([mqState.lastAt]));
+        }
+      }, 6000);
+    }
+    // 二维码（教师端）：动态加载 qrcodejs，本地优先回退双 CDN
+    async function loadQrLib() {
+      if (window.QRCode) return;
+      for (const src of ['qrcode.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js', 'https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@master/qrcode.min.js']) {
+        try {
+          await new Promise((res, rej) => {
+            const s = document.createElement('script');
+            s.src = src; s.onload = res; s.onerror = rej;
+            document.head.appendChild(s);
+          });
+          if (window.QRCode) return;
+        } catch (e) {}
+      }
+    }
+    async function showQr(lecId, qId) {
+      await loadQrLib();
+      const url = mqUrl(lecId, qId);
+      document.getElementById('qrUrl').textContent = url;
+      const box = document.getElementById('qrBox');
+      box.innerHTML = '';
+      try {
+        new QRCode(box, { text: url, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.M });
+      } catch (e) {
+        box.innerHTML = '<p style="color:#333;font-size:12px">二维码库加载失败，请手动访问下方链接</p>';
+      }
+      document.getElementById('qrModal').classList.add('open');
+    }
+
+    // 启动：解析 ?lec= & ?q=
+    async function mqBootFromUrl() {
+      const u = new URLSearchParams(location.search);
+      const qid = u.get('q');
+      const lec = u.get('lec');
+      if (lec) { mqState.lec = lec; localStorage.setItem('hub_lec', lec); }
+      if (!qid && !lec) {
+        const savedLec = localStorage.getItem('hub_lec');
+        if (savedLec) mqState.lec = savedLec;
+        return;
+      }
+      if (!(await mqEnsureLogin())) return;
+      if (qid) {
+        const r = await apiFetch('/lecture/q/get', { method: 'POST', body: { question_id: qid } });
+        if (r && r.code === 0) { mqShow(r.data); mqStartPush(); return; }
+        showToast((r && r.message) || '题目不可用', true);
+      }
+      mqStartPush();
     }
 
     function canSeeTeacherBackend() {
@@ -3555,6 +3798,7 @@
     async function initializeCloudbase() {
       // v2(SCF 架构)：无需浏览器直连 CloudBase，全部经 SCF 网关
       console.log('[星环教学中枢] SCF 网关模式', SCF_API);
+      hideHubNav();
       setAnonymous();
       setConnection('online', 'SCF 网关已连接');
       logStep('网关就绪', '匿名可浏览公开数据');
@@ -3614,6 +3858,23 @@
       });
       const wbSearchEl = document.getElementById('wbSearch');
       if (wbSearchEl) wbSearchEl.oninput = wbRenderMembers;
+      // v2.22 顶栏中枢入口
+      document.querySelectorAll('.nav-hub-item').forEach(b => {
+        b.addEventListener('click', () => enterHub(b.dataset.hub));
+      });
+      const navMon = document.getElementById('navMonitor');
+      if (navMon) navMon.addEventListener('click', () => enterHub('classroom'));
+      const navShop = document.getElementById('navShop');
+      if (navShop) navShop.addEventListener('click', () => enterShop());
+      // 首页锚点（星环/入驻星系等）回到首页视图
+      document.querySelectorAll('.top-nav-link:not(.nav-hub-item):not(#navShop), .top-nav-anchor').forEach(b => {
+        b.addEventListener('click', () => {
+          if (hubMode) showLanding();
+          const sp2 = document.getElementById('shopPage');
+          if (sp2) sp2.hidden = true;
+          if (!hubMode) document.querySelectorAll('.landing-only').forEach(el => { el.hidden = false; });
+        });
+      });
       const ljo = document.getElementById('lectureJoinOnline');
       if (ljo) ljo.addEventListener('click', () => ocJoin('online'));
       const ljc = document.getElementById('lectureJoinCheckin');
@@ -3729,6 +3990,7 @@
       }
       // v1.4 默认进入登录页；v2.12.6 若从协会官网 SSO 跳转则跳过
       if (!(await trySsoLogin())) openLogin();
+      mqBootFromUrl();
     }
 
     boot();

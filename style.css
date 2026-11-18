@@ -6581,3 +6581,31 @@ body.join-open {
 a.partner-link{display:block;color:inherit;text-decoration:none}
 a.partner-link:hover{border-color:rgba(230,199,143,.55);transform:translateY(-6px);box-shadow:0 24px 60px rgba(0,0,0,.45)}
 a.partner-link .partner-name::after{content:" ↗";font-size:.6em;color:#5c7194}
+
+/* v2.24 文创商城 */
+.shop-page{margin-top:0}
+.shop-card{border:1px solid rgba(124,167,220,.15);border-radius:14px;overflow:hidden;background:rgba(255,255,255,.015);transition:.3s;display:flex;flex-direction:column}
+.shop-card:hover{transform:translateY(-4px);border-color:rgba(230,199,143,.4)}
+.shop-ico{height:120px;display:grid;place-items:center;font-size:40px;color:#7cc7ff;
+  background:radial-gradient(circle at 30% 20%,rgba(124,199,255,.14),transparent 55%),linear-gradient(160deg,#0a1526,#060b16)}
+.shop-body{padding:14px 16px 16px;display:flex;flex-direction:column;gap:8px;flex:1}
+.shop-name{font-size:15px;font-weight:600;color:#eaf2fb}
+.shop-desc{font-size:11px;color:#93a7c4;line-height:1.6;flex:1}
+.shop-foot{display:flex;align-items:center;justify-content:space-between;margin-top:4px}
+.shop-price{color:#e6c78f;font-size:14px}
+.shop-x{padding:7px 18px;border:1px solid rgba(230,199,143,.45);border-radius:999px;background:rgba(230,199,143,.07);color:#e6c78f;font-size:12px;cursor:pointer;font-family:inherit}
+.shop-x:hover{background:rgba(230,199,143,.15)}
+.shop-x:disabled{opacity:.4;cursor:not-allowed}
+
+/* v2.26 手机答题浮层 */
+.mq-sheet{position:fixed;inset:0;z-index:95;display:grid;place-items:end center;background:rgba(2,5,10,.6);backdrop-filter:blur(6px)}
+.mq-sheet[hidden]{display:none !important}
+.mq-card{width:min(560px,94vw);max-height:86vh;overflow-y:auto;padding:20px 22px;border:1px solid rgba(124,199,255,.3);border-radius:20px 20px 0 0;background:#0a1220}
+@media(min-width:640px){.mq-sheet{place-items:center}.mq-card{border-radius:20px}}
+.mq-head{display:flex;align-items:center;justify-content:space-between}
+.mq-head span{font-size:12px;letter-spacing:.2em;color:#7cc7ff}
+.mq-head button{background:none;border:0;color:#5c7194;font-size:22px;cursor:pointer}
+.mq-opt{display:block;width:100%;text-align:left;margin-bottom:8px;padding:12px 16px;border:1px solid rgba(124,167,220,.25);border-radius:12px;background:rgba(255,255,255,.03);color:#d8dee6;font-size:14px;cursor:pointer;font-family:inherit}
+.mq-opt:hover{border-color:#7cc7ff}
+.mq-input{width:100%;padding:12px 14px;border:1px solid rgba(124,167,220,.25);border-radius:12px;background:rgba(255,255,255,.03);color:#eaf2fb;font-size:14px;outline:none;font-family:inherit}
+.mq-send{width:100%;margin-top:10px;padding:12px;border:0;border-radius:12px;background:linear-gradient(135deg,#2f7fe0,#1c5cb8);color:#fff;font-size:15px;cursor:pointer;font-family:inherit}
