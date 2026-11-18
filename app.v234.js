@@ -14,6 +14,19 @@
       });
       return response.json();
     }
+
+    // ===== v2.35 飞行记录仪：开机自诊断 =====
+    (function () {
+      const box = document.createElement('div');
+      box.id = 'flightrecorder';
+      box.style.cssText = 'position:fixed;left:8px;top:60px;z-index:99999;background:rgba(0,0,0,.82);color:#7CFC9A;font:11px/1.6 monospace;padding:8px 10px;border-radius:8px;max-width:60vw;white-space:pre-wrap;pointer-events:none';
+      document.addEventListener('DOMContentLoaded', () => document.body.appendChild(box));
+      window.__rec = (msg) => { const b = document.getElementById('flightrecorder'); if (b) b.textContent += '\n' + new Date().toLocaleTimeString('zh-CN', { hour12: false }) + ' ' + msg; };
+      window.addEventListener('error', (e) => { window.__rec('ERROR: ' + e.message + ' @' + (e.filename || '').split('/').pop() + ':' + e.lineno); });
+      window.addEventListener('unhandledrejection', (e) => { window.__rec('REJECT: ' + (e.reason && (e.reason.message || e.reason) || 'unknown')); });
+      window.__rec('recorder on | API=' + (window.XINGHUAN_API || 'MISSING!'));
+    })();
+
     const ECHARTS_FALLBACK = 'https://unpkg.com/echarts@5.6.0/dist/echarts.min.js';
     const FALLBACK_SERIES = [12.6, 12.3, 11.8, 11.1, 10.7, 10.9, 11.5, 12.1, 12.8];
     const ORG_DEFINITIONS = {
@@ -552,6 +565,7 @@
         return;
       }
 
+      window.__rec && window.__rec('login:submit click');
       state.busy = true;
       elements.submitLoginButton.disabled = true;
       const submitLabel = elements.submitLoginButton.querySelector('span');
@@ -565,7 +579,9 @@
       logStep('正在调用 memberService.web_login');
 
       try {
+        window.__rec && window.__rec('login:request sent');
         const data = await callWebLogin(username, password);
+        window.__rec && window.__rec('login:resp code=' + (data && data.code));
         console.log('[星环教学中枢] 登录成功，身份已建立');
         localStorage.setItem('hub_token', data.token || (data.user && data.user.token) || '');
         setLoggedIn({ ...(data.user || { username }), token: data.token || (data.user && data.user.token) });
@@ -4141,6 +4157,7 @@
     }
 
     async function boot() {
+      try { window.__rec('boot:start'); } catch (e) {}
       bindElements();
       bindEvents();
       activateOrg(state.activeOrg);
@@ -4155,8 +4172,12 @@
       renderGroupSubmissionWall();
       logStep('页面初始化', '正在加载依赖');
       try {
+        window.__rec && window.__rec('chart:loading');
         await initializeChart();
+        window.__rec && window.__rec('chart:ok');
+        window.__rec && window.__rec('cloudbase:loading');
         await initializeCloudbase();
+        window.__rec && window.__rec('cloudbase:ok');
       } catch (error) {
         console.error('[星环教学中枢] 初始化失败', error);
         setConnection('error', '初始化失败');
