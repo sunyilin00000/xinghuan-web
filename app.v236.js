@@ -1605,7 +1605,6 @@
       if (orgEl) orgEl.textContent = 'ORG / ' + orgKey + (wbState.isAdmin ? ' · 管理员视图' : ' · 只读视图');
     }
     async function wbLoad() {
-      await Promise.allSettled([wbLoadMembers(), wbLoadRes(), wbLoadLogs()]);
     }
     async function wbLoadMembers() {
       const r = await wbCall('web_am_list');
@@ -1727,7 +1726,6 @@
       wbLoadRes();
     };
 
-    document.getElementById('wbLogRefresh').onclick = wbLoadLogs;
 
     // ---------- v2.18 星环 AI 抽屉 ----------
     const hubAiHistory = [];
