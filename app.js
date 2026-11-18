@@ -568,6 +568,8 @@
         console.log('[星环教学中枢] 登录成功，身份已建立');
         localStorage.setItem('hub_token', data.token || (data.user && data.user.token) || '');
         setLoggedIn({ ...(data.user || { username }), token: data.token || (data.user && data.user.token) });
+        // v2.27 登录成功直接带进中枢页（课堂看板），不用自己找入口
+        setTimeout(() => enterHub('classroom'), 350);
         setConnection('online', '已连接');
         showToast('登录成功');
         await Promise.allSettled([loadRecords(), loadClassroomCourses()]);
