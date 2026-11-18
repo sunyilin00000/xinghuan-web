@@ -26,6 +26,31 @@
     // 部署后把这里改成你的 SCF API 网关地址（或在部署前全局替换）
     window.XINGHUAN_API = 'https://1521583267-cn8t3sbvwc.ap-shanghai.tencentscf.com';
   </script>
+  <!-- v2.35.3 内联诊断仪：版本与链路实况直接显示在页面上 -->
+  <script>
+  (function () {
+    var box = document.createElement('div');
+    box.style.cssText = 'position:fixed;left:10px;top:70px;z-index:2147483647;background:#200a0a;color:#ff6b6b;border:2px solid #ff6b6b;font:bold 14px/1.8 monospace;padding:12px 16px;border-radius:10px;max-width:70vw;white-space:pre-wrap';
+    box.textContent = 'v2.35.3 诊断仪运行中…';
+    function mount() { document.body.appendChild(box); probe(); }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount); else mount();
+    window.addEventListener('error', function (e) { box.textContent += '\n[JS错误] ' + e.message + ' @' + String(e.filename).split('/').pop() + ':' + e.lineno; });
+    function probe() {
+      var api = window.XINGHUAN_API || '(未定义!)';
+      box.textContent = '版本: v2.35.3\nAPI: ' + api;
+      var t0 = Date.now();
+      fetch((window.XINGHUAN_API || '') + '/ping?u=https://www.baidu.com&diag=' + Date.now())
+        .then(function (r) { return r.text(); })
+        .then(function (t) { box.textContent += '\nPing: OK ' + (Date.now() - t0) + 'ms ' + t.slice(0, 80); })
+        .catch(function (e) { box.textContent += '\nPing: 失败 ' + e.message; });
+      fetch((window.XINGHUAN_API || '') + '/records', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+        .then(function (r) { return r.text(); })
+        .then(function (t) { box.textContent += '\nRecords: OK ' + t.slice(0, 80); })
+        .catch(function (e) { box.textContent += '\nRecords: 失败 ' + e.message; });
+    }
+  })();
+  </script>
+
 </head>
 <body class="auth-locked">
 
