@@ -15,17 +15,20 @@
       return response.json();
     }
 
-    // ===== v2.35 飞行记录仪：开机自诊断 =====
+    
+
+    // ===== v2.36.1 导航诊断仪（精简） =====
     (function () {
-      const box = document.createElement('div');
-      box.id = 'flightrecorder';
-      box.style.cssText = 'position:fixed;left:8px;top:60px;z-index:99999;background:rgba(0,0,0,.82);color:#7CFC9A;font:11px/1.6 monospace;padding:8px 10px;border-radius:8px;max-width:60vw;white-space:pre-wrap;pointer-events:none';
-      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => document.body.appendChild(box));
-      else document.body.appendChild(box);
-      window.__rec = (msg) => { const b = document.getElementById('flightrecorder'); if (b) b.textContent += '\n' + new Date().toLocaleTimeString('zh-CN', { hour12: false }) + ' ' + msg; };
-      window.addEventListener('error', (e) => { window.__rec('ERROR: ' + e.message + ' @' + (e.filename || '').split('/').pop() + ':' + e.lineno); });
-      window.addEventListener('unhandledrejection', (e) => { window.__rec('REJECT: ' + (e.reason && (e.reason.message || e.reason) || 'unknown')); });
-      window.__rec('recorder on | API=' + (window.XINGHUAN_API || 'MISSING!'));
+      var box = document.createElement('div');
+      box.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:2147483647;background:rgba(0,0,0,.85);color:#7CFC9A;font:11px/1.6 monospace;padding:6px 10px;border-radius:8px;max-width:55vw;white-space:pre-wrap;pointer-events:none';
+      box.textContent = 'nav-diag on';
+      (document.body || document.documentElement).appendChild(box);
+      window.__rec = function (m) { box.textContent += ' | ' + m; };
+      window.addEventListener('error', function (e) { window.__rec('ERR:' + String(e.message).slice(0, 60) + '@' + String(e.filename).split('/').pop() + ':' + e.lineno); });
+      document.addEventListener('click', function (ev) {
+        var b = ev.target.closest && ev.target.closest('.top-nav-link');
+        if (b) window.__rec('click:' + (b.id || b.textContent.trim()));
+      }, true);
     })();
 
     const ECHARTS_FALLBACK = 'https://unpkg.com/echarts@5.6.0/dist/echarts.min.js';
@@ -566,7 +569,6 @@
         return;
       }
 
-      window.__rec && window.__rec('login:submit click');
       state.busy = true;
       elements.submitLoginButton.disabled = true;
       const submitLabel = elements.submitLoginButton.querySelector('span');
@@ -580,9 +582,7 @@
       logStep('正在调用 memberService.web_login');
 
       try {
-        window.__rec && window.__rec('login:request sent');
         const data = await callWebLogin(username, password);
-        window.__rec && window.__rec('login:resp code=' + (data && data.code));
         console.log('[星环教学中枢] 登录成功，身份已建立');
         localStorage.setItem('hub_token', data.token || (data.user && data.user.token) || '');
         setLoggedIn({ ...(data.user || { username }), token: data.token || (data.user && data.user.token) });
@@ -1605,6 +1605,7 @@
       if (orgEl) orgEl.textContent = 'ORG / ' + orgKey + (wbState.isAdmin ? ' · 管理员视图' : ' · 只读视图');
     }
     async function wbLoad() {
+      await Promise.allSettled([wbLoadMembers(), wbLoadRes(), wbLoadOrgApps()]);
     }
     async function wbLoadMembers() {
       const r = await wbCall('web_am_list');
@@ -1734,6 +1735,8 @@
       document.getElementById('hubAiDrawer').classList.toggle('open');
     };
     document.getElementById('hubAiClose').onclick = () => document.getElementById('hubAiDrawer').classList.remove('open');
+    document.getElementById('hubAiHead').insertAdjacentHTML('beforeend', '<button id="hubAiHisBtn" style="background:none;border:1px solid rgba(124,199,255,.4);color:#7cc7ff;border-radius:999px;padding:3px 14px;font-size:11px;cursor:pointer;font-family:inherit">历史</button>');
+    setTimeout(() => { const hb = document.getElementById('hubAiHisBtn'); if (hb) hb.onclick = hubAiHistLoad; }, 0);
     function hubAiPush(role, text) {
       const box = document.getElementById('hubAiMsgs');
       const div = document.createElement('div');
@@ -2352,6 +2355,73 @@
         else if (live.length) mm.lastAt = Math.max.apply(null, live.map(q => Number(q.at || 0)).concat([mm.lastAt]));
       }, 6000);
     }
+
+
+    // ---------- v2.37 成员申请审批 + AI 历史 + 导航委托兜底 ----------
+
+
+    // AI 抽屉：历史按钮
+    async function hubAiHistLoad() {
+      const box = document.getElementById('hubAiMsgs');
+      box.innerHTML = '<div class="ai-msg bot">读取中…</div>';
+      const r = await apiFetch('/ai/history', { method: 'POST', body: {} });
+      const list = (r && r.data) || [];
+      box.innerHTML = list.map(m =>
+        '<div class="ai-msg bot"><div style="color:#7cc7ff;font-size:11px;margin-bottom:4px">问：' + String(m.question || '').slice(0, 80) + '</div>' + String(m.answer || '').slice(0, 300) + '</div>').join('')
+        || '<div class="ai-msg bot">还没有历史对话</div>';
+      box.scrollTop = box.scrollHeight;
+    }
+
+
+    // 导航委托兜底：无论绑定阶段发生什么，点击必响应
+    document.addEventListener('click', function (ev) {
+      var b = ev.target.closest && ev.target.closest('.top-nav-link');
+      if (!b) return;
+      var id = b.id || '';
+      try {
+        if (id === 'navHome') { showLanding(); var sp = document.getElementById('shopPage'); if (sp) sp.hidden = true; window.scrollTo({ top: 0, behavior: 'smooth' }); }
+        else if (id === 'navPartners') { showLanding(); var sp2 = document.getElementById('shopPage'); if (sp2) sp2.hidden = true; var pt = document.getElementById('partners'); if (pt) setTimeout(function () { pt.scrollIntoView({ behavior: 'smooth' }); }, 60); }
+        else if (id === 'navShop') enterShop();
+        else if (id === 'navMonitor') enterHub('classroom');
+        else if (b.dataset.hub) enterHub(b.dataset.hub);
+      } catch (err) { if (window.__rec) window.__rec('navERR:' + err.message); }
+    }, true);
+
+
+    // ---------- v2.37 社团入驻申请 ----------
+    document.getElementById('orgApplyBtn').onclick = async () => {
+      const v = await uiPrompt({
+        title: '申请入驻星环',
+        sub: '提交后由星环终端管理员（孙一琳）审核，通过后将开通贵社团账号',
+        fields: [
+          { id: 'name', label: '社团名称', placeholder: '如：北京大学天文协会' },
+          { id: 'school', label: '学校', placeholder: '如：北京大学' },
+          { id: 'contact', label: '联系方式（微信/手机/邮箱）', placeholder: '审核通过后我们联系你' },
+          { id: 'intro', label: '社团简介（可空）', placeholder: '一句话介绍贵社' }
+        ]
+      });
+      if (!v || !v.name || !v.school || !v.contact) return;
+      const r = await apiFetch('/org/apply', { method: 'POST', body: v });
+      showToast((r && r.code === 0) ? '申请已提交，请等待审核' : ((r && r.message) || '提交失败'), !(r && r.code === 0));
+    };
+    async function wbLoadOrgApps() {
+      const box = document.getElementById('wbOrgList');
+      if (!box) return;
+      const r = await apiFetch('/org/applications', { method: 'POST', body: {} });
+      if (r && r.code === 403) { document.getElementById('wbOrgTab').hidden = true; document.getElementById('wbOrg').hidden = true; return; }
+      document.getElementById('wbOrgTab').hidden = false;
+      const list = (r && r.data) || [];
+      box.innerHTML = list.map(m =>
+        '<div class="ap-li"><span class="grow"><b>' + m.name + '</b> <span style="color:var(--faint)">' + m.school + ' · ' + m.contact + '</span>' + (m.intro ? '<br><span style="color:var(--muted);font-size:11px">' + m.intro + '</span>' : '') + '</span>' +
+        '<button class="ap-mini" onclick="wbOrgApprove(\'' + m._id + '\',\'approve\',\'' + m.name + '\')">通过</button>' +
+        '<button class="ap-mini danger" onclick="wbOrgApprove(\'' + m._id + '\',\'reject\',\'' + m.name + '\')">拒绝</button></div>').join('')
+        || '<div class="ap-li" style="color:var(--faint)">暂无入驻申请</div>';
+    }
+    window.wbOrgApprove = async (id, action, name) => {
+      const r = await apiFetch('/org/approve', { method: 'POST', body: { id, action, name } });
+      showToast((r && r.code === 0) ? (action === 'approve' ? '已通过：请为「' + name + '」开通管理员账号' : '已拒绝') : ((r && r.message) || '操作失败'), !(r && r.code === 0));
+      wbLoadOrgApps();
+    };
 
     function canSeeTeacherBackend() {
       const u = state.user || {};
@@ -4030,6 +4100,8 @@
         document.getElementById('wbMembers').hidden = t.dataset.wbt !== 'members';
         document.getElementById('wbRes').hidden = t.dataset.wbt !== 'res';
         if (t.dataset.wbt === 'res') wbLoadRes();
+        document.getElementById('wbOrg').hidden = t.dataset.wbt !== 'orgapp';
+        if (t.dataset.wbt === 'orgapp') wbLoadOrgApps();
       });
       const wbSearchEl = document.getElementById('wbSearch');
       if (wbSearchEl) wbSearchEl.oninput = wbRenderMembers;
@@ -4156,7 +4228,6 @@
     }
 
     async function boot() {
-      try { window.__rec('boot:start'); } catch (e) {}
       bindElements();
       bindEvents();
       activateOrg(state.activeOrg);
@@ -4171,12 +4242,8 @@
       renderGroupSubmissionWall();
       logStep('页面初始化', '正在加载依赖');
       try {
-        window.__rec && window.__rec('chart:loading');
         await initializeChart();
-        window.__rec && window.__rec('chart:ok');
-        window.__rec && window.__rec('cloudbase:loading');
         await initializeCloudbase();
-        window.__rec && window.__rec('cloudbase:ok');
       } catch (error) {
         console.error('[星环教学中枢] 初始化失败', error);
         setConnection('error', '初始化失败');
