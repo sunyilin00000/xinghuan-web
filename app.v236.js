@@ -997,7 +997,15 @@
       var zone = document.createElement('div');
       zone.id = 'videoZone';
       zone.style.cssText = 'margin:0 16px 16px;padding:18px;border:1px solid rgba(230,199,143,.22);border-radius:14px;background:linear-gradient(145deg,rgba(230,199,143,.05),rgba(255,255,255,.012))';
-      zone.innerHTML = '<div style="display:flex;align-items:center;gap:14px;margin-bottom:16px"><span style="font-size:16px;letter-spacing:.18em;color:#e6c78f">视频教学</span><span style="flex:1;height:1px;background:rgba(230,199,143,.14)"></span></div><div id="videoList" class="video-list"><p style="color:var(--faint);font-size:12px;text-align:center;padding:14px 0">正在载入视频…</p></div>';
+      zone.innerHTML = '<div style="display:flex;align-items:center;gap:14px;margin-bottom:16px"><span style="font-size:16px;letter-spacing:.18em;color:#e6c78f">视频教学</span><span style="flex:1;height:1px;background:rgba(230,199,143,.14)"></span><button id="xhVideoUp" class="btn" type="button" style="min-height:32px;font-size:12px">上传视频</button></div><div id="videoList" class="video-list"><p style="color:var(--faint);font-size:12px;text-align:center;padding:14px 0">正在载入视频…</p></div>';
+      if (localStorage.getItem('hub_token')) {
+        setTimeout(function () {
+          var up = document.getElementById('xhVideoUp');
+          if (up) up.onclick = uploadVideoFlow;
+        }, 0);
+      } else {
+        setTimeout(function () { var up = document.getElementById('xhVideoUp'); if (up) up.style.display = 'none'; }, 0);
+      }
       var card = document.getElementById('xyCard');
       if (card) host.insertBefore(zone, card); else host.appendChild(zone);
     }
@@ -4670,3 +4678,46 @@
         box.innerHTML = '<p class="pub-res-empty">公开资料载入失败</p>';
       }
     };
+
+    /* v2.53 视频直传：网关签名 → 浏览器 PUT 到 COS（不过服务器、大小不限）→ 自动登记清单 */
+    function uploadVideoFlow() {
+      var input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'video/mp4,video/webm,video/*';
+      input.onchange = async function () {
+        var file = input.files[0];
+        if (!file) return;
+        var btn = document.getElementById('xhVideoUp');
+        var title = (file.name.replace(/\.[^.]+$/, '') || '未命名视频').slice(0, 60);
+        try {
+          btn.disabled = true; btn.textContent = '获取上传凭证…';
+          var tk = localStorage.getItem('hub_token') || '';
+          var sg = await fetch(SCF_API + '/video-sign', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Member-Token': tk }, body: JSON.stringify({ filename: file.name }) });
+          var sgj = await sg.json();
+          if (!sgj || sgj.code !== 0) { showToast((sgj && sgj.message) || '签名失败', true); btn.disabled = false; btn.textContent = '上传视频'; return; }
+          btn.textContent = '上传中 0%';
+          await new Promise(function (res, rej) {
+            var xhr = new XMLHttpRequest();
+            xhr.open('PUT', sgj.data.url, true);
+            xhr.setRequestHeader('Authorization', sgj.data.auth);
+            xhr.setRequestHeader('Content-Type', file.type || 'video/mp4');
+            xhr.upload.onprogress = function (e) {
+              if (e.lengthComputable) btn.textContent = '上传中 ' + Math.round(e.loaded / e.total * 100) + '%';
+            };
+            xhr.onload = function () { (xhr.status === 200) ? res() : rej(new Error('COS ' + xhr.status)); };
+            xhr.onerror = function () { rej(new Error('网络错误')); };
+            xhr.send(file);
+          });
+          btn.textContent = '登记清单…';
+          var rg = await fetch(SCF_API + '/video-register', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Member-Token': tk }, body: JSON.stringify({ key: sgj.data.key, title: title }) });
+          var rgj = await rg.json();
+          if (!rgj || rgj.code !== 0) { showToast((rgj && rgj.message) || '登记失败', true); }
+          else { showToast('上传完成，已上架'); loadVideos(); }
+        } catch (e) {
+          showToast('上传失败：' + (e.message || e), true);
+        } finally {
+          btn.disabled = false; btn.textContent = '上传视频';
+        }
+      };
+      input.click();
+    }
