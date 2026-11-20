@@ -241,6 +241,12 @@
           </a>
         </div>
 
+        <!-- v2.46 公开资料库（免登录可读公开档资料） -->
+        <div class="partners-res">
+          <h3>公开资料库 <span>免登录可查看 · 由各社团上传</span></h3>
+          <div id="pubResList" class="pub-res-list"><p class="pub-res-empty">正在载入公开资料…</p></div>
+        </div>
+
         <div class="partners-cta">
           <button id="applyButton" class="apply-button" type="button">
             <span class="apply-bracket">[</span>
@@ -702,7 +708,7 @@
               <span style="flex:1;height:1px;background:rgba(124,167,220,.14)"></span>
             </div>
             <div id="astroResList" class="res-grid"></div>
-            <p id="astroResHint" hidden style="color:#5c7194;font-size:12px;margin-top:4px">本板块仅天文协会成员可见，请使用天文协会成员账号登录。</p>
+            <p id="astroResHint" hidden style="color:#5c7194;font-size:12px;margin-top:4px"></p>
           </div>
         </section>
 
@@ -711,7 +717,7 @@
           <header class="panel-head">
             <div class="panel-title-wrap">
               <h2 class="panel-title">控制台</h2>
-              <p class="panel-subtitle">课堂控制 · 仅管理员与授课教师可用</p>
+              <p class="panel-subtitle">课堂控制</p>
             </div>
           </header>
           <!-- v2.44 星环运营中枢 · 3D 地球态势屏（示例数据） -->
@@ -747,7 +753,7 @@
           <div id="consoleDenied" class="console-denied" hidden>
             <div class="denied-mark">!</div>
             <p class="denied-title">您暂无权限</p>
-            <p class="denied-sub">控制台仅管理员与授课教师可用</p>
+            <p class="denied-sub">当前账号无权访问</p>
           </div>
         </section>
     <!-- v2.18 工作台：按组织换 logo · 成员管理 · 资料管理 · 操作日志 -->
@@ -788,7 +794,7 @@
         
 <div id="wbRes" style="padding:16px 18px" hidden>
           <div class="ap-toolbar">
-            <span style="color:var(--faint);font-size:12px">「天文资料」对海大天协与南开天协共享可见；其他协会登录后不可见</span>
+            
             <span style="flex:1"></span>
             <button class="btn btn-gold" id="wbResAdd" type="button" style="min-height:34px;font-size:12px">上传资料</button>
           </div>
@@ -1123,8 +1129,8 @@
 
   <script src="script.js"></script>
   <script src="echarts.min.js"></script>
-  <script src="globe.js?v=245"></script>
-  <script src="app.v236.js?v=245"></script>
+  <script src="globe.js?v=247"></script>
+  <script src="app.v236.js?v=247"></script>
   <!-- 星屿 · Telescope Garden：学习资源页入口（作品与素材由 7uanm 提供，GPL-3.0） -->
   <script src="xingyu/xingyu-config.js"></script>
   <script src="xingyu/xingyu.js"></script>

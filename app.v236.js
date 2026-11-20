@@ -513,7 +513,7 @@
         state.records = [];
         finishRendering();
         setConnection('error', '只读数据受限');
-        elements.consoleMessage.textContent = '数据库读取失败，请检查集合存在性与匿名读权限 · ' + getErrorMessage(error);
+        elements.consoleMessage.textContent = '数据库读取失败，请稍后重试 · ' + getErrorMessage(error);
         if (options.toast) showToast('读取失败：' + getErrorMessage(error), true);
       } finally {
         elements.refreshButton.disabled = false;
@@ -1567,7 +1567,7 @@
 
     // ---------- v2.18 工作台（成员管理/资料管理/日志，多组织） ----------
     const ORG_DEFS = {
-      astro: { name: '中国海洋大学天文协会', logo: 'logo.png' },
+      astro: { name: '中国海洋大学天文协会', logo: 'ouc-astro-logo.png' },
       nankai_astro: { name: '南开大学天文协会', logo: 'nankai-logo.png' }
     };
     const wbState = { members: [], isAdmin: false };
@@ -1587,9 +1587,18 @@
       const logoEl = document.getElementById('wbLogo');
       if (logoEl) logoEl.src = def.logo;
       const titleEl = document.getElementById('wbTitle');
-      if (titleEl) titleEl.textContent = def.name + ' · 工作台';
       const orgEl = document.getElementById('wbOrgName');
-      if (orgEl) orgEl.textContent = 'ORG / ' + orgKey + (wbState.isAdmin ? ' · 管理员视图' : ' · 只读视图');
+      if (u.super_admin === true) {
+        /* v2.46 平台视角：最高权限不挂靠任何社团 */
+        if (titleEl) titleEl.textContent = '星环终端 · 工作台';
+        if (orgEl) orgEl.textContent = 'PLATFORM / 平台管理视图';
+      } else if (u.admin_scope === 'platform') {
+        if (titleEl) titleEl.textContent = '星环终端 · 工作台';
+        if (orgEl) orgEl.textContent = 'PLATFORM / 星环终端管理员视图';
+      } else {
+        if (titleEl) titleEl.textContent = def.name + ' · 工作台';
+        if (orgEl) orgEl.textContent = 'ORG / ' + orgKey + (wbState.isAdmin ? ' · 管理员视图' : ' · 只读视图');
+      }
       /* v2.46 我的资料：所有登录用户可完善学校/校区/专业/联系方式 */
       if (!document.getElementById('wbMeTab')) {
         var tabs2 = document.querySelector('.wb-tabs');
@@ -1737,7 +1746,7 @@
       wbLoadMembers();
     };
     window.wbSubAdmin = async (id, name) => {
-      const on = await uiConfirm('将「' + name + '」设为次级管理员？（拥有成员编辑/删除、改密、活动管理权限）', '次级管理员');
+      const on = await uiConfirm('将「' + name + '」设为次级管理员？', '次级管理员');
       if (on === null) return;
       const perms = { member_edit: true, member_delete: true, password_reset: true, activity_manage: true, subadmin_manage: false };
       const r = await wbCall('web_am_set_subadmin', { member_id: id, subadmin: on, perms });
@@ -1783,9 +1792,11 @@
     async function wbLoadRes() {
       const r = await apiFetch('/res/list', { method: 'POST', body: {} });
       const list = (r && r.data) || [];
+      const visName = { public: '公开', shared: '共享', private: '私密' };
       document.getElementById('wbResList').innerHTML = list.map(d =>
         '<div class="ap-li"><span class="grow"><b>' + d.title + '</b> <span style="color:var(--faint)">' +
-        ({ theory: '理论', observe: '观测', astro: '天文资料' }[d.cat] || d.cat) + ' · ' + (d.by || '') + '</span></span>' +
+        ({ theory: '理论', observe: '观测', astro: '天文资料' }[d.cat] || d.cat) + ' · ' + (d.by || '') + '</span>' +
+        ' <span class="res-vis vis-' + (d.visibility || 'shared') + '">' + (visName[d.visibility] || '共享') + '</span></span>' +
         (wbState.isAdmin ? '<button class="ap-mini danger" onclick="wbResDel(\'' + d._id + '\')">删除</button>' : '') + '</div>'
       ).join('') || '<div class="ap-li" style="color:var(--faint)">暂无资料</div>';
     }
@@ -1944,7 +1955,7 @@
     async function cmApi(path, body) { return apiFetch(path, { method: 'POST', body: body || {} }); }
     async function cmLoad() {
       const r = await cmApi('/astro/posts', { section: cmState.section });
-      if (r && r.code === 403) { switchPage('classroom'); showToast('仅天文协会成员可见社区', true); return; }
+      if (r && r.code === 403) { switchPage('classroom'); showToast('无权访问社区', true); return; }
       cmState.posts = (r && r.data) || [];
       cmRender();
       cmLoadBoard();
@@ -2114,6 +2125,7 @@
       if (sp) sp.hidden = true;
       document.querySelectorAll('.landing-only').forEach(el => { el.hidden = false; });
       window.scrollTo({ top: 0 });
+      if (window.loadPublicRes) window.loadPublicRes();
     }
     window.XHNav = Object.assign(window.XHNav || {}, { openPartners: openPartners });
     function revealHubNav() {
@@ -2647,7 +2659,7 @@
       } catch (error) {
         console.error('[星环实验大屏] AI 诊断失败', error);
         elements.aiDiagnosisMeta.textContent = '生成失败';
-        elements.aiDiagnosisContent.innerHTML = '<p>诊断生成失败，请检查教师权限与 aiService 部署状态。</p>';
+        elements.aiDiagnosisContent.innerHTML = '<p>诊断生成失败，请稍后重试。</p>';
         showToast('AI 诊断失败：' + getErrorMessage(error), true);
       } finally {
         state.classroom.diagnosisBusy = false;
@@ -4085,7 +4097,7 @@
       ]);
       elements.classroomBoardNote.textContent = answersOk && chatsOk && pollsOk && groupsOk
         ? '四路实时监听已连接；暂停、统计与 AI 诊断均由当前教师身份驱动。'
-        : '部分集合受实时监听权限限制，已自动使用 3 秒轮询兜底。';
+        : '部分实时监听不可用，已自动使用轮询同步。';
       console.log('[星环实验大屏] 课堂面板已连接', {
         courseId,
         sessionId,
@@ -4602,4 +4614,22 @@
         }
         return '<tr><td style="white-space:nowrap">' + time + '</td><td>' + who + '</td><td>' + (it.action || '-') + '</td><td>' + target + '</td><td>' + (detail || '-') + '</td></tr>';
       }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--faint)">暂无操作记录</td></tr>';
+    };
+
+    /* v2.46 公开资料库（入驻星系页，免登录可读公开档资料） */
+    window.loadPublicRes = async function () {
+      var box = document.getElementById('pubResList');
+      if (!box || box.dataset.loaded) return;
+      box.dataset.loaded = '1';
+      try {
+        var resp = await fetch(SCF_API + '/res/list', { method: 'GET' });
+        var payload = await resp.json();
+        var list = (payload && payload.data) || [];
+        var links = list.filter(function (d) { return d.visibility === 'public' && d.kind === 'link' && d.url; });
+        box.innerHTML = links.map(function (d) {
+          return '<a class="pub-res-item" href="' + d.url + '" target="_blank" rel="noopener"><b>' + d.title + '</b><span>' + (d.by || '') + '</span></a>';
+        }).join('') || '<p class="pub-res-empty">暂无公开资料</p>';
+      } catch (e) {
+        box.innerHTML = '<p class="pub-res-empty">公开资料载入失败</p>';
+      }
     };

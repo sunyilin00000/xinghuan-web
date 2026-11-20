@@ -764,7 +764,7 @@
     if (heroUserMeta) {
       const parts = [];
       if (user && user.department) parts.push(user.department);
-      parts.push(user && user.role === 'admin' ? '管理员权限' : '成员身份');
+
       parts.push('数据通道已开启');
       heroUserMeta.textContent = parts.join(' · ');
     }
