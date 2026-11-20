@@ -432,6 +432,19 @@
               <button id="generateDiagnosisButton" class="btn btn-gold diagnosis-button" type="button" hidden>生成 AI 诊断</button>
             </div>
           </header>
+      <div id="courseAdmin" style="margin:14px;display:none">
+        <div style="border:1px solid rgba(124,167,220,.18);border-radius:14px;background:rgba(255,255,255,.015);overflow:hidden">
+          <div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.06);flex-wrap:wrap">
+            <strong style="font-size:14px;letter-spacing:.1em;color:#ebe0cc">课程管理</strong>
+            <select id="caSeries" style="min-width:200px;padding:8px 12px;border:1px solid rgba(124,167,220,.2);border-radius:9px;background:#0a1220;color:#eaf2fb;font-size:12px"></select>
+            <input id="caSeriesName" placeholder="新系列名称" style="width:160px;padding:8px 12px;border:1px solid rgba(124,167,220,.2);border-radius:9px;background:#0a1220;color:#eaf2fb;font-size:12px" />
+            <button class="btn" id="caSeriesAdd" type="button" style="min-height:34px;font-size:12px">新建系列</button>
+            <button class="btn btn-gold" id="caLectureAdd" type="button" style="min-height:34px;font-size:12px">新建讲次</button>
+          </div>
+          <div style="padding:14px 18px">
+            <div id="caLectures" style="display:grid;gap:10px"></div>
+          </div>
+        </div>
           <div id="teacherControlBar" class="teacher-control-bar" hidden>
             <div class="teacher-control-copy">
               <span class="teacher-control-kicker">控制台</span>
@@ -729,20 +742,6 @@
             </div>
           </div>
           <div id="consoleSlot" class="console-slot"></div>
-
-      <div id="courseAdmin" style="margin:14px;display:none">
-        <div style="border:1px solid rgba(124,167,220,.18);border-radius:14px;background:rgba(255,255,255,.015);overflow:hidden">
-          <div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.06);flex-wrap:wrap">
-            <strong style="font-size:14px;letter-spacing:.1em;color:#ebe0cc">课程管理</strong>
-            <select id="caSeries" style="min-width:200px;padding:8px 12px;border:1px solid rgba(124,167,220,.2);border-radius:9px;background:#0a1220;color:#eaf2fb;font-size:12px"></select>
-            <input id="caSeriesName" placeholder="新系列名称" style="width:160px;padding:8px 12px;border:1px solid rgba(124,167,220,.2);border-radius:9px;background:#0a1220;color:#eaf2fb;font-size:12px" />
-            <button class="btn" id="caSeriesAdd" type="button" style="min-height:34px;font-size:12px">新建系列</button>
-            <button class="btn btn-gold" id="caLectureAdd" type="button" style="min-height:34px;font-size:12px">新建讲次</button>
-          </div>
-          <div style="padding:14px 18px">
-            <div id="caLectures" style="display:grid;gap:10px"></div>
-          </div>
-        </div>
       </div>
 
           <div id="consoleDenied" class="console-denied" hidden>

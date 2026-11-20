@@ -1590,6 +1590,67 @@
       if (titleEl) titleEl.textContent = def.name + ' · 工作台';
       const orgEl = document.getElementById('wbOrgName');
       if (orgEl) orgEl.textContent = 'ORG / ' + orgKey + (wbState.isAdmin ? ' · 管理员视图' : ' · 只读视图');
+      /* v2.46 我的资料：所有登录用户可完善学校/校区/专业/联系方式 */
+      if (!document.getElementById('wbMeTab')) {
+        var tabs2 = document.querySelector('.wb-tabs');
+        if (tabs2) {
+          var meTab = document.createElement('button');
+          meTab.className = 'wb-tab'; meTab.id = 'wbMeTab'; meTab.dataset.wbt = 'me';
+          meTab.type = 'button'; meTab.textContent = '我的资料';
+          tabs2.insertBefore(meTab, tabs2.firstChild);
+          var mePanel = document.createElement('div');
+          mePanel.id = 'wbMe'; mePanel.hidden = true; mePanel.style.padding = '16px 18px';
+          mePanel.innerHTML =
+            '<div class="ap-toolbar"><span style="color:var(--faint);font-size:12px">完善个人信息（学校/校区/专业为必填，联系方式选填）</span></div>' +
+            '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;max-width:900px">' +
+            [['school','学校（必填）','如：中国海洋大学'],['campus','校区（必填）','如：崂山校区'],['major','专业（必填）','如：物理学'],['department','社团部门','选填'],['phone','手机号','选填'],['email','邮箱','选填'],['wechat','微信','选填'],['qq','QQ','选填']].map(function (f) {
+              return '<div class="field" style="display:grid;gap:6px"><label style="font-size:10px;letter-spacing:.2em;color:#5c7194">' + f[1] + '</label>' +
+                '<input data-pf="' + f[0] + '" placeholder="' + f[2] + '" style="padding:11px 14px;border:1px solid rgba(124,167,220,.2);border-radius:11px;background:rgba(255,255,255,.03);color:#eaf2fb;font-size:13px;outline:none;font-family:inherit" /></div>';
+            }).join('') +
+            '</div>' +
+            '<div style="margin-top:16px;display:flex;gap:12px;align-items:center"><button class="btn btn-gold" id="wbMeSave" type="button" style="min-height:38px;font-size:13px">保存资料</button><span id="wbMeMsg" style="font-size:12px;color:#86b5a0"></span></div>';
+          var body2 = document.querySelector('.wb-body');
+          if (body2) body2.insertBefore(mePanel, body2.firstChild);
+          meTab.onclick = function () {
+            document.querySelectorAll('.wb-tab').forEach(function (x) { x.classList.toggle('active', x === meTab); });
+            document.getElementById('wbMembers').hidden = true;
+            document.getElementById('wbRes').hidden = true;
+            var og2 = document.getElementById('wbOrg'); if (og2) og2.hidden = true;
+            var pf = document.getElementById('wbPlatform'); if (pf) pf.hidden = true; var lg = document.getElementById('wbOpLogs'); if (lg) lg.hidden = true;
+            mePanel.hidden = false;
+            fillProfileForm();
+          };
+          document.getElementById('wbMeSave').onclick = saveProfile;
+        }
+      }
+      /* v2.46 操作日志公示：所有登录成员可见管理员留痕 */
+      if (!document.getElementById('wbLogTab')) {
+        var tabs3 = document.querySelector('.wb-tabs');
+        if (tabs3) {
+          var logTab = document.createElement('button');
+          logTab.className = 'wb-tab'; logTab.id = 'wbLogTab'; logTab.dataset.wbt = 'oplogs';
+          logTab.type = 'button'; logTab.textContent = '操作日志';
+          tabs3.appendChild(logTab);
+          var logPanel = document.createElement('div');
+          logPanel.id = 'wbOpLogs'; logPanel.hidden = true; logPanel.style.padding = '16px 18px';
+          logPanel.innerHTML =
+            '<div class="ap-toolbar"><span style="color:var(--faint);font-size:12px">管理员操作留痕 · 全体登录成员可见（公示）</span><span style="flex:1"></span><span id="wbLogCount"></span>' +
+            '<button class="res-btn" type="button" onclick="wbLoadOpLogs()">刷新</button></div>' +
+            '<div class="ap-table-wrap"><table class="ap-table"><thead><tr><th>时间</th><th>操作人</th><th>动作</th><th>对象</th><th>详情</th></tr></thead><tbody id="wbLogTbody"></tbody></table></div>';
+          var body3 = document.querySelector('.wb-body');
+          if (body3) body3.appendChild(logPanel);
+          logTab.onclick = function () {
+            document.querySelectorAll('.wb-tab').forEach(function (x) { x.classList.toggle('active', x === logTab); });
+            document.getElementById('wbMembers').hidden = true;
+            document.getElementById('wbRes').hidden = true;
+            var og3 = document.getElementById('wbOrg'); if (og3) og3.hidden = true;
+            var pf3 = document.getElementById('wbPlatform'); if (pf3) pf3.hidden = true; var lg = document.getElementById('wbOpLogs'); if (lg) lg.hidden = true;
+            var me3 = document.getElementById('wbMe'); if (me3) me3.hidden = true;
+            logPanel.hidden = false;
+            wbLoadOpLogs();
+          };
+        }
+      }
       /* v2.43 平台管理入口：仅 super_admin，界面不含任何人名 */
       if (u.super_admin === true && !document.getElementById('wbPfTab')) {
         var tabs = document.querySelector('.wb-tabs');
@@ -1601,7 +1662,7 @@
           var panel = document.createElement('div');
           panel.id = 'wbPlatform'; panel.hidden = true; panel.style.padding = '16px 18px';
           panel.innerHTML =
-            '<div class="ap-toolbar"><span style="color:var(--faint);font-size:12px">全部注册用户 · 可任命/撤销各社团主管理员，主管由各社团主管理员在「成员管理」中设置</span>' +
+            '<div class="ap-toolbar"><span style="color:var(--faint);font-size:12px">全部注册用户 · 可任命星环终端管理员与各社团主管理员；社团主管由各社团主管理员在「成员管理」中设置</span>' +
             '<span style="flex:1"></span><span id="wbPfCount"></span>' +
             '<button class="res-btn" type="button" onclick="wbLoadPlatform()">刷新</button></div>' +
             '<div class="ap-table-wrap"><table class="ap-table"><thead><tr><th>姓名</th><th>账号</th><th>社团</th><th>身份</th><th style="width:290px">操作</th></tr></thead><tbody id="wbPfTbody"></tbody></table></div>';
@@ -1639,12 +1700,30 @@
         return '<tr><td>' + (m.name || '-') + '</td><td>' + (m.username || '-') + '</td><td>' + (m.org || '-') + '</td><td>' +
           (m.department || '-') + '</td><td>' + (tags.join('') || '成员') + '</td>' +
           '<td><div class="ap-rowbtns">' +
+          '<button class="ap-mini" onclick="wbEditMember(\'' + m._id + '\',\'' + (m.name || m.username) + '\',\'' + (m.org || '') + '\',\'' + (m.campus || '') + '\',\'' + (m.department || '') + '\')">编辑</button>' +
           '<button class="ap-mini" onclick="wbResetPwd(\'' + m._id + '\',\'' + (m.name || m.username) + '\')">改密</button>' +
           '<button class="ap-mini" onclick="wbSubAdmin(\'' + m._id + '\',\'' + (m.name || m.username) + '\')">次级权限</button>' +
           (String(m.username).indexOf('test') === 0 || m.role !== 'admin' ? '<button class="ap-mini danger" onclick="wbDelMember(\'' + m._id + '\',\'' + (m.name || m.username) + '\')">删除</button>' : '') +
           '</div></td></tr>';
       }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--faint)">无成员</td></tr>';
     }
+    /* v2.46 编辑成员：名称/所在组织/校区/部门；平台管理员全局可改，社团管理员限本社（云端校验） */
+    window.wbEditMember = async (id, name, org, campus, department) => {
+      const v = await uiPrompt({
+        title: '编辑成员 · ' + name,
+        fields: [
+          { id: 'name', label: '姓名', placeholder: '姓名', value: name || '' },
+          { id: 'org', label: '所在组织（astro 海大天协 / bio 生科协 / outdoor 户协 / nankai_astro 南开天协 / guest 游客）', placeholder: 'astro', value: org || '' },
+          { id: 'campus', label: '校区', placeholder: '校区', value: campus || '' },
+          { id: 'department', label: '部门（可空）', placeholder: '', value: department || '' }
+        ]
+      });
+      if (!v) return;
+      if (!v.name) { showToast('姓名不能为空', true); return; }
+      const r = await wbCall('web_am_update', { member_id: id, name: v.name, org: v.org, campus: v.campus, department: v.department });
+      showToast((r && r.code === 0) ? '已保存' : ('失败：' + ((r && r.message) || '')), !(r && r.code === 0));
+      wbLoadMembers();
+    };
     window.wbResetPwd = async (id, name) => {
       const pwd = await uiPrompt({ title: '重置密码 · ' + name, fields: [{ id: 'p', label: '新密码（至少 4 位）', password: true }] });
       if (!pwd || !pwd.p) return;
@@ -1722,11 +1801,13 @@
           { id: 'title', label: '标题', placeholder: '如：梅西耶天体观测指南' },
           { id: 'cat', label: '分类（theory 理论 / observe 观测 / astro 天文资料）', placeholder: 'astro' },
           { id: 'url', label: '网盘链接（可空，空则走文件）', placeholder: 'https://...' },
-          { id: 'code', label: '提取码（可空）', placeholder: '' }
+          { id: 'code', label: '提取码（可空）', placeholder: '' },
+          { id: 'visibility', label: '可见范围：public 公开（免登录）/ shared 登录可见 / private 仅本社', placeholder: 'shared' }
         ]
       });
       if (!v || !v.title) return;
-      let data = { title: v.title, cat: v.cat || 'observe', kind: 'link', url: v.url, code: v.code };
+      const vis = ['public', 'shared', 'private'].indexOf(v.visibility) !== -1 ? v.visibility : 'shared';
+      let data = { title: v.title, cat: v.cat || 'observe', kind: 'link', url: v.url, code: v.code, visibility: vis };
       if (!v.url) {
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
@@ -1734,7 +1815,7 @@
         if (!file) { showToast('未选择文件', true); return; }
         if (file.size > 8 * 1024 * 1024) { showToast('文件超过 8MB', true); return; }
         const b64 = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.readAsDataURL(file); });
-        data = { title: v.title, cat: v.cat || 'observe', kind: 'file', filename: file.name, data_base64: b64 };
+        data = { title: v.title, cat: v.cat || 'observe', kind: 'file', filename: file.name, data_base64: b64, visibility: vis };
       }
       const r = await apiFetch('/res/add', { method: 'POST', body: data });
       showToast((r && r.code === 0) ? '已上传' : ('失败：' + ((r && r.message) || '')), !(r && r.code === 0));
@@ -3208,6 +3289,19 @@
       document.querySelectorAll('.tab-classroom').forEach((el) => {
         el.hidden = tab !== 'classroom';
       });
+      /* v2.46 课程管理属于监控中枢：教师在课堂看板页可见 */
+      if (tab === 'classroom') {
+        var caEl = document.getElementById('courseAdmin');
+        if (caEl) {
+          if (canSeeTeacherBackend()) {
+            caEl.style.display = 'block';
+            caBind();
+            caLoadSeries();
+          } else {
+            caEl.style.display = 'none';
+          }
+        }
+      }
       if (elements.resourcesPage) {
         elements.resourcesPage.hidden = tab !== 'resources';
         if (tab === 'resources' && typeof renderAstroRes === 'function') renderAstroRes();
@@ -3223,18 +3317,20 @@
       if (elements.consolePage) {
         elements.consolePage.hidden = tab !== 'console';
         if (tab === 'console') {
-          if (canSeeTeacherBackend()) {
+          /* v2.46 控制台分级：3D 态势屏仅星环终端工作人员（超管/平台管理员）可见；
+             任课教师仍可进控制台管理课程，但看不到态势屏 */
+          /* v2.46 控制台仅星环终端工作人员（超管/平台管理员） */
+          var u = state.user || {};
+          var isStaff = u.super_admin === true || u.admin_scope === 'platform';
+          if (isStaff) {
             elements.consoleDenied.hidden = true;
             elements.consoleSlot.hidden = false;
-            moveTeacherBar(elements.consoleSlot);
-            elements.teacherControlBar.hidden = false;
-            document.getElementById('courseAdmin').style.display = 'block';
-            caBind();
-            caLoadSeries();
           } else {
             elements.consoleSlot.hidden = true;
             elements.consoleDenied.hidden = false;
           }
+          var od = document.getElementById('opsDash');
+          if (od) od.style.display = isStaff ? '' : 'none';
         } else {
           moveTeacherBar(null); // 离开控制台页，把控制条放回课堂板块原位置
         }
@@ -4140,6 +4236,9 @@
         if (t.dataset.wbt === 'res') wbLoadRes();
         document.getElementById('wbOrg').hidden = t.dataset.wbt !== 'orgapp';
         if (t.dataset.wbt === 'orgapp') wbLoadOrgApps();
+        /* v2.46 动态页签面板互斥 */
+        var dyn = { wbMe: 1, wbPlatform: 1, wbOpLogs: 1 };
+        Object.keys(dyn).forEach(function (id) { var el = document.getElementById(id); if (el) el.hidden = true; });
       });
       const wbSearchEl = document.getElementById('wbSearch');
       if (wbSearchEl) wbSearchEl.oninput = wbRenderMembers;
@@ -4347,13 +4446,6 @@
         '    <div class="field"><label>账号（拼音小写全拼）</label><input id="xrUser" maxlength="40" autocomplete="username" placeholder="账号" /></div>',
         '    <div class="field"><label>密码（至少 4 位）</label><input id="xrPwd" type="password" maxlength="64" autocomplete="new-password" placeholder="密码" /></div>',
         '    <div class="field"><label>确认密码</label><input id="xrPwd2" type="password" maxlength="64" autocomplete="new-password" placeholder="再输一遍密码" /></div>',
-        '    <div class="field"><label>所属社团（可选）</label><select id="xrOrg" style="padding:11px 14px;border:1px solid rgba(124,167,220,.2);border-radius:11px;background:rgba(255,255,255,.03);color:#eaf2fb;font-size:14px;font-family:inherit">',
-        '      <option value="">暂不选择</option>',
-        '      <option value="astro">海大天协</option>',
-        '      <option value="bio">海大生科协</option>',
-        '      <option value="outdoor">海大户协</option>',
-        '      <option value="nankai_astro">南开天协</option>',
-        '    </select></div>',
         '  </div>',
         '  <div class="modal-msg" id="xrMsg" style="min-height:18px;color:#f0a8a8;font-size:12px"></div>',
         '  <div style="display:flex;gap:10px;justify-content:flex-end">',
@@ -4378,7 +4470,7 @@
       var username = document.getElementById('xrUser').value.trim();
       var password = document.getElementById('xrPwd').value;
       var password2 = document.getElementById('xrPwd2').value;
-      var org = document.getElementById('xrOrg').value;
+      var org = '';
       if (!username || !password) { msg.textContent = '账号和密码必填'; return; }
       if (password.length < 6) { msg.textContent = '密码至少 6 位'; return; }
       if (password !== password2) { msg.textContent = '两次密码不一致'; return; }
@@ -4390,7 +4482,7 @@
           localStorage.setItem('hub_token', r.data.token);
           setLoggedIn({ ...(r.data.user || {}), token: r.data.token });
           document.getElementById('xhRegModal').classList.remove('open');
-          showToast('注册成功，已自动登录');
+          showToast('注册成功，已自动登录（游客身份，可在工作台完善资料）');
         } else {
           msg.textContent = (r && r.message) || '注册失败，请稍后重试';
         }
@@ -4422,8 +4514,12 @@
       var rows = r.data || [];
       document.getElementById('wbPfCount').textContent = rows.length + ' 个注册用户';
       document.getElementById('wbPfTbody').innerHTML = rows.map(function (m) {
-        var roleName = m.role === 'admin' ? '社团主管理员' : (m.subadmin ? '社团主管' : '成员');
+        var isPlatform = m.admin_scope === 'platform';
+        var roleName = isPlatform ? '星环终端管理员' : m.role === 'admin' ? '社团主管理员' : (m.subadmin ? '社团主管' : '成员');
         var btns = '<button class="ap-mini" onclick="wbPfReset(\'' + m._id + '\',\'' + (m.name || m.username) + '\')">改密</button>' +
+          (isPlatform
+            ? '<button class="ap-mini" onclick="wbPfRevoke(\'' + m._id + '\')">撤销平台管理员</button>'
+            : '<button class="ap-mini" onclick="wbPfMakePlatform(\'' + m._id + '\')">设为平台管理员</button>') +
           (m.role === 'admin'
             ? '<button class="ap-mini" onclick="wbPfRevoke(\'' + m._id + '\')">撤销主管理员</button>'
             : '<button class="ap-mini" onclick="wbPfMakeAdmin(\'' + m._id + '\',\'' + (m.org || 'astro') + '\')">设为主管理员</button>') +
@@ -4436,6 +4532,11 @@
       showToast((r && r.code === 0) ? '已任命为社团主管理员' : ('失败：' + ((r && r.message) || '')), !(r && r.code === 0));
       wbLoadPlatform();
     };
+    window.wbPfMakePlatform = async function (id) {
+      var r = await wbCall('web_platform_set_role', { member_id: id, role: 'platform_admin' });
+      showToast((r && r.code === 0) ? '已任命为星环终端管理员' : ('失败：' + ((r && r.message) || '')), !(r && r.code === 0));
+      wbLoadPlatform();
+    };
     window.wbPfRevoke = async function (id) {
       var r = await wbCall('web_platform_set_role', { member_id: id, role: 'member' });
       showToast((r && r.code === 0) ? '已撤销管理员' : ('失败：' + ((r && r.message) || '')), !(r && r.code === 0));
@@ -4443,3 +4544,62 @@
     };
     window.wbPfReset = async function (id, name) { if (window.wbResetPwd) return window.wbResetPwd(id, name); };
     window.wbPfDel = async function (id, name) { if (window.wbDelMember) return window.wbDelMember(id, name); };
+
+    /* v2.46 资料表单读写 */
+    function fillProfileForm() {
+      var u = state.user || {};
+      document.querySelectorAll('[data-pf]').forEach(function (input) {
+        input.value = u[input.dataset.pf] || '';
+      });
+    }
+    async function saveProfile() {
+      var msg = document.getElementById('wbMeMsg');
+      var body = {};
+      document.querySelectorAll('[data-pf]').forEach(function (input) {
+        body[input.dataset.pf] = input.value.trim();
+      });
+      if (!body.school || !body.campus || !body.major) {
+        msg.style.color = '#f0a8a8'; msg.textContent = '学校、校区、专业为必填';
+        return;
+      }
+      var btn = document.getElementById('wbMeSave');
+      btn.disabled = true; btn.textContent = '保存中…';
+      try {
+        var r = await wbCall('web_update_profile', body);
+        if (r && r.code === 0) {
+          state.user = Object.assign({}, state.user, r.data || {});
+          msg.style.color = '#86b5a0'; msg.textContent = '已保存';
+          showToast('资料已更新');
+        } else {
+          msg.style.color = '#f0a8a8'; msg.textContent = (r && r.message) || '保存失败';
+        }
+      } catch (e) {
+        msg.style.color = '#f0a8a8'; msg.textContent = '网络异常';
+      } finally {
+        btn.disabled = false; btn.textContent = '保存资料';
+      }
+    }
+
+    /* v2.46 操作日志公示：读取并渲染（兼容两种日志字段） */
+    window.wbLoadOpLogs = async function () {
+      var tbody = document.getElementById('wbLogTbody');
+      if (!tbody) return;
+      var r = await wbCall('web_am_logs', {});
+      if (!r || r.code !== 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--faint)">读取失败：' + ((r && r.message) || '') + '</td></tr>';
+        return;
+      }
+      var rows = (r.data || []).slice(0, 100);
+      document.getElementById('wbLogCount').textContent = rows.length + ' 条';
+      tbody.innerHTML = rows.map(function (it) {
+        var t = it.at || it.time || 0;
+        var time = t ? new Date(Number(t)).toLocaleString('zh-CN', { hour12: false }) : '';
+        var who = it.actor_name || it.operator_name || '-';
+        var target = it.target_name || '-';
+        var detail = it.detail || '';
+        if (!detail && (it.old_value !== undefined || it.new_value !== undefined)) {
+          detail = String(it.old_value || '') + ' → ' + String(it.new_value || '');
+        }
+        return '<tr><td style="white-space:nowrap">' + time + '</td><td>' + who + '</td><td>' + (it.action || '-') + '</td><td>' + target + '</td><td>' + (detail || '-') + '</td></tr>';
+      }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--faint)">暂无操作记录</td></tr>';
+    };
