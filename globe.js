@@ -374,7 +374,7 @@
   /* ---------------- 真实数据加载 ---------------- */
   async function loadRealData() {
     try {
-      var resp = await fetch(window.SCF_API + '/org-overview', {
+      var resp = await fetch(window.XINGHUAN_API + '/org-overview', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

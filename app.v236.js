@@ -957,8 +957,9 @@
     ];
     function canSeeAstroRes() {
       const u = state.user || {};
-      if (!u || !u.org) return false;
+      if (!u) return false;
       if (u.super_admin === true || u.role === 'admin') return true;
+      if (!u.org) return false;
       const org = normalizeOrg(u.org);
       return org === 'astro' || org === 'nankai_astro';
     }
