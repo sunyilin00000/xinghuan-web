@@ -573,6 +573,12 @@
      3.5 监控中枢显隐 & 顶部导航状态
      ========================================================= */
   function updateNavActive() {
+    if (doc.body.classList.contains('partners-view')) {
+      if (navHeroButton) navHeroButton.classList.remove('active');
+      if (consoleNavButton) consoleNavButton.classList.remove('active');
+      if (navPartnersButton) navPartnersButton.classList.add('active');
+      return;
+    }
     const y = window.scrollY || 0;
     const consoleMode = doc.body.classList.contains('console-mode');
     const partnerTop = partners ? partners.offsetTop : heroHeightCache;
@@ -592,6 +598,7 @@
   }
 
   function openConsole(tab) {
+    doc.body.classList.remove('partners-view');
     doc.body.classList.add('console-mode');
     if (tab) {
       const tabButton = doc.querySelector('.page-tab[data-tab="' + tab + '"]');
@@ -777,6 +784,10 @@
 
   doc.querySelectorAll('[data-scroll]').forEach((btn) => {
     btn.addEventListener('click', () => {
+      if (btn.dataset.scroll === '#partners' && window.XHNav && window.XHNav.openPartners) {
+        window.XHNav.openPartners();
+        return;
+      }
       const target = doc.querySelector(btn.dataset.scroll);
       scrollToElement(target, 0);
     });
@@ -863,7 +874,10 @@
   }
 
   if (applyButton) applyButton.addEventListener('click', openJoinModal);
-  if (registerButton) registerButton.addEventListener('click', openJoinModal);
+  if (registerButton) registerButton.addEventListener('click', () => {
+    if (window.XHNav && window.XHNav.openRegister) window.XHNav.openRegister();
+    else openJoinModal();
+  });
   if (joinClose) joinClose.addEventListener('click', closeJoinModal);
   if (joinDone) joinDone.addEventListener('click', closeJoinModal);
 
@@ -922,6 +936,7 @@
         ref,
         at: new Date().toISOString()
       };
+      if (window.XHOrgApply) window.XHOrgApply(entry);
       try {
         const raw = window.localStorage.getItem('xinghuan_partner_applications');
         const list = raw ? JSON.parse(raw) : [];

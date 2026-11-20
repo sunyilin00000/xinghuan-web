@@ -728,6 +728,33 @@
               <p class="panel-subtitle">课堂控制 · 仅管理员与授课教师可用</p>
             </div>
           </header>
+          <!-- v2.44 星环运营中枢 · 3D 地球态势屏（示例数据） -->
+          <div id="opsDash" class="ops-dash">
+            <div class="ops-top">
+              <div class="ops-title">星环运营中枢 · 社团态势总览 <span class="ops-badge">示例数据</span></div>
+              <div class="ops-metrics" id="opsMetrics"></div>
+              <div class="ops-regions" id="opsRegions"></div>
+            </div>
+            <div class="ops-main">
+              <div class="ops-left">
+                <div class="ops-stats" id="opsStats"></div>
+                <div class="ops-panel">
+                  <h4>人员变动 <span>示例</span></h4>
+                  <div class="ops-feed" id="opsFeedList"></div>
+                </div>
+              </div>
+              <div class="ops-globe-wrap">
+                <canvas id="opsGlobe"></canvas>
+                <div class="ops-tip" id="opsTip" hidden></div>
+                <div class="ops-globe-hint">拖动旋转 · 滚轮缩放 · 点击查看节点</div>
+              </div>
+              <div class="ops-right" id="opsDetail"></div>
+            </div>
+            <div class="ops-alerts">
+              <h4>职位调动 · 风险预警 <span>示例</span></h4>
+              <div class="ops-alert-list" id="opsAlertList"></div>
+            </div>
+          </div>
           <div id="consoleSlot" class="console-slot"></div>
 
       <div id="courseAdmin" style="margin:14px;display:none">
@@ -783,7 +810,7 @@
           </div>
         </div>
         <div id="wbOrg" style="padding:16px 18px" hidden>
-          <div class="ap-toolbar"><span style="color:var(--faint);font-size:12px">社团入驻申请 · 仅超级管理员可见</span><span style="flex:1"></span><button class="res-btn" id="wbOrgRefresh" type="button">刷新</button></div>
+          <div class="ap-toolbar"><span style="color:var(--faint);font-size:12px">社团入驻申请 · 仅平台管理可见</span><span style="flex:1"></span><button class="res-btn" id="wbOrgRefresh" type="button">刷新</button></div>
           <div id="wbOrgList" class="ap-list"></div>
         </div>
         
@@ -940,7 +967,7 @@
             <span>提交申请</span>
             <span class="join-arrow" aria-hidden="true">→</span>
           </button>
-          <p class="join-note">当前为前端演示：申请仅记录在本机浏览器，正式审核请联系星环运营团队。</p>
+          <p class="join-note">提交后进入平台审核队列，结果将通过你的联系方式告知。</p>
         </form>
       </div>
 
@@ -1124,6 +1151,7 @@
 
   <script src="script.js"></script>
   <script src="echarts.min.js"></script>
+  <script src="globe.js"></script>
   <script src="app.v236.js?v=237"></script>
   <!-- 星屿 · Telescope Garden：学习资源页入口（作品与素材由 7uanm 提供，GPL-3.0） -->
   <script src="xingyu/xingyu-config.js"></script>

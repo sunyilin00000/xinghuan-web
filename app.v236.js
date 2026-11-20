@@ -17,19 +17,6 @@
 
     
 
-    // ===== v2.36.1 导航诊断仪（精简） =====
-    (function () {
-      var box = document.createElement('div');
-      box.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:2147483647;background:rgba(0,0,0,.85);color:#7CFC9A;font:11px/1.6 monospace;padding:6px 10px;border-radius:8px;max-width:55vw;white-space:pre-wrap;pointer-events:none';
-      box.textContent = 'nav-diag on';
-      (document.body || document.documentElement).appendChild(box);
-      window.__rec = function (m) { box.textContent += ' | ' + m; };
-      window.addEventListener('error', function (e) { window.__rec('ERR:' + String(e.message).slice(0, 60) + '@' + String(e.filename).split('/').pop() + ':' + e.lineno); });
-      document.addEventListener('click', function (ev) {
-        var b = ev.target.closest && ev.target.closest('.top-nav-link');
-        if (b) window.__rec('click:' + (b.id || b.textContent.trim()));
-      }, true);
-    })();
 
     const ECHARTS_FALLBACK = 'https://unpkg.com/echarts@5.6.0/dist/echarts.min.js';
     const FALLBACK_SERIES = [12.6, 12.3, 11.8, 11.1, 10.7, 10.9, 11.5, 12.1, 12.8];
@@ -595,7 +582,7 @@
         console.error('[星环实验大屏] 网页登录失败', error);
         elements.loginError.textContent = getErrorMessage(error);
         elements.loginError.classList.add('show');
-        setConnection('error', '登录失败');
+        if (state.mode !== 'custom') setConnection('error', '登录失败');
         logStep('登录失败', getErrorMessage(error));
       } finally {
         state.busy = false;
@@ -1216,7 +1203,7 @@
       }).join('') : '<p style="color:#5c7194;font-size:12px">该系列还没有讲次，点"新建讲次"</p>';
     }
     window.caStart = async (id) => {
-      const custom = await uiPrompt({ title: '开始上课', sub: '邀请码留空则自动生成 4 位数字', fields: [{ id: 'code', label: '邀请码（可自定义）', placeholder: '如 8848' }] });
+      const custom = await uiPrompt({ title: '开始上课', sub: '邀请码留空则自动生成 4 位数字', fields: [{ id: 'code', label: '邀请码（可自定义）', placeholder: '4 位数字，可留空' }] });
       if (custom === null) return;
       const r = await caApi('/lecture/start', { lecture_id: id, invite_code: custom });
       if (!r || r.code !== 0) { showToast((r && r.message) || '开始上课失败', true); return; }
@@ -1249,7 +1236,7 @@
           title: '新建讲次',
           fields: [
             { id: 'title', label: '讲次标题', placeholder: '如：恒星专题第一讲' },
-            { id: 'date', label: '日期（YYYY-MM-DD，可空）', placeholder: '2026-11-21' },
+            { id: 'date', label: '日期（YYYY-MM-DD，可空）', placeholder: 'YYYY-MM-DD' },
             { id: 'code', label: '自定义邀请码（可空，开始上课时可再设）', placeholder: '如 8848' }
           ]
         });
@@ -1603,6 +1590,33 @@
       if (titleEl) titleEl.textContent = def.name + ' · 工作台';
       const orgEl = document.getElementById('wbOrgName');
       if (orgEl) orgEl.textContent = 'ORG / ' + orgKey + (wbState.isAdmin ? ' · 管理员视图' : ' · 只读视图');
+      /* v2.43 平台管理入口：仅 super_admin，界面不含任何人名 */
+      if (u.super_admin === true && !document.getElementById('wbPfTab')) {
+        var tabs = document.querySelector('.wb-tabs');
+        if (tabs) {
+          var tab = document.createElement('button');
+          tab.className = 'wb-tab'; tab.id = 'wbPfTab'; tab.dataset.wbt = 'platform';
+          tab.type = 'button'; tab.textContent = '平台管理';
+          tabs.appendChild(tab);
+          var panel = document.createElement('div');
+          panel.id = 'wbPlatform'; panel.hidden = true; panel.style.padding = '16px 18px';
+          panel.innerHTML =
+            '<div class="ap-toolbar"><span style="color:var(--faint);font-size:12px">全部注册用户 · 可任命/撤销各社团主管理员，主管由各社团主管理员在「成员管理」中设置</span>' +
+            '<span style="flex:1"></span><span id="wbPfCount"></span>' +
+            '<button class="res-btn" type="button" onclick="wbLoadPlatform()">刷新</button></div>' +
+            '<div class="ap-table-wrap"><table class="ap-table"><thead><tr><th>姓名</th><th>账号</th><th>社团</th><th>身份</th><th style="width:290px">操作</th></tr></thead><tbody id="wbPfTbody"></tbody></table></div>';
+          var body = document.querySelector('.wb-body');
+          if (body) body.appendChild(panel);
+          tab.onclick = function () {
+            document.querySelectorAll('.wb-tab').forEach(function (x) { x.classList.toggle('active', x === tab); });
+            document.getElementById('wbMembers').hidden = true;
+            document.getElementById('wbRes').hidden = true;
+            var og = document.getElementById('wbOrg'); if (og) og.hidden = true;
+            panel.hidden = false;
+            wbLoadPlatform();
+          };
+        }
+      }
     }
     async function wbLoad() {
       await Promise.allSettled([wbLoadMembers(), wbLoadRes(), wbLoadOrgApps()]);
@@ -1656,7 +1670,7 @@
       const v = await uiPrompt({
         title: '批量导入成员（每行一个：姓名,账号,密码）',
         sub: '导入的账号自动成为本组织管理员，全部记入操作日志',
-        fields: [{ id: 'list', label: '成员列表', placeholder: '孙颢函,sunhaohan,sunhaohan\n李忠尚,lizhongshang,lizhongshang', value: '' }]
+        fields: [{ id: 'list', label: '成员列表', placeholder: '每行一条：姓名,账号,密码', value: '' }]
       });
       if (!v || !v.list) return;
       const lines = v.list.split('\n').map(l => l.trim()).filter(Boolean);
@@ -1676,9 +1690,9 @@
       const v = await uiPrompt({
         title: '新建成员账号（创建即为本组织管理员）',
         fields: [
-          { id: 'name', label: '姓名', placeholder: '如：孙颢函' },
-          { id: 'username', label: '账号（拼音小写全拼）', placeholder: 'sunhaohan' },
-          { id: 'password', label: '密码', placeholder: '如 sunhaohan', password: true },
+          { id: 'name', label: '姓名', placeholder: '成员姓名' },
+          { id: 'username', label: '账号（拼音小写全拼）', placeholder: '账号' },
+          { id: 'password', label: '密码', placeholder: '初始密码', password: true },
           { id: 'org', label: '组织（全局管理员可指定：astro 海大 / nankai_astro 南开）', placeholder: 'astro' }
         ]
       });
@@ -1988,6 +2002,8 @@
       if (!state.user || !state.user.token) { openLogin(); return; }
       hubMode = true;
       document.body.classList.add('hub-mode');
+      document.body.classList.add('console-mode');
+      document.body.classList.remove('partners-view');
       const area = document.getElementById('hubArea');
       if (area) area.hidden = false;
       document.querySelectorAll('.landing-only').forEach(el => { el.hidden = true; });
@@ -1998,11 +2014,27 @@
     function showLanding() {
       hubMode = false;
       document.body.classList.remove('hub-mode');
+      document.body.classList.remove('console-mode');
+      document.body.classList.remove('partners-view');
       const area = document.getElementById('hubArea');
       if (area) area.hidden = true;
       document.querySelectorAll('.landing-only').forEach(el => { el.hidden = false; });
       window.scrollTo({ top: 0 });
     }
+
+    /* v2.42 入驻星系独立页：点导航跳页面，不再下滑 */
+    function openPartners() {
+      hubMode = false;
+      document.body.classList.remove('hub-mode', 'console-mode');
+      document.body.classList.add('partners-view');
+      const area = document.getElementById('hubArea');
+      if (area) area.hidden = true;
+      const sp = document.getElementById('shopPage');
+      if (sp) sp.hidden = true;
+      document.querySelectorAll('.landing-only').forEach(el => { el.hidden = false; });
+      window.scrollTo({ top: 0 });
+    }
+    window.XHNav = Object.assign(window.XHNav || {}, { openPartners: openPartners });
     function revealHubNav() {
       document.querySelectorAll('.nav-hub-item').forEach(b => { b.hidden = false; });
       const sep = document.getElementById('navHubSep');
@@ -2047,6 +2079,9 @@
       });
     }
     function enterShop() {
+      document.body.classList.add('console-mode');
+      document.body.classList.remove('partners-view', 'hub-mode');
+      hubMode = false;
       document.querySelectorAll('.landing-only').forEach(el => { el.hidden = true; });
       const area = document.getElementById('hubArea');
       if (area) area.hidden = true;
@@ -2380,7 +2415,7 @@
       var id = b.id || '';
       try {
         if (id === 'navHome') { showLanding(); var sp = document.getElementById('shopPage'); if (sp) sp.hidden = true; window.scrollTo({ top: 0, behavior: 'smooth' }); }
-        else if (id === 'navPartners') { showLanding(); var sp2 = document.getElementById('shopPage'); if (sp2) sp2.hidden = true; var pt = document.getElementById('partners'); if (pt) setTimeout(function () { pt.scrollIntoView({ behavior: 'smooth' }); }, 60); }
+        else if (id === 'navPartners') { openPartners(); }
         else if (id === 'navShop') enterShop();
         else if (id === 'navMonitor') enterHub('classroom');
         else if (b.dataset.hub) enterHub(b.dataset.hub);
@@ -2392,7 +2427,7 @@
     document.getElementById('orgApplyBtn').onclick = async () => {
       const v = await uiPrompt({
         title: '申请入驻星环',
-        sub: '提交后由星环终端管理员（孙一琳）审核，通过后将开通贵社团账号',
+        sub: '提交后由平台运营团队审核，通过后将开通贵社团账号',
         fields: [
           { id: 'name', label: '社团名称', placeholder: '如：北京大学天文协会' },
           { id: 'school', label: '学校', placeholder: '如：北京大学' },
@@ -2425,7 +2460,7 @@
 
     function canSeeTeacherBackend() {
       const u = state.user || {};
-      // v2.12.4 全局管理员（含超级管理员）不受课堂角色限制；其他教师仍要求授课身份
+      // v2.12.4 全局管理员（含平台管理）不受课堂角色限制；其他教师仍要求授课身份
       if (u.super_admin === true || u.role === 'admin') return true;
       return u.course_teacher === true && state.classroom.role === 'teacher';
     }
@@ -4292,4 +4327,116 @@
     }
 
     boot();
-  
+
+    /* ============================================================
+       v2.43 公开注册：注册即可登录，数据入成员库
+       ============================================================ */
+    function openRegister() {
+      if (document.getElementById('xhRegModal')) { document.getElementById('xhRegModal').classList.add('open'); return; }
+      var modal = document.createElement('div');
+      modal.className = 'modal'; modal.id = 'xhRegModal';
+      modal.innerHTML = [
+        '<div class="ui-card" style="width:min(430px,92vw)">',
+        '  <h3 style="margin:0 0 4px;font-size:18px;letter-spacing:.1em;color:#eaf2fb">注册星环账号</h3>',
+        '  <p style="margin:0;color:#5c7194;font-size:12px">注册成功后自动登录</p>',
+        '  <div style="display:grid;gap:12px;margin:16px 0" id="xhRegFields">',
+        '    <div class="field"><label>姓名</label><input id="xrName" maxlength="40" placeholder="你的称呼" /></div>',
+        '    <div class="field"><label>账号（拼音小写全拼）</label><input id="xrUser" maxlength="40" autocomplete="username" placeholder="账号" /></div>',
+        '    <div class="field"><label>密码（至少 4 位）</label><input id="xrPwd" type="password" maxlength="64" autocomplete="new-password" placeholder="密码" /></div>',
+        '    <div class="field"><label>确认密码</label><input id="xrPwd2" type="password" maxlength="64" autocomplete="new-password" placeholder="再输一遍密码" /></div>',
+        '    <div class="field"><label>所属社团（可选）</label><select id="xrOrg" style="padding:11px 14px;border:1px solid rgba(124,167,220,.2);border-radius:11px;background:rgba(255,255,255,.03);color:#eaf2fb;font-size:14px;font-family:inherit">',
+        '      <option value="">暂不选择</option>',
+        '      <option value="astro">海大天协</option>',
+        '      <option value="bio">海大生科协</option>',
+        '      <option value="outdoor">海大户协</option>',
+        '      <option value="nankai_astro">南开天协</option>',
+        '    </select></div>',
+        '  </div>',
+        '  <div class="modal-msg" id="xrMsg" style="min-height:18px;color:#f0a8a8;font-size:12px"></div>',
+        '  <div style="display:flex;gap:10px;justify-content:flex-end">',
+        '    <button class="btn" id="xrCancel" type="button" style="min-height:36px;font-size:13px">取 消</button>',
+        '    <button class="btn btn-gold" id="xrOk" type="button" style="min-height:36px;font-size:13px">注册并登录</button>',
+        '  </div>',
+        '</div>'
+      ].join('\n');
+      document.body.appendChild(modal);
+      document.getElementById('xrCancel').onclick = function () { modal.classList.remove('open'); };
+      modal.addEventListener('click', function (e) { if (e.target === modal) modal.classList.remove('open'); });
+      document.getElementById('xrOk').onclick = doRegister;
+      ['xrUser', 'xrPwd', 'xrPwd2'].forEach(function (id) {
+        document.getElementById(id).addEventListener('keydown', function (e) { if (e.key === 'Enter') doRegister(); });
+      });
+      modal.classList.add('open');
+    }
+    async function doRegister() {
+      var msg = document.getElementById('xrMsg');
+      msg.textContent = ''; msg.style.color = '#f0a8a8';
+      var name = document.getElementById('xrName').value.trim();
+      var username = document.getElementById('xrUser').value.trim();
+      var password = document.getElementById('xrPwd').value;
+      var password2 = document.getElementById('xrPwd2').value;
+      var org = document.getElementById('xrOrg').value;
+      if (!username || !password) { msg.textContent = '账号和密码必填'; return; }
+      if (password.length < 4) { msg.textContent = '密码至少 4 位'; return; }
+      if (password !== password2) { msg.textContent = '两次密码不一致'; return; }
+      var btn = document.getElementById('xrOk');
+      btn.disabled = true; btn.textContent = '注册中…';
+      try {
+        var r = await apiFetch('/register', { method: 'POST', body: { name: name, username: username, password: password, org: org } });
+        if (r && r.code === 0 && r.data && r.data.token) {
+          localStorage.setItem('hub_token', r.data.token);
+          setLoggedIn({ ...(r.data.user || {}), token: r.data.token });
+          document.getElementById('xhRegModal').classList.remove('open');
+          showToast('注册成功，已自动登录');
+        } else {
+          msg.textContent = (r && r.message) || '注册失败，请稍后重试';
+        }
+      } catch (e) {
+        msg.textContent = '网络异常，请重试';
+      } finally {
+        btn.disabled = false; btn.textContent = '注册并登录';
+      }
+    }
+    window.XHNav = Object.assign(window.XHNav || {}, { openRegister: openRegister });
+
+    /* 入驻申请转交后端（原前端演示改为真实提交） */
+    window.XHOrgApply = async function (entry) {
+      try { await apiFetch('/org/apply', { method: 'POST', body: entry }); } catch (e) {}
+    };
+
+    /* ============================================================
+       v2.43 平台管理（仅 super_admin 可见；界面不出现任何人名）
+       分级：平台任命各社团主管理员 → 社团主管理员任命本社主管
+       ============================================================ */
+    async function wbLoadPlatform() {
+      var box = document.getElementById('wbPlatform');
+      if (!box) return;
+      var r = await wbCall('web_platform_members');
+      if (!r || r.code !== 0) {
+        box.querySelector('#wbPfTbody').innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--faint)">读取失败：' + ((r && r.message) || '无权限') + '</td></tr>';
+        return;
+      }
+      var rows = r.data || [];
+      document.getElementById('wbPfCount').textContent = rows.length + ' 个注册用户';
+      document.getElementById('wbPfTbody').innerHTML = rows.map(function (m) {
+        var roleName = m.role === 'admin' ? '社团主管理员' : (m.subadmin ? '社团主管' : '成员');
+        var btns = '<button class="ap-mini" onclick="wbPfReset(\'' + m._id + '\',\'' + (m.name || m.username) + '\')">改密</button>' +
+          (m.role === 'admin'
+            ? '<button class="ap-mini" onclick="wbPfRevoke(\'' + m._id + '\')">撤销主管理员</button>'
+            : '<button class="ap-mini" onclick="wbPfMakeAdmin(\'' + m._id + '\',\'' + (m.org || 'astro') + '\')">设为主管理员</button>') +
+          '<button class="ap-mini danger" onclick="wbPfDel(\'' + m._id + '\',\'' + (m.name || m.username) + '\')">删除</button>';
+        return '<tr><td>' + (m.name || '-') + '</td><td>' + (m.username || '-') + '</td><td>' + (m.org || '-') + '</td><td>' + roleName + '</td><td><div class="ap-rowbtns">' + btns + '</div></td></tr>';
+      }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--faint)">暂无用户</td></tr>';
+    }
+    window.wbPfMakeAdmin = async function (id, org) {
+      var r = await wbCall('web_platform_set_role', { member_id: id, role: 'admin', org: org });
+      showToast((r && r.code === 0) ? '已任命为社团主管理员' : ('失败：' + ((r && r.message) || '')), !(r && r.code === 0));
+      wbLoadPlatform();
+    };
+    window.wbPfRevoke = async function (id) {
+      var r = await wbCall('web_platform_set_role', { member_id: id, role: 'member' });
+      showToast((r && r.code === 0) ? '已撤销管理员' : ('失败：' + ((r && r.message) || '')), !(r && r.code === 0));
+      wbLoadPlatform();
+    };
+    window.wbPfReset = async function (id, name) { if (window.wbResetPwd) return window.wbResetPwd(id, name); };
+    window.wbPfDel = async function (id, name) { if (window.wbDelMember) return window.wbDelMember(id, name); };
