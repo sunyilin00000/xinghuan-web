@@ -2560,22 +2560,6 @@
     }, true);
 
 
-    // ---------- v2.37 社团入驻申请 ----------
-    document.getElementById('orgApplyBtn').onclick = async () => {
-      const v = await uiPrompt({
-        title: '申请入驻星环',
-        sub: '提交后由平台运营团队审核，通过后将开通贵社团账号',
-        fields: [
-          { id: 'name', label: '社团名称', placeholder: '如：北京大学天文协会' },
-          { id: 'school', label: '学校', placeholder: '如：北京大学' },
-          { id: 'contact', label: '联系方式（微信/手机/邮箱）', placeholder: '审核通过后我们联系你' },
-          { id: 'intro', label: '社团简介（可空）', placeholder: '一句话介绍贵社' }
-        ]
-      });
-      if (!v || !v.name || !v.school || !v.contact) return;
-      const r = await apiFetch('/org/apply', { method: 'POST', body: v });
-      showToast((r && r.code === 0) ? '申请已提交，请等待审核' : ((r && r.message) || '提交失败'), !(r && r.code === 0));
-    };
     document.addEventListener('click', function (ev) {
       if (ev.target && ev.target.id === 'wbOrgRefresh') wbLoadOrgApps();
     });
