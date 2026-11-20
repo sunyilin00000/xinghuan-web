@@ -1,78 +1,115 @@
-星屿 · Telescope Garden —— 星环教学中枢 · 学习资源内嵌版
-==========================================================
+星屿 · Telescope Garden —— 学习资源入口说明
+============================================
 
-一、这是什么
-------------
-「星屿」原本是 Telescope Garden 1.0.0（Windows 桌面天文摆件，Godot 4.7 制作）。
-本包把它的**原版 3D 设备模型**和**真实星表 / 天文算法**移植成网页版，
-内嵌在星环教学中枢的「学习资源」页里，点一下就能用，不需要安装任何东西。
-
-二、怎么打开
-------------
-1. 解压整个压缩包（不要只解出 index.html）。
-2. 双击 index.html，用 Edge / Chrome 打开。
-3. 用成员账号登录 → 顶栏出现「学习资源」→ 页面最上方就是「星屿」卡片 → 点「进入星屿」。
-   （学习资源页和其他中枢页一样，需要登录后从顶栏进入。）
-
-   也可以直接把网站部署到静态托管（如腾讯云 CloudBase 静态网站）后再访问，行为一致。
-
-三、里面能做什么
-----------------
-· 观测地：北京 / 上海 / 阿里 / 阿塔卡马 / 堪培拉 / 武汉，各自的经纬度与时区（含夏令时）。
-· 目标：M1–M110 与 80 个精选目标，共 190 个真实天体，可按类型筛选、按名称搜索。
-· 时间：1× / 60× / 240× / 480× / 1440× 倍速；「前往夜晚」一键跳到太阳低于 -22° 的时刻。
-· 望远镜：折射镜 76SAP / 施卡 SCT / 牛顿反射 200PDS 三种主镜，单反 / 冷冻相机，导星镜可开关。
-· 跟踪：选中目标后望远镜自动转向并持续跟踪；目标落下或天亮会自动停止。
-· 拍摄：与桌面版相同的判定——太阳低于地平线 18°、目标高于 5°，每帧 60 秒模拟曝光。
-· 读数：本地时间、恒星时、太阳高度、月亮亮度与高度、目标高度与方位、曝光帧数与累计积分。
-· 全天星图：天顶投影，含地平圈、方位标注、太阳与月亮轨迹、全部目标位置。
-
-四、关于云函数（重点）
+一、署名与来源（重要）
 ----------------------
-**不需要新增任何 SCF 云函数，也不需要新建数据库集合。**
+本模块提供的是 **Telescope Garden 1.0.0**（浏览器版 + 桌面版下载入口），
+界面可见处均已标注：
 
-· 3D 模型（.glb）与星表（targets.json、timezones.json）都已用 base64 / JS 内嵌在
-  xingyu/xingyu-models.js 与 xingyu/xingyu-data.js 里，运行时不发任何网络请求。
-· 星历（太阳、月亮、恒星时、岁差）全部在浏览器里计算，不调用后端。
-· 站点原有的登录、课堂、资料等接口保持不变；本模块从不请求它们。
-· 因此断网、本地双击打开也能完整运行。
+    由 7uanm 提供 · 开源公开作品 · GNU GPL v3.0
 
-唯一需要注意的是：三个第三方库（three.js / GLTFLoader / OrbitControls）已随包放在
-xingyu/vendor/ 下，同样不依赖 CDN。
+· 作者 / 版权：7uanm
+· 仓库：https://github.com/i7uanm/TelescopeGarden
+· 发布页：https://github.com/i7uanm/TelescopeGarden/releases/tag/v1.0.0
+· 许可：GNU GPL v3.0（可自由使用、修改、再分发，需保留署名与开源）
+· 第三方素材：NASA Deep Star Maps、DSS2、OpenNGC、Poly Haven，详见项目内
+  docs/THIRD-PARTY-NOTICES.md
+· 星图署名：NASA/Goddard Space Flight Center Scientific Visualization Studio；
+  Gaia DR2: ESA/Gaia/DPAC
 
-五、文件清单
+二、当前状态：已配置完成，可以直接部署
+--------------------------------------
+浏览器版已接上你自己的腾讯云 COS 桶，本机实测跑通：
+
+    · 桶       xinghuan-1521583267（南京 ap-nanjing）
+    · 对象     星屿-index.pck
+    · 地址     见 xingyu/web/bin-config.js 的 window.XY_PCK_URL
+    · 校验     364,361,508 字节；文件头 GDPC（Godot 资源包）
+    · CORS     Access-Control-Allow-Origin: *
+               Access-Control-Allow-Methods: HEAD,GET
+               Access-Control-Expose-Headers: ETag,Content-Length
+    · 实测     站点 → 学习资源 → 点「在浏览器里直接玩」→ 全屏 iframe
+               引擎启动成功，首屏约 93 秒（含下载 347 MB），之后走浏览器缓存
+               控制台报错 0 条，失败请求 0 条
+
+部署要做的事只有一件：把本包（约 39 MB）上传到 GitHub Pages。
+其中 index.wasm 有 37.7 MB，超过网页拖拽上传的 25 MB 限制，
+请用 GitHub Desktop / git push（单文件上限 100 MB）。
+
+三、为什么这样拆（关键，别改）
+------------------------------
+· 外壳 + index.wasm + 音频 worklet 必须与页面同源：
+  Godot 的音频 worklet 跨域会直接失败（实测报
+  "Failed to load worklet module script ... CORS"），
+  所以**不能**把整个目录都放进桶，也不能把 executable 指向桶。
+· 只有 347.5 MB 的 index.pck 允许跨域，因此只把它外置到 COS。
+· 桶不做网站托管、不绑自定义域名、不需要备案；
+  页面在 GitHub Pages（免备案），桶只当一个文件下载源。
+· COS 的 x-cos-force-download 只影响地址栏直接打开，fetch 取资源不受影响。
+
+四、换文件位置怎么办
+--------------------
+只改 xingyu/web/bin-config.js：
+
+    window.XY_PCK_URL = 'https://你的桶-appid.cos.地域.myqcloud.com/文件名.pck';
+
+· 文件名是中文时要写 UTF-8 百分号编码，例如 星屿-index.pck →
+  %E6%98%9F%E5%B1%BF-index.pck
+· 若对象就叫 index.pck，也可以只给目录：
+  window.XY_PCK_BASE = 'https://你的桶-appid.cos.地域.myqcloud.com';
+
+换桶时记得同步开通：公有读、CORS（Origin *、方法 GET/HEAD、暴露 ETag 与 Content-Length）。
+建议顺带把对象 Content-Type 设为 application/octet-stream（当前是 text/plain，
+不影响加载，只是更规范）。
+
+五、桌面版（可选）
+------------------
+安装包不随站点分发，单独提供：Telescope Garden-1.0.0-Windows-x64.zip
+  官方 SHA-256  9365aa8d903e9a1c0eb9826ee8e7ac2ec60f9d76a6e4e418717c53766bf7c4be
+上传后把地址填进 xingyu/xingyu-config.js 的 packageUrl 即可站内下载；
+留空则「下载桌面版」按钮回落到 7uanm 的官方发布页。
+
+六、本机 / 教室离线使用（完全不用托管）
+--------------------------------------
+把「星屿浏览器版-Web导出.zip」解压，双击「启动星屿（浏览器版）.bat」，
+需要本机有 Python 3。它会在本地起服务并自动打开浏览器，适合教室/局域网。
+
+七、完整版包含什么（未做任何裁剪）
+----------------------------------
+· 设备：EQ6 / EQ5 / AM5N / AM3N 赤道仪；折射、牛顿、施卡、马卡主镜
+        （76SAP、200PDS、D60、50SAW、Mighty Cat 71、70 APO、FF70、SQA85）；
+        相机、导星、滤镜轮、电调焦、控制盒、支撑配件自由搭配；默认 OAG 导星
+· 装配：预览可平移／旋转／缩放、选连接点、收放遮光罩；线缆随姿态变化并做碰撞避让
+· 观测：自动观测、中天翻转、限位与归位；太阳低于 18°、目标高于 5° 才成像；
+        每帧 60 秒模拟曝光；DSS2 巡天参考图
+· 天空：M1–M110 与 80 个精选目标共 190 个；方位／高度／升落、日月位置、
+        月相、全天星图、岁差修正均按观测地与时间计算
+· 场景：北京 / 上海 / 武汉 / 阿里 / 阿塔卡马 / 堪培拉 × 六类地台，36 种组合
+· 桌面：四档画质、15/30/60/120 FPS、背景透明度、置顶、鼠标穿透、托盘、中英切换
+· 存档：桌面版存 %APPDATA%\TelescopeGarden\garden.json；浏览器版存 IndexedDB
+
+八、浏览器版的已知差异（浏览器能力所限，非裁剪）
+------------------------------------------------
+· 鼠标穿透、窗口置顶、系统托盘、背景透明没有对应能力，
+  引擎启动会打印 "Mouse passthrough not supported"，属预期提示。
+· 浏览器存档是 IndexedDB，换浏览器/清缓存会丢，与桌面版不通用。
+· 首次加载需下载约 385 MB（wasm 37.7 + pck 347.5），之后走缓存。
+
+九、文件清单
 ------------
-index.html                站点入口（新增了一行样式引用、一个脚本引用）
-script.js / style.css     原有站点脚本与样式，未改动
-app.v236.js               原有中枢逻辑，未改动
-echarts.min.js            原有图表库，未改动
-logo.png / nankai-logo.png 原有徽标
-xingyu/                   新增的「星屿」模块
-  xingyu.js               三维场景、天文计算、界面与交互
-  xingyu.css              模块样式（沿用站点配色）
-  xingyu-data.js          星表 190 条 + 时区表 + 月球级数表
-  xingyu-models.js        10 个 .glb 模型（base64 内嵌，约 2.9 MB）
-  vendor/three.min.js     three.js r147
-  vendor/GLTFLoader.js    glTF 模型加载器
-  vendor/OrbitControls.js 视角控制
+index.html                  新增一行样式引用、两行脚本引用
+xingyu/
+  xingyu-config.js          卡片配置（webUrl / packageUrl / sha256 / mirrorUrl）
+  xingyu.js                 入口卡片、全屏运行层、下载分发
+  xingyu.css                卡片样式
+  assets/*.jpg/png          实机截图与 Logo
+  web/
+    index.html              引擎页（含 pck 来源重定向）
+    index.js                引擎胶水 0.27 MB
+    index.wasm              引擎本体 37.7 MB
+    index.audio*.worklet.js 音频工作线程（必须同源）
+    bin-config.js           大文件地址（已填你的 COS）
+    index.png / icon        启动图与图标
 
-六、体积与性能
---------------
-整个模块约 4.1 MB（其中模型 2.9 MB）。采用**按需加载**：打开学习资源页时不会
-加载它，只有点了「进入星屿」才开始下载并装配，所以不影响站点首屏速度。
-
-七、来源与许可
---------------
-· 模型、星表与天文算法来自 Telescope Garden 1.0.0，采用 GNU GPL v3.0 许可
-  （https://github.com/i7uanm/TelescopeGarden）。
-· 本项目按 GPL-3.0 的要求同样以 GPL-3.0 发布，并在此提供来源说明；如需再分发，
-  请保留本说明与许可信息。
-· 星图数据来源：NASA/Goddard Space Flight Center Scientific Visualization Studio、
-  Gaia DR2（ESA/Gaia/DPAC）、OpenNGC、DSS2、Poly Haven。
-· 这是非官方爱好者移植作品，与所描绘器材厂商无隶属或代言关系。
-
-八、已知边界
-------------
-· 网页版是「可视化 + 教学」取向的移植，不做桌面版的导线碰撞、装配微调预览、托盘常驻等功能。
-· 模型按包围盒装配（底座贴台面、燕尾板坐进鞍座），没有逐点还原桌面版的机械限位与中天翻转。
-· 需要浏览器支持 WebGL；开启硬件加速体验最佳。
+script.js / style.css / app.v236.js / echarts.min.js 及两张徽标：一字节未改。
+原有「天文资料」面板仍在学习资源页上方，星屿卡片追加在其后。
