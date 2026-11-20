@@ -1705,7 +1705,7 @@
         }
       }
       /* v2.43 平台管理入口：仅 super_admin，界面不含任何人名 */
-      if (u.super_admin === true && !document.getElementById('wbPfTab')) {
+      if ((u.super_admin === true || u.role === 'admin') && !document.getElementById('wbPfTab')) {
         var tabs = document.querySelector('.wb-tabs');
         if (tabs) {
           var tab = document.createElement('button');
@@ -3380,7 +3380,7 @@
              任课教师仍可进控制台管理课程，但看不到态势屏 */
           /* v2.46 控制台仅星环终端工作人员（超管/平台管理员） */
           var u = state.user || {};
-          var isStaff = u.super_admin === true || u.admin_scope === 'platform';
+          var isStaff = u.super_admin === true || u.admin_scope === 'platform' || u.role === 'admin';
           if (isStaff) {
             elements.consoleDenied.hidden = true;
             elements.consoleSlot.hidden = false;
@@ -4321,13 +4321,7 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
       });
       const navPartners = document.getElementById('navPartners');
-      if (navPartners) navPartners.addEventListener('click', () => {
-        showLanding();
-        const sp4 = document.getElementById('shopPage');
-        if (sp4) sp4.hidden = true;
-        const pt = document.getElementById('partners');
-        if (pt) setTimeout(() => pt.scrollIntoView({ behavior: 'smooth' }), 60);
-      });
+      if (navPartners) navPartners.addEventListener('click', () => { openPartners(); });
       const navShop = document.getElementById('navShop');
       if (navShop) navShop.addEventListener('click', () => enterShop());
       // 首页锚点（星环/入驻星系等）回到首页视图
