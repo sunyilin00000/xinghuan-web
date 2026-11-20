@@ -4377,7 +4377,7 @@
       var password2 = document.getElementById('xrPwd2').value;
       var org = document.getElementById('xrOrg').value;
       if (!username || !password) { msg.textContent = '账号和密码必填'; return; }
-      if (password.length < 4) { msg.textContent = '密码至少 4 位'; return; }
+      if (password.length < 6) { msg.textContent = '密码至少 6 位'; return; }
       if (password !== password2) { msg.textContent = '两次密码不一致'; return; }
       var btn = document.getElementById('xrOk');
       btn.disabled = true; btn.textContent = '注册中…';
