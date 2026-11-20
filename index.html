@@ -751,6 +751,14 @@
               <div class="ops-alert-list" id="opsAlertList"></div>
             </div>
           </div>
+
+          <!-- v2.54 社团入驻审批（控制台，仅平台工作人员可见） -->
+          <div id="wbOrg" class="ops-dash" hidden style="padding-top:0">
+            <div class="ops-panel" style="border-color:rgba(230,199,143,.2)">
+              <h4 style="display:flex;align-items:center;gap:12px">社团入驻审批 <span style="flex:1"></span><button class="res-btn" id="wbOrgRefresh" type="button">刷新</button></h4>
+              <div style="padding:12px"><div id="wbOrgList" class="ap-list"></div></div>
+            </div>
+          </div>
           <div id="consoleSlot" class="console-slot"></div>
       </div>
 
@@ -775,8 +783,7 @@
         <div class="wb-tabs">
           <button class="wb-tab active" data-wbt="members" type="button">成员管理</button>
           <button class="wb-tab" data-wbt="res" type="button">资料管理</button>
-          <button class="wb-tab" data-wbt="orgapp" type="button" hidden id="wbOrgTab">社团入驻</button>
-                  </div>
+                    </div>
         <div id="wbMembers" style="padding:16px 18px">
           <div class="ap-toolbar">
             <input id="wbSearch" placeholder="搜索姓名 / 账号 / 部门 / 校区" />
@@ -791,11 +798,6 @@
             </table>
           </div>
         </div>
-        <div id="wbOrg" style="padding:16px 18px" hidden>
-          <div class="ap-toolbar"><span style="color:var(--faint);font-size:12px">社团入驻申请 · 仅超级管理员可见</span><span style="flex:1"></span><button class="res-btn" id="wbOrgRefresh" type="button">刷新</button></div>
-          <div id="wbOrgList" class="ap-list"></div>
-        </div>
-        
 <div id="wbRes" style="padding:16px 18px" hidden>
           <div class="ap-toolbar">
             

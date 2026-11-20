@@ -2576,12 +2576,14 @@
       const r = await apiFetch('/org/apply', { method: 'POST', body: v });
       showToast((r && r.code === 0) ? '申请已提交，请等待审核' : ((r && r.message) || '提交失败'), !(r && r.code === 0));
     };
+    document.addEventListener('click', function (ev) {
+      if (ev.target && ev.target.id === 'wbOrgRefresh') wbLoadOrgApps();
+    });
     async function wbLoadOrgApps() {
       const box = document.getElementById('wbOrgList');
       if (!box) return;
       const r = await apiFetch('/org/applications', { method: 'POST', body: {} });
-      if (r && r.code === 403) { document.getElementById('wbOrgTab').hidden = true; document.getElementById('wbOrg').hidden = true; return; }
-      document.getElementById('wbOrgTab').hidden = false;
+      if (r && r.code === 403) { document.getElementById('wbOrg').hidden = true; return; }
       const list = (r && r.data) || [];
       box.innerHTML = list.map(m =>
         '<div class="ap-li"><span class="grow"><b>' + m.name + '</b> <span style="color:var(--faint)">' + m.school + ' · ' + m.contact + '</span>' + (m.intro ? '<br><span style="color:var(--muted);font-size:11px">' + m.intro + '</span>' : '') + '</span>' +
@@ -3388,6 +3390,11 @@
           }
           var od = document.getElementById('opsDash');
           if (od) od.style.display = isStaff ? '' : 'none';
+          var ogEl = document.getElementById('wbOrg');
+          if (ogEl) {
+            ogEl.hidden = !isStaff;
+            if (isStaff) wbLoadOrgApps();
+          }
         } else {
           moveTeacherBar(null); // 离开控制台页，把控制条放回课堂板块原位置
         }
