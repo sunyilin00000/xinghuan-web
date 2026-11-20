@@ -239,6 +239,21 @@
               <span class="partner-school">南开大学</span>
             </div>
           </a>
+          <article class="partner-card partner-meta">
+            <div class="partner-card-top">
+              <span class="partner-number">05</span>
+              <span class="partner-orbit" aria-hidden="true"><i></i></span>
+            </div>
+            <div class="partner-card-body">
+              <h3 class="partner-name">元宇宙协会</h3>
+              <p class="partner-en">METAVERSE DEV</p>
+              <p class="partner-desc">虚拟场景、数字人与星环世界的建造者。</p>
+            </div>
+            <div class="partner-card-foot">
+              <span class="partner-tag">METAVERSE</span>
+              <span class="partner-school">中国海洋大学</span>
+            </div>
+          </article>
         </div>
 
         <!-- v2.46 公开资料库（免登录可读公开档资料） -->
@@ -699,17 +714,6 @@
               <p class="panel-subtitle">天文仪器 · 天文摄影 · 后期软件 · 教程合集（感谢艾博宇学长整理制作）</p>
             </div>
           </header>
-          
-
-          <!-- v2.12.5 天文资料分支：仅天文协会成员（海大天协/南开天协）可见 -->
-          <div id="astroResPanel" hidden style="margin:0 16px 16px;padding:18px;border:1px solid rgba(124,199,255,.28);border-radius:14px;background:linear-gradient(145deg,rgba(124,199,255,.06),rgba(255,255,255,.012))">
-            <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
-              <span style="font-size:16px;letter-spacing:.18em;color:#7cc7ff">天文资料 · 协会成员专属（海大天协 / 南开天协）</span>
-              <span style="flex:1;height:1px;background:rgba(124,167,220,.14)"></span>
-            </div>
-            <div id="astroResList" class="res-grid"></div>
-            <p id="astroResHint" hidden style="color:#5c7194;font-size:12px;margin-top:4px"></p>
-          </div>
         </section>
 
         <!-- v2.12 控制台页：教师可见控制条；学生/匿名显示"您暂无权限" -->
@@ -723,7 +727,7 @@
           <!-- v2.44 星环运营中枢 · 3D 地球态势屏（示例数据） -->
           <div id="opsDash" class="ops-dash">
             <div class="ops-top">
-              <div class="ops-title">星环运营中枢 · 社团态势总览 <span class="ops-badge">示例数据</span></div>
+              <div class="ops-title">星环运营中枢 · 社团态势总览 <span class="ops-badge">实时数据</span></div>
               <div class="ops-metrics" id="opsMetrics"></div>
               <div class="ops-regions" id="opsRegions"></div>
             </div>
@@ -731,7 +735,7 @@
               <div class="ops-left">
                 <div class="ops-stats" id="opsStats"></div>
                 <div class="ops-panel">
-                  <h4>人员变动 <span>示例</span></h4>
+                  <h4>人员变动</h4>
                   <div class="ops-feed" id="opsFeedList"></div>
                 </div>
               </div>
@@ -743,7 +747,7 @@
               <div class="ops-right" id="opsDetail"></div>
             </div>
             <div class="ops-alerts">
-              <h4>职位调动 · 风险预警 <span>示例</span></h4>
+              <h4>职位调动 · 风险预警</h4>
               <div class="ops-alert-list" id="opsAlertList"></div>
             </div>
           </div>
@@ -1129,6 +1133,7 @@
 
   <script src="script.js"></script>
   <script src="echarts.min.js"></script>
+  <script src="china-boundaries.js"></script>
   <script src="globe.js?v=247"></script>
   <script src="app.v236.js?v=247"></script>
   <!-- 星屿 · Telescope Garden：学习资源页入口（作品与素材由 7uanm 提供，GPL-3.0） -->

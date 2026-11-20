@@ -24,7 +24,8 @@
       astro: { label: '天文协会', school: '中国海洋大学' },
       bio: { label: '生物科技协会', school: '中国海洋大学' },
       outdoor: { label: '户外协会', school: '中国海洋大学' },
-      nankai_astro: { label: '南开天协', school: '南开大学' }
+      nankai_astro: { label: '南开天协', school: '南开大学' },
+      metaverse: { label: '元宇宙发展协会', school: '中国海洋大学' }
     };
 
     const state = {
@@ -169,6 +170,7 @@
     function normalizeOrg(value) {
       const raw = String(value || '').trim().toLowerCase();
       if (raw.includes('nankai') || raw.includes('南开')) return 'nankai_astro';
+      if (raw.includes('meta') || raw.includes('元宇宙')) return 'metaverse';
       if (raw.includes('outdoor') || raw.includes('户外')) return 'outdoor';
       if (raw.includes('bio') || raw.includes('生物科技') || raw.includes('生科')) return 'bio';
       return 'astro';
@@ -960,25 +962,58 @@
       const org = normalizeOrg(u.org);
       return org === 'astro' || org === 'nankai_astro';
     }
+    /* v2.49 动态生成天文资料面板：不依赖静态 HTML，杜绝渲染异常 */
     function renderAstroRes() {
-      const panel = document.getElementById('astroResPanel');
-      const list = document.getElementById('astroResList');
-      const hint = document.getElementById('astroResHint');
-      if (!panel) return;
-      if (canSeeAstroRes()) {
-        panel.hidden = false;
-        hint.hidden = true;
-        list.innerHTML = ASTRO_RES.length ? ASTRO_RES.map(r =>
-          '<article class="res-card"><div class="res-tag-row"><span class="res-tag">' + (r.tag || '天文资料') + '</span>' +
-          (r.url && r.url.indexOf('baidu') !== -1 ? '<span class="res-tag tag-baidu">百度网盘</span>' : '') + '</div>' +
-          '<h3 class="res-title">' + r.title + '</h3><p class="res-desc">' + (r.desc || '') + '</p>' +
-          '<div class="res-actions">' +
-          (r.url ? '<a class="btn btn-gold res-link" href="' + r.url + '" target="_blank" rel="noopener">打开网盘</a>' : '') +
-          (r.code ? '<button class="btn res-code" type="button" data-code="' + r.code + '">提取码 ' + r.code + ' · 点击复制</button>' : '') +
-          '</div></article>').join('')
-          : '<p style="color:var(--faint);font-size:13px;padding:12px 4px">资料筹备中，协会管理员确定内容后上架。</p>';
-      } else {
-        panel.hidden = true;    // v2.18：非海大/南开（含其他协会与未登录）：彻底隐藏，不给任何提示
+      var host = document.getElementById('resourcesPage');
+      if (!host) return;
+      var visible = canSeeAstroRes();
+      var panel = document.getElementById('astroResPanel');
+      if (!visible) { if (panel) panel.remove(); return; }
+      if (!panel) {
+        panel = document.createElement('div');
+        panel.id = 'astroResPanel';
+        panel.style.cssText = 'margin:0 16px 16px;padding:18px;border:1px solid rgba(124,199,255,.28);border-radius:14px;background:linear-gradient(145deg,rgba(124,199,255,.06),rgba(255,255,255,.012))';
+        var headEl = host.querySelector('.panel-head');
+        headEl.parentNode.insertBefore(panel, headEl.nextSibling);
+        panel.innerHTML = '<div style="display:flex;align-items:center;gap:14px;margin-bottom:16px"><span style="font-size:16px;letter-spacing:.18em;color:#7cc7ff">天文资料</span><span style="flex:1;height:1px;background:rgba(124,167,220,.14)"></span></div><div id="astroResList" class="res-grid"></div>';
+      }
+      var list = document.getElementById('astroResList');
+      if (!list) return;
+      list.innerHTML = ASTRO_RES.length ? ASTRO_RES.map(r =>
+        '<article class="res-card"><div class="res-tag-row"><span class="res-tag">' + (r.tag || '天文资料') + '</span>' +
+        (r.url && r.url.indexOf('baidu') !== -1 ? '<span class="res-tag tag-baidu">百度网盘</span>' : '') + '</div>' +
+        '<h3 class="res-title">' + r.title + '</h3><p class="res-desc">' + (r.desc || '') + '</p>' +
+        '<div class="res-actions">' +
+        (r.url ? '<a class="btn btn-gold res-link" href="' + r.url + '" target="_blank" rel="noopener">打开网盘</a>' : '') +
+        (r.code ? '<button class="btn res-code" type="button" data-code="' + r.code + '">提取码 ' + r.code + ' · 点击复制</button>' : '') +
+        '</div></article>').join('')
+        : '<p style="color:var(--faint);font-size:13px;padding:12px 4px">资料筹备中，协会管理员确定内容后上架。</p>';
+    }
+
+    /* v2.49 视频教学区：桶内 videos/videos.json 清单驱动，免登录可播放公开视频 */
+    function ensureVideoZone() {
+      var host = document.getElementById('resourcesPage');
+      if (!host || document.getElementById('videoZone')) return;
+      var zone = document.createElement('div');
+      zone.id = 'videoZone';
+      zone.style.cssText = 'margin:0 16px 16px;padding:18px;border:1px solid rgba(230,199,143,.22);border-radius:14px;background:linear-gradient(145deg,rgba(230,199,143,.05),rgba(255,255,255,.012))';
+      zone.innerHTML = '<div style="display:flex;align-items:center;gap:14px;margin-bottom:16px"><span style="font-size:16px;letter-spacing:.18em;color:#e6c78f">视频教学</span><span style="flex:1;height:1px;background:rgba(230,199,143,.14)"></span></div><div id="videoList" class="video-list"><p style="color:var(--faint);font-size:12px;text-align:center;padding:14px 0">正在载入视频…</p></div>';
+      var card = document.getElementById('xyCard');
+      if (card) host.insertBefore(zone, card); else host.appendChild(zone);
+    }
+    async function loadVideos() {
+      ensureVideoZone();
+      var box = document.getElementById('videoList');
+      try {
+        var resp = await fetch('https://xinghuan-1521583267.cos.ap-nanjing.myqcloud.com/videos/videos.json', { cache: 'no-store' });
+        if (!resp.ok) throw new Error('no manifest');
+        var payload = await resp.json();
+        var vids = Array.isArray(payload) ? payload : (payload.videos || []);
+        box.innerHTML = vids.map(function (v) {
+          return '<div class="video-item"><video controls preload="metadata"' + (v.poster ? ' poster="' + v.poster + '"' : '') + ' src="' + v.url + '"></video><p>' + v.title + '</p></div>';
+        }).join('') || '<p style="color:var(--faint);font-size:12px;text-align:center;padding:14px 0">视频筹备中，敬请期待</p>';
+      } catch (e) {
+        box.innerHTML = '<p style="color:var(--faint);font-size:12px;text-align:center;padding:14px 0">视频筹备中，敬请期待</p>';
       }
     }
 
@@ -1568,7 +1603,8 @@
     // ---------- v2.18 工作台（成员管理/资料管理/日志，多组织） ----------
     const ORG_DEFS = {
       astro: { name: '中国海洋大学天文协会', logo: 'ouc-astro-logo.png' },
-      nankai_astro: { name: '南开大学天文协会', logo: 'nankai-logo.png' }
+      nankai_astro: { name: '南开大学天文协会', logo: 'nankai-logo.png' },
+      metaverse: { name: '元宇宙发展协会', logo: 'logo.png' }
     };
     const wbState = { members: [], isAdmin: false };
     // 经 SCF /member-bridge 中转调用 memberService（鉴权透传）
@@ -3317,6 +3353,7 @@
       if (elements.resourcesPage) {
         elements.resourcesPage.hidden = tab !== 'resources';
         if (tab === 'resources' && typeof renderAstroRes === 'function') renderAstroRes();
+        if (tab === 'resources') loadVideos();
       }
       if (document.getElementById('workbenchPage')) {
         document.getElementById('workbenchPage').hidden = tab !== 'workbench';
