@@ -4316,7 +4316,7 @@
       const navShop = document.getElementById('navShop');
       if (navShop) navShop.addEventListener('click', () => enterShop());
       // 首页锚点（星环/入驻星系等）回到首页视图
-      document.querySelectorAll('.top-nav-link:not(.nav-hub-item):not(#navShop), .top-nav-anchor').forEach(b => {
+      document.querySelectorAll('.top-nav-link:not(.nav-hub-item):not(#navShop):not(#navHome):not(#navPartners), .top-nav-anchor').forEach(b => {
         b.addEventListener('click', () => {
           if (hubMode) showLanding();
           const sp2 = document.getElementById('shopPage');

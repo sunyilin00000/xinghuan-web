@@ -130,6 +130,9 @@
       cg.addColorStop(0, 'rgba(80,220,255,0.22)');
       cg.addColorStop(0.09, 'rgba(80,220,255,0)');
       cg.addColorStop(1, 'rgba(80,220,255,0)');
+      cg.addColorStop(0, 'rgba(80,220,255,0.22)');
+      cg.addColorStop(0.09, 'rgba(80,220,255,0)');
+      cg.addColorStop(1, 'rgba(80,220,255,0)');
       ctx.fillStyle = cg;
       ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
     }
@@ -494,13 +497,17 @@
     renderStats(); renderFeed(); renderAlerts(); renderDetail(null, null);
     resize();
     loadRealData();
-    (function loop() {
-      if (!document.hidden) {
-        if (autoSpin && !dragging) rotY += 0.0022;
-        drawGlobe();
+    /* v2.51 性能：30fps 上限 + 面板不可见时整帧跳过（零浪费渲染） */
+    var lastFrame = 0;
+    (function loop(now) {
+      if (!document.hidden && now - lastFrame >= 33) {
+        lastFrame = now;
+        if (autoSpin && !dragging) rotY += 0.0022 * ((now - (loop._p || now)) / 16.7 || 1);
+        loop._p = now;
+        if (canvas.clientWidth > 0) drawGlobe();
       }
       requestAnimationFrame(loop);
-    })();
+    })(0);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
