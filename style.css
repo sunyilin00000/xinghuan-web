@@ -6858,3 +6858,27 @@ body.partners-view #partners { min-height: 100vh; padding-top: clamp(96px, 12vh,
   .ops-globe-wrap { min-height: 340px; }
   #opsGlobe { min-height: 340px; }
 }
+
+
+/* v2.45 地球容器科技风升级 */
+.ops-globe-wrap {
+  border-color: rgba(95,190,255,.22);
+  background:
+    repeating-linear-gradient(0deg, rgba(95,190,255,.022) 0 1px, transparent 1px 42px),
+    repeating-linear-gradient(90deg, rgba(95,190,255,.022) 0 1px, transparent 1px 42px),
+    radial-gradient(ellipse 70% 60% at 50% 45%, rgba(50,120,200,.12), transparent 70%),
+    rgba(4,7,14,.72);
+}
+.ops-globe-wrap::before, .ops-globe-wrap::after {
+  content: ""; position: absolute; width: 22px; height: 22px; z-index: 3; pointer-events: none;
+  border-color: rgba(140,225,255,.7); border-style: solid;
+}
+.ops-globe-wrap::before { left: 10px; top: 10px; border-width: 1.5px 0 0 1.5px; }
+.ops-globe-wrap::after { right: 10px; bottom: 10px; border-width: 0 1.5px 1.5px 0; }
+.ops-globe-hint { color: rgba(140,220,255,.4); }
+
+
+/* v2.45 导航整页切换：进入中枢/控制台/星系页时隐藏首屏 */
+body.console-mode .hero { display: none !important; }
+body.hub-mode .hero { display: none !important; }
+body.partners-view .hero { display: none !important; }

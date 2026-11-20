@@ -3208,7 +3208,10 @@
       document.querySelectorAll('.tab-classroom').forEach((el) => {
         el.hidden = tab !== 'classroom';
       });
-      if (elements.resourcesPage) elements.resourcesPage.hidden = tab !== 'resources';
+      if (elements.resourcesPage) {
+        elements.resourcesPage.hidden = tab !== 'resources';
+        if (tab === 'resources' && typeof renderAstroRes === 'function') renderAstroRes();
+      }
       if (document.getElementById('workbenchPage')) {
         document.getElementById('workbenchPage').hidden = tab !== 'workbench';
         if (tab === 'workbench') { wbSetup(); wbLoad(); }
