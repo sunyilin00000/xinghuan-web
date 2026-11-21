@@ -236,12 +236,19 @@
       checkLiveLecture();
       document.getElementById('hubAiFloat').hidden = false;
       revealHubNav();
+      syncConsoleNav();
       wbSetup();
       if (canSeeAstroRes()) document.getElementById('communityTab').hidden = false;
       closeLogin();
       syncVoiceEnrollButton();
     }
 
+    /* v2.62 控制台导航仅星环终端工作人员可见，其余人直接不显示入口 */
+    function syncConsoleNav() {
+      const u = state.user || {};
+      const staff = u.super_admin === true || u.admin_scope === 'platform' || u.role === 'admin';
+      document.querySelectorAll('[data-hub="console"]').forEach(function (el) { el.hidden = !staff; });
+    }
     function setAnonymous() {
       disconnectClassroomBoard();
       document.body.classList.add('auth-locked');

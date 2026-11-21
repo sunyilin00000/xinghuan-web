@@ -6907,3 +6907,12 @@ body.partners-view .hero { display: none !important; }
 .video-item p { margin: 0; padding: 10px 14px; color: var(--text); font-size: 12px; }
 
 .partner-meta { --accent: 124, 154, 232; }
+
+
+/* v2.62 内页模式：隐藏首页专属的黑洞吸积盘与底部辉光，只留星空 */
+body.console-mode .ring-stage,
+body.hub-mode .ring-stage,
+body.partners-view .ring-stage { display: none !important; }
+body.console-mode .cosmos-glow,
+body.hub-mode .cosmos-glow,
+body.partners-view .cosmos-glow { display: none !important; }

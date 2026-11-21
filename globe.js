@@ -27,6 +27,7 @@
   var rotY = -1.95, tiltX = -0.38, zoom = 1;
   var dragging = false, lastX = 0, lastY = 0, autoSpin = true;
   var sweepA = 0, dashOff = 0, pulseT = 0;
+  var labelQueue = [], placedBoxes = [];
   var stars = [];
 
   var canvas, ctx, tip, detail, DPR = 1;
@@ -142,21 +143,43 @@
     ctx.lineTo(cx + Math.cos(sweepA) * R, cy + Math.sin(sweepA) * R);
     ctx.stroke();
 
-    /* 大陆轮廓（点阵世界地图） */
-    for (var r = 0; r < 36; r++) {
-      var row = LAND[r];
-      var lat = 87.5 - r * 5;
-      for (var cc = 0; cc < 72; cc++) {
-        if (row.charCodeAt(cc) !== 49) continue;  /* '1' */
-        var p = project(lat, -177.5 + cc * 5, R, cx, cy);
-        if (p.z <= 0.03) continue;
-        var depth = 0.35 + 0.4 * p.z;
-        ctx.globalAlpha = depth * 0.75;
-        ctx.fillStyle = '#5fb8ff';
-        ctx.fillRect(p.x - 0.9, p.y - 0.9, 1.8, 1.8);
+    /* 全球陆地轮廓（Natural Earth 110m 真实数据，含南极洲；无行政划分） */
+    if (window.WORLD_BOUNDS) {
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(140,215,255,0.55)';
+      ctx.beginPath();
+      window.WORLD_BOUNDS.forEach(function (ring) {
+        var prevVis = false;
+        for (var vi = 0; vi < ring.length; vi++) {
+          var pt = ring[vi];
+          var pv = project(pt[1], pt[0], R, cx, cy);
+          if (pv.z > 0.02) {
+            if (prevVis) ctx.lineTo(pv.x, pv.y);
+            else ctx.moveTo(pv.x, pv.y);
+            prevVis = true;
+          } else {
+            prevVis = false;
+            ctx.moveTo(NaN, NaN);
+          }
+        }
+      });
+      ctx.stroke();
+    } else if (LAND.length) {
+      /* 兜底：手工点阵大陆 */
+      for (var r = 0; r < 36; r++) {
+        var row = LAND[r];
+        var lat = 87.5 - r * 5;
+        for (var cc = 0; cc < 72; cc++) {
+          if (row.charCodeAt(cc) !== 49) continue;
+          var p = project(lat, -177.5 + cc * 5, R, cx, cy);
+          if (p.z <= 0.03) continue;
+          ctx.globalAlpha = (0.35 + 0.4 * p.z) * 0.75;
+          ctx.fillStyle = '#5fb8ff';
+          ctx.fillRect(p.x - 0.9, p.y - 0.9, 1.8, 1.8);
+        }
       }
+      ctx.globalAlpha = 1;
     }
-    ctx.globalAlpha = 1;
 
     /* 经纬网格 */
     ctx.lineWidth = 0.7;
@@ -183,31 +206,6 @@
       ctx.stroke();
     }
     ctx.restore();
-
-    /* 中国行政区划边界（DataV 真实数据，压缩内嵌 china-boundaries.js） */
-    if (window.CHINA_BOUNDS) {
-      ctx.lineWidth = 0.7;
-      ctx.strokeStyle = 'rgba(140,215,255,0.42)';
-      ctx.beginPath();
-      window.CHINA_BOUNDS.forEach(function (f) {
-        f.r.forEach(function (ring) {
-          var prevVis = false;
-          for (var vi = 0; vi < ring.length; vi++) {
-            var pt = ring[vi];
-            var pv = project(pt[1], pt[0], R, cx, cy);
-            if (pv.z > 0.02) {
-              if (prevVis) ctx.lineTo(pv.x, pv.y);
-              else ctx.moveTo(pv.x, pv.y);
-              prevVis = true;
-            } else {
-              prevVis = false;
-              ctx.moveTo(NaN, NaN);
-            }
-          }
-        });
-      });
-      ctx.stroke();
-    }
 
     /* 社团节点 */
     var visible = [];
@@ -239,6 +237,7 @@
     ctx.setLineDash([]);
 
     pulseT += 0.03;
+    labelQueue = [];
     visible.forEach(function (o) {
       var active = inRegion(o);
       var size = active ? 3.5 + 8 * (val(o) / metricMax()) : 2.5;
@@ -268,15 +267,51 @@
         ctx.beginPath(); ctx.arc(o._p.x, o._p.y, size + 7, 0, Math.PI * 2);
         ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.4; ctx.stroke();
       }
-      if (active) {
-        ctx.font = '11px "PingFang SC","Microsoft YaHei",sans-serif';
-        ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = 4;
-        ctx.fillStyle = 'rgba(225,242,255,0.95)';
-        ctx.fillText(o.name, o._p.x + size + 6, o._p.y + 4);
-        ctx.shadowBlur = 0;
-      }
+      if (active) labelQueue.push({ o: o, x: o._p.x, y: o._p.y, size: size });
       ctx.globalAlpha = 1;
     });
+
+    /* 标签防碰撞：重叠时自动挪位并用指引线指回节点 */
+    labelQueue.sort(function (a, b) { return b.size - a.size; });
+    ctx.font = '11px "PingFang SC","Microsoft YaHei",sans-serif';
+    labelQueue.forEach(function (L) {
+      var text = L.o.name;
+      var tw = ctx.measureText(text).width;
+      var th = 13;
+      var cands = [
+        { x: L.x + L.size + 7, y: L.y - 3, lx: L.x + L.size + 3, ly: L.y },        /* 右 */
+        { x: L.x - tw - L.size - 7, y: L.y - 3, lx: L.x - L.size - 3, ly: L.y },   /* 左 */
+        { x: L.x - tw / 2, y: L.y - L.size - th - 7, lx: L.x, ly: L.y - L.size - 3 }, /* 上 */
+        { x: L.x - tw / 2, y: L.y + L.size + 10, lx: L.x, ly: L.y + L.size + 3 }     /* 下 */
+      ];
+      var placed = null;
+      for (var ci = 0; ci < cands.length; ci++) {
+        var c = cands[ci];
+        var box = { x: c.x - 2, y: c.y - th, w: tw + 4, h: th + 4 };
+        var hit = false;
+        for (var bi = 0; bi < placedBoxes.length; bi++) {
+          var B = placedBoxes[bi];
+          if (box.x < B.x + B.w && box.x + box.w > B.x && box.y < B.y + B.h && box.y + box.h > B.y) { hit = true; break; }
+        }
+        if (!hit) { placed = c; placedBoxes.push(box); break; }
+      }
+      if (!placed) placed = cands[3];
+      /* 指引线（标签挪位时画出连接线） */
+      var defX = L.x + L.size + 3, defY = L.y;
+      if (Math.abs(placed.lx - defX) > 2 || Math.abs(placed.ly - defY) > 2) {
+        ctx.strokeStyle = 'rgba(180,230,255,0.55)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(placed.lx, placed.ly);
+        ctx.lineTo(placed.x + (placed.x > L.x ? 0 : tw), placed.y - 3);
+        ctx.stroke();
+      }
+      ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = 4;
+      ctx.fillStyle = 'rgba(225,242,255,0.95)';
+      ctx.fillText(text, placed.x, placed.y);
+      ctx.shadowBlur = 0;
+    });
+    placedBoxes = [];
 
     /* HUD */
     ctx.font = '10px ui-monospace,Consolas,monospace';
