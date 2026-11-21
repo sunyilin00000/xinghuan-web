@@ -1011,6 +1011,7 @@
       if (card) host.insertBefore(zone, card); else host.appendChild(zone);
     }
     async function loadVideos() {
+      if (window.SITE_CONFIG && window.SITE_CONFIG.videos === false) return;
       ensureVideoZone();
       var box = document.getElementById('videoList');
       try {
@@ -1047,7 +1048,7 @@
 
 
     // ---------- v2.13 TRTC 语音教室（凭证经 SCF /trtc/join，SDK 走腾讯云 v5） ----------
-    const trtcState = { client: null, inRoom: false, muted: false, micStarted: false, videoOn: false, remote: new Set() };
+    const trtcState = { client: null, inRoom: false, muted: false, micStarted: false, videoOn: false, screenOn: false, remote: new Set() };
     // v2.16.2：优先加载本站自托管 trtc.js，失败再试两个公共 CDN
     async function trtcLoadSdk() {
       if (window.TRTC) return;
@@ -1081,6 +1082,8 @@
         joinBtn.hidden = true; muteBtn.hidden = false; leaveBtn.hidden = false;
         const camBtn = document.getElementById('trtcCam');
         if (camBtn) camBtn.hidden = false;
+        const scrBtn = document.getElementById('trtcScreen');
+        if (scrBtn) { scrBtn.hidden = false; scrBtn.textContent = trtcState.screenOn ? '停止共享' : '共享屏幕'; }
         muteBtn.textContent = !trtcState.micStarted ? '开启麦克风' : (trtcState.muted ? '取消静音' : '静音');
         count.textContent = '在线 ' + (trtcState.remote.size + 1) + ' 人';
       } else {
@@ -1089,6 +1092,8 @@
         joinBtn.hidden = false; muteBtn.hidden = true; leaveBtn.hidden = true;
         const camBtn2 = document.getElementById('trtcCam');
         if (camBtn2) camBtn2.hidden = true;
+        const scrBtn2 = document.getElementById('trtcScreen');
+        if (scrBtn2) scrBtn2.hidden = true;
         count.textContent = '';
       }
     }
@@ -1108,6 +1113,11 @@
           try { await client.startRemoteVideo({ userId: e.userId, view: tile }); } catch (err) { console.warn('[trtc] 远程视频订阅失败', err); }
         });
         client.on(TRTC.EVENT.REMOTE_VIDEO_UNAVAILABLE, (e) => trtcRemoveTile('r-' + e.userId));
+        client.on(TRTC.EVENT.SCREEN_SHARE_STOPPED, () => {
+          trtcState.screenOn = false;
+          trtcRemoveTile('screen');
+          trtcUpdatePanel();
+        });
         await client.enterRoom({ sdkAppId: d.sdk_app_id, userId: d.user_id, userSig: d.user_sig, strRoomId: String(d.room_id) }); // v5：字符串房间号用平级 strRoomId 键
         // v2.17.1：先显式申请麦克风权限（触发浏览器授权框），成功才开麦；失败留房旁听
         try {
@@ -1138,7 +1148,10 @@
       trtcState.inRoom = false;
       trtcState.muted = false;
       trtcState.micStarted = false;
+      try { if (trtcState.screenOn && trtcState.client) await trtcState.client.stopScreenShare(); } catch (e) {}
       trtcState.videoOn = false;
+      trtcState.screenOn = false;
+      trtcRemoveTile('screen');
       trtcState.remote.clear();
       document.getElementById('trtcVideoWall').innerHTML = '';
       document.getElementById('trtcVideoWall').hidden = true;
@@ -1186,6 +1199,34 @@
         trtcRemoveTile('local');
         trtcState.videoOn = false;
       }
+    }
+
+    /* v2.60 屏幕共享：教师共享 PPT/软件操作，学生自动看到 */
+    async function trtcToggleScreen() {
+      if (!trtcState.inRoom || !trtcState.client) return;
+      const btn = document.getElementById('trtcScreen');
+      try {
+        if (trtcState.screenOn) {
+          await trtcState.client.stopScreenShare();
+          trtcRemoveTile('screen');
+          trtcState.screenOn = false;
+          btn.textContent = '共享屏幕';
+          showToast('已停止共享');
+        } else {
+          const tile = trtcTile('screen', '屏幕共享');
+          await trtcState.client.startScreenShare({ view: tile });
+          trtcState.screenOn = true;
+          btn.textContent = '停止共享';
+          showToast('屏幕共享中，学生端实时可见');
+        }
+      } catch (e) {
+        console.error('[trtc] 屏幕共享失败', e);
+        trtcRemoveTile('screen');
+        trtcState.screenOn = false;
+        btn.textContent = '共享屏幕';
+        showToast('屏幕共享被取消或浏览器不支持（Chrome/Edge 可用）', true);
+      }
+      trtcUpdatePanel();
     }
 
     async function trtcToggleMute() {
@@ -1644,6 +1685,17 @@
         if (titleEl) titleEl.textContent = def.name + ' · 工作台';
         if (orgEl) orgEl.textContent = 'ORG / ' + orgKey + (wbState.isAdmin ? ' · 管理员视图' : ' · 只读视图');
       }
+      /* v2.58 平台管理：位于控制台，仅最高权限可见，界面不含任何人名 */
+      if (u.super_admin === true && !document.getElementById('wbPfPanel')) {
+        var cpEl = document.getElementById('consolePage');
+        if (cpEl) {
+          var pf = document.createElement('div');
+          pf.id = 'wbPfPanel'; pf.className = 'ops-dash'; pf.hidden = true; pf.style.paddingTop = '0';
+          pf.innerHTML = '<div class="ops-panel" style="border-color:rgba(124,199,255,.2)"><h4 style="display:flex;align-items:center;gap:12px">平台管理 <span style="font-weight:400;font-size:10px;color:var(--faint)">全部注册用户 · 任命星环终端管理员与各社团主管理员</span><span style="flex:1"></span><button class="res-btn" type="button" onclick="wbLoadPlatform()">刷新</button></h4><div style="padding:12px"><div class="ap-table-wrap"><table class="ap-table"><thead><tr><th>姓名</th><th>账号</th><th>社团</th><th>身份</th><th style="width:290px">操作</th></tr></thead><tbody id="wbPfTbody"></tbody></table></div></div></div>';
+          var ogEl2 = document.getElementById('wbOrg');
+          if (ogEl2 && ogEl2.parentNode === cpEl) cpEl.insertBefore(pf, ogEl2.nextSibling); else cpEl.appendChild(pf);
+        }
+      }
       /* v2.46 我的资料：所有登录用户可完善学校/校区/专业/联系方式 */
       if (!document.getElementById('wbMeTab')) {
         var tabs2 = document.querySelector('.wb-tabs');
@@ -1702,33 +1754,6 @@
             var me3 = document.getElementById('wbMe'); if (me3) me3.hidden = true;
             logPanel.hidden = false;
             wbLoadOpLogs();
-          };
-        }
-      }
-      /* v2.43 平台管理入口：仅 super_admin，界面不含任何人名 */
-      if ((u.super_admin === true || u.role === 'admin') && !document.getElementById('wbPfTab')) {
-        var tabs = document.querySelector('.wb-tabs');
-        if (tabs) {
-          var tab = document.createElement('button');
-          tab.className = 'wb-tab'; tab.id = 'wbPfTab'; tab.dataset.wbt = 'platform';
-          tab.type = 'button'; tab.textContent = '平台管理';
-          tabs.appendChild(tab);
-          var panel = document.createElement('div');
-          panel.id = 'wbPlatform'; panel.hidden = true; panel.style.padding = '16px 18px';
-          panel.innerHTML =
-            '<div class="ap-toolbar"><span style="color:var(--faint);font-size:12px">全部注册用户 · 可任命星环终端管理员与各社团主管理员；社团主管由各社团主管理员在「成员管理」中设置</span>' +
-            '<span style="flex:1"></span><span id="wbPfCount"></span>' +
-            '<button class="res-btn" type="button" onclick="wbLoadPlatform()">刷新</button></div>' +
-            '<div class="ap-table-wrap"><table class="ap-table"><thead><tr><th>姓名</th><th>账号</th><th>社团</th><th>身份</th><th style="width:290px">操作</th></tr></thead><tbody id="wbPfTbody"></tbody></table></div>';
-          var body = document.querySelector('.wb-body');
-          if (body) body.appendChild(panel);
-          tab.onclick = function () {
-            document.querySelectorAll('.wb-tab').forEach(function (x) { x.classList.toggle('active', x === tab); });
-            document.getElementById('wbMembers').hidden = true;
-            document.getElementById('wbRes').hidden = true;
-            var og = document.getElementById('wbOrg'); if (og) og.hidden = true;
-            panel.hidden = false;
-            wbLoadPlatform();
           };
         }
       }
@@ -2217,6 +2242,7 @@
       });
     }
     function enterShop() {
+      if (window.SITE_CONFIG && window.SITE_CONFIG.shop === false) { showToast('商城暂未开放'); return; }
       document.body.classList.add('console-mode');
       document.body.classList.remove('partners-view', 'hub-mode');
       hubMode = false;
@@ -3380,6 +3406,18 @@
             ogEl.hidden = !isStaff;
             if (isStaff) wbLoadOrgApps();
           }
+          var pfEl = document.getElementById('wbPfPanel');
+          if (pfEl) {
+            var isSa = u.super_admin === true;
+            pfEl.hidden = !isSa;
+            if (isSa) wbLoadPlatform();
+          }
+          ensureSiteCfgPanel();
+          var cfgEl = document.getElementById('siteCfgPanel');
+          if (cfgEl) {
+            cfgEl.hidden = !(u.super_admin === true);
+            if (u.super_admin === true) fillSiteCfgForm();
+          }
         } else {
           moveTeacherBar(null); // 离开控制台页，把控制条放回课堂板块原位置
         }
@@ -4342,6 +4380,8 @@
       if (trtcMuteBtn) trtcMuteBtn.addEventListener('click', trtcToggleMute);
       const trtcCamBtn = document.getElementById('trtcCam');
       if (trtcCamBtn) trtcCamBtn.addEventListener('click', trtcToggleCamera);
+      const trtcScrBtn = document.getElementById('trtcScreen');
+      if (trtcScrBtn) trtcScrBtn.addEventListener('click', trtcToggleScreen);
       if (elements.mossVoiceToggle) {
         syncMossVoiceBtn();
         elements.mossVoiceToggle.addEventListener('click', () => {
@@ -4421,6 +4461,7 @@
       renderPollDistribution();
       renderGroupSubmissionWall();
       logStep('页面初始化', '正在加载依赖');
+      loadSiteConfig();
       try {
         await initializeChart();
         await initializeCloudbase();
@@ -4472,6 +4513,75 @@
     }
 
     boot();
+
+    /* ============================================================
+       v2.61 站点设置：启动拉取 → 应用；控制台可视化编辑
+       ============================================================ */
+    window.SITE_CONFIG = null;
+    async function loadSiteConfig() {
+      try {
+        const r = await fetch(SCF_API + '/site-config', { method: 'GET' });
+        const p = await r.json();
+        if (p && p.code === 0) { window.SITE_CONFIG = p.data; applySiteConfig(); }
+      } catch (e) {}
+    }
+    function applySiteConfig() {
+      const c = window.SITE_CONFIG;
+      if (!c) return;
+      document.querySelectorAll('.brand-title').forEach(function (el) { el.textContent = c.title; });
+      document.querySelectorAll('.brand-subtitle').forEach(function (el) { el.textContent = c.subtitle; });
+      const nt = document.getElementById('siteNotice');
+      if (nt) { if (c.notice) { nt.hidden = false; nt.textContent = c.notice; } else nt.hidden = true; }
+      if (c.shop === false) { const b = document.getElementById('navShop'); if (b) b.hidden = true; }
+      if (c.community === false) { document.querySelectorAll('[data-hub="community"]').forEach(function (el) { el.hidden = true; }); }
+      fillSiteCfgForm();
+    }
+    function fillSiteCfgForm() {
+      const c = window.SITE_CONFIG; if (!c) return;
+      const setv = function (id, v) { const el = document.getElementById(id); if (el) el.value = v; };
+      const setc = function (id, v) { const el = document.getElementById(id); if (el) el.checked = v !== false; };
+      setv('cfgTitle', c.title); setv('cfgSubtitle', c.subtitle); setv('cfgNotice', c.notice);
+      setc('cfgShop', c.shop); setc('cfgCommunity', c.community); setc('cfgVideos', c.videos);
+    }
+    async function saveSiteConfig() {
+      const btn = document.getElementById('cfgSave');
+      const body = {
+        title: (document.getElementById('cfgTitle') || {}).value,
+        subtitle: (document.getElementById('cfgSubtitle') || {}).value,
+        notice: (document.getElementById('cfgNotice') || {}).value,
+        shop: (document.getElementById('cfgShop') || {}).checked,
+        community: (document.getElementById('cfgCommunity') || {}).checked,
+        videos: (document.getElementById('cfgVideos') || {}).checked
+      };
+      btn.disabled = true; btn.textContent = '保存中…';
+      try {
+        const r = await apiFetch('/site-config', { method: 'POST', body: body });
+        if (r && r.code === 0) { window.SITE_CONFIG = r.data; applySiteConfig(); showToast('站点设置已生效'); }
+        else showToast((r && r.message) || '保存失败', true);
+      } catch (e) { showToast('网络异常', true); }
+      finally { btn.disabled = false; btn.textContent = '保存设置'; }
+    }
+    /* v2.61 控制台「站点设置」面板（仅最高权限） */
+    function ensureSiteCfgPanel() {
+      if (document.getElementById('siteCfgPanel')) return;
+      const cp = document.getElementById('consolePage');
+      if (!cp) return;
+      const pf = document.createElement('div');
+      pf.id = 'siteCfgPanel'; pf.className = 'ops-dash'; pf.hidden = true; pf.style.paddingTop = '0';
+      pf.innerHTML = '<div class="ops-panel" style="border-color:rgba(141,184,198,.25)"><h4>站点设置 <span style="font-weight:400;font-size:10px;color:var(--faint)">保存后全站即时生效，无需重新部署</span></h4>' +
+        '<div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;max-width:980px">' +
+        '<div class="field" style="display:grid;gap:6px"><label style="font-size:10px;letter-spacing:.2em;color:#5c7194">站点名称</label><input id="cfgTitle" maxlength="40" style="padding:11px 14px;border:1px solid rgba(124,167,220,.2);border-radius:11px;background:rgba(255,255,255,.03);color:#eaf2fb;font-size:13px;outline:none;font-family:inherit" /></div>' +
+        '<div class="field" style="display:grid;gap:6px"><label style="font-size:10px;letter-spacing:.2em;color:#5c7194">英文副标题</label><input id="cfgSubtitle" maxlength="60" style="padding:11px 14px;border:1px solid rgba(124,167,220,.2);border-radius:11px;background:rgba(255,255,255,.03);color:#eaf2fb;font-size:13px;outline:none;font-family:inherit" /></div>' +
+        '<div class="field" style="display:grid;gap:6px;grid-column:1/-1"><label style="font-size:10px;letter-spacing:.2em;color:#5c7194">顶部公告（留空不显示）</label><input id="cfgNotice" maxlength="120" style="padding:11px 14px;border:1px solid rgba(124,167,220,.2);border-radius:11px;background:rgba(255,255,255,.03);color:#eaf2fb;font-size:13px;outline:none;font-family:inherit" /></div>' +
+        '<label style="display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px"><input type="checkbox" id="cfgShop" /> 文创商城</label>' +
+        '<label style="display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px"><input type="checkbox" id="cfgCommunity" /> 天文社区</label>' +
+        '<label style="display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px"><input type="checkbox" id="cfgVideos" /> 视频教学</label>' +
+        '<div style="grid-column:1/-1"><button id="cfgSave" class="btn btn-gold" type="button" style="min-height:38px;font-size:13px">保存设置</button></div>' +
+        '</div></div>';
+      const og = document.getElementById('wbPfPanel');
+      if (og && og.parentNode === cp) cp.insertBefore(pf, og.nextSibling); else cp.appendChild(pf);
+      document.getElementById('cfgSave').onclick = saveSiteConfig;
+    }
 
     /* ============================================================
        v2.43 公开注册：注册即可登录，数据入成员库
@@ -4547,7 +4657,7 @@
        分级：平台任命各社团主管理员 → 社团主管理员任命本社主管
        ============================================================ */
     async function wbLoadPlatform() {
-      var box = document.getElementById('wbPlatform');
+      var box = document.getElementById('wbPfPanel');
       if (!box) return;
       var r = await wbCall('web_platform_members');
       if (!r || r.code !== 0) {
