@@ -25,7 +25,8 @@
       bio: { label: '生物科技协会', school: '中国海洋大学' },
       outdoor: { label: '户外协会', school: '中国海洋大学' },
       nankai_astro: { label: '南开天协', school: '南开大学' },
-      metaverse: { label: '元宇宙发展协会', school: '中国海洋大学' }
+      metaverse: { label: '元宇宙发展协会', school: '中国海洋大学' },
+      sagittarius: { label: '南斗天文社', school: '西交利物浦大学' }
     };
 
     const state = {
@@ -171,6 +172,7 @@
       const raw = String(value || '').trim().toLowerCase();
       if (raw.includes('nankai') || raw.includes('南开')) return 'nankai_astro';
       if (raw.includes('meta') || raw.includes('元宇宙')) return 'metaverse';
+      if (raw.includes('sagittarius') || raw.includes('南斗')) return 'sagittarius';
       if (raw.includes('outdoor') || raw.includes('户外')) return 'outdoor';
       if (raw.includes('bio') || raw.includes('生物科技') || raw.includes('生科')) return 'bio';
       return 'astro';
@@ -1664,6 +1666,7 @@
       bio: { name: '生物科技协会', logo: 'logo.png' },
       outdoor: { name: '户外协会', logo: 'logo.png' },
       guest: { name: '游客', logo: 'logo.png' },
+      sagittarius: { name: '南斗天文社', logo: 'sagittarius-logo.png' },
       metaverse: { name: '元宇宙发展协会', logo: 'logo.png' }
     };
     const wbState = { members: [], isAdmin: false };
@@ -1684,15 +1687,12 @@
       if (logoEl) logoEl.src = def.logo;
       const titleEl = document.getElementById('wbTitle');
       const orgEl = document.getElementById('wbOrgName');
-      /* v2.67 标题显示用户名下全部社团；最高权限/平台管理员徽标用星环 logo */
+      /* v2.73 工作台=协会视角：永远挂协会徽标与名称；平台掌控归控制台 */
       const myOrgs = (Array.isArray(u.orgs) && u.orgs.length ? u.orgs : [orgKey]).filter(function (k) { return k !== 'guest'; });
       const orgNames = myOrgs.map(function (k) { return (ORG_DEFS[k] && ORG_DEFS[k].name) || k; });
+      const primaryOrg = myOrgs[0] || 'astro';
       const logoEl2 = document.getElementById('wbLogo');
-      if (u.super_admin === true || u.admin_scope === 'platform') {
-        if (logoEl2) logoEl2.src = 'logo.png';
-      } else if (logoEl2 && ORG_DEFS[myOrgs[0]] && ORG_DEFS[myOrgs[0]].logo) {
-        logoEl2.src = ORG_DEFS[myOrgs[0]].logo;
-      }
+      if (logoEl2) logoEl2.src = (ORG_DEFS[primaryOrg] && ORG_DEFS[primaryOrg].logo) || 'logo.png';
       if (titleEl) titleEl.textContent = (orgNames.join(' · ') || '星环终端') + ' · 工作台';
       if (orgEl) orgEl.textContent = 'ORG / ' + myOrgs.join(' + ') + (wbState.isAdmin ? ' · 管理员视图' : ' · 只读视图');
       /* v2.58 平台管理：位于控制台，仅最高权限可见，界面不含任何人名 */
