@@ -1661,6 +1661,9 @@
     const ORG_DEFS = {
       astro: { name: '中国海洋大学天文协会', logo: 'ouc-astro-logo.png' },
       nankai_astro: { name: '南开大学天文协会', logo: 'nankai-logo.png' },
+      bio: { name: '生物科技协会', logo: 'logo.png' },
+      outdoor: { name: '户外协会', logo: 'logo.png' },
+      guest: { name: '游客', logo: 'logo.png' },
       metaverse: { name: '元宇宙发展协会', logo: 'logo.png' }
     };
     const wbState = { members: [], isAdmin: false };
@@ -1681,17 +1684,17 @@
       if (logoEl) logoEl.src = def.logo;
       const titleEl = document.getElementById('wbTitle');
       const orgEl = document.getElementById('wbOrgName');
-      if (u.super_admin === true) {
-        /* v2.46 平台视角：最高权限不挂靠任何社团 */
-        if (titleEl) titleEl.textContent = '星环终端 · 工作台';
-        if (orgEl) orgEl.textContent = 'PLATFORM / 平台管理视图';
-      } else if (u.admin_scope === 'platform') {
-        if (titleEl) titleEl.textContent = '星环终端 · 工作台';
-        if (orgEl) orgEl.textContent = 'PLATFORM / 星环终端管理员视图';
-      } else {
-        if (titleEl) titleEl.textContent = def.name + ' · 工作台';
-        if (orgEl) orgEl.textContent = 'ORG / ' + orgKey + (wbState.isAdmin ? ' · 管理员视图' : ' · 只读视图');
+      /* v2.67 标题显示用户名下全部社团；最高权限/平台管理员徽标用星环 logo */
+      const myOrgs = (Array.isArray(u.orgs) && u.orgs.length ? u.orgs : [orgKey]).filter(function (k) { return k !== 'guest'; });
+      const orgNames = myOrgs.map(function (k) { return (ORG_DEFS[k] && ORG_DEFS[k].name) || k; });
+      const logoEl2 = document.getElementById('wbLogo');
+      if (u.super_admin === true || u.admin_scope === 'platform') {
+        if (logoEl2) logoEl2.src = 'logo.png';
+      } else if (logoEl2 && ORG_DEFS[myOrgs[0]] && ORG_DEFS[myOrgs[0]].logo) {
+        logoEl2.src = ORG_DEFS[myOrgs[0]].logo;
       }
+      if (titleEl) titleEl.textContent = (orgNames.join(' · ') || '星环终端') + ' · 工作台';
+      if (orgEl) orgEl.textContent = 'ORG / ' + myOrgs.join(' + ') + (wbState.isAdmin ? ' · 管理员视图' : ' · 只读视图');
       /* v2.58 平台管理：位于控制台，仅最高权限可见，界面不含任何人名 */
       if (u.super_admin === true && !document.getElementById('wbPfPanel')) {
         var cpEl = document.getElementById('consolePage');
@@ -2250,6 +2253,8 @@
     }
     function enterShop() {
       if (window.SITE_CONFIG && window.SITE_CONFIG.shop === false) { showToast('商城暂未开放'); return; }
+      var dh2 = document.getElementById('deckHead');
+      if (dh2) dh2.hidden = true;
       document.body.classList.add('console-mode');
       document.body.classList.remove('partners-view', 'hub-mode');
       hubMode = false;
@@ -3365,6 +3370,9 @@
       document.querySelectorAll('.tab-classroom').forEach((el) => {
         el.hidden = tab !== 'classroom';
       });
+      /* v2.70 中枢门头只在课堂看板/监控中枢显示，其余页面收起 */
+      var dhEl = document.getElementById('deckHead');
+      if (dhEl) dhEl.hidden = tab !== 'classroom';
       /* v2.46 课程管理属于监控中枢：教师在课堂看板页可见 */
       if (tab === 'classroom') {
         var caEl = document.getElementById('courseAdmin');

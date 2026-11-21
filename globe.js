@@ -124,23 +124,22 @@
     ctx.save();
     ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.clip();
 
-    /* 雷达扫描扇面 */
+    /* 雷达扫描扇面：地理锚定（随地球自转），中心留白避免“从某节点发出”的错觉 */
     sweepA += 0.012;
+    var sweepScreenA = sweepA + rotY;
     if (ctx.createConicGradient) {
-      var cg = ctx.createConicGradient(sweepA, cx, cy);
-      cg.addColorStop(0, 'rgba(80,220,255,0.22)');
-      cg.addColorStop(0.09, 'rgba(80,220,255,0)');
-      cg.addColorStop(1, 'rgba(80,220,255,0)');
-      cg.addColorStop(0, 'rgba(80,220,255,0.22)');
+      var cg = ctx.createConicGradient(sweepScreenA, cx, cy);
+      cg.addColorStop(0, 'rgba(80,220,255,0.18)');
       cg.addColorStop(0.09, 'rgba(80,220,255,0)');
       cg.addColorStop(1, 'rgba(80,220,255,0)');
       ctx.fillStyle = cg;
       ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
     }
-    ctx.strokeStyle = 'rgba(120,235,255,0.5)';
+    ctx.strokeStyle = 'rgba(120,235,255,0.35)';
     ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(cx, cy);
-    ctx.lineTo(cx + Math.cos(sweepA) * R, cy + Math.sin(sweepA) * R);
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(sweepScreenA) * R * 0.35, cy + Math.sin(sweepScreenA) * R * 0.35);
+    ctx.lineTo(cx + Math.cos(sweepScreenA) * R, cy + Math.sin(sweepScreenA) * R);
     ctx.stroke();
 
     /* 全球陆地轮廓（Natural Earth 110m 真实数据，含南极洲；无行政划分） */
