@@ -417,7 +417,7 @@
         body: '{}'
       });
       var payload = await resp.json();
-      if (!payload || payload.code !== 0 || !payload.data) throw new Error((payload && payload.message) || 'no data');
+      if (!payload || payload.code !== 0 || !payload.data) throw new Error((payload && payload.message) || ('HTTP ' + resp.status));
       ORGS = payload.data.orgs || [];
       FEED = payload.data.feed || [];
       ALERTS = payload.data.alerts || [];
@@ -431,9 +431,10 @@
       renderStats(); renderFeed(); renderAlerts(); renderDetail(null, null);
       drawGlobe();
     } catch (e) {
-      document.getElementById('opsStats').innerHTML = '<div class="ops-stat-card" style="grid-column:1/-1"><p>数据加载</p><strong style="font-size:13px">登录后显示真实态势数据</strong></div>';
-      document.getElementById('opsFeedList').innerHTML = '<div class="classroom-empty compact">登录后载入</div>';
-      document.getElementById('opsAlertList').innerHTML = '<div class="classroom-empty compact">登录后载入</div>';
+      /* 显示真实错误原因，便于排查 */
+      document.getElementById('opsStats').innerHTML = '<div class="ops-stat-card" style="grid-column:1/-1"><p>态势数据加载失败</p><strong style="font-size:12px;line-height:1.7">' + String(e.message || e).slice(0, 80) + '</strong></div>';
+      document.getElementById('opsFeedList').innerHTML = '<div class="classroom-empty compact">载入失败</div>';
+      document.getElementById('opsAlertList').innerHTML = '<div class="classroom-empty compact">载入失败</div>';
     }
   }
 
