@@ -4840,7 +4840,7 @@
       if (!btn) return;
       ev.preventDefault();
       if (!state.user || !state.user.token) { openLogin(); showToast('登录后即可申请加入星系'); return; }
-      apiFetch('/member-bridge', { method: 'POST', body: { data: { action: 'apply_join_org', target_org: btn.dataset.org } } }).then(function (r) {
+      apiFetch('/member-bridge', { method: 'POST', body: { action: 'apply_join_org', data: { target_org: btn.dataset.org } } }).then(function (r) {
         if (r && r.code === 0) showToast('申请已提交，等待该星系管理员审核');
         else showToast((r && r.message) || '提交失败', true);
       }).catch(function () { showToast('网络异常', true); });
