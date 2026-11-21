@@ -2168,6 +2168,7 @@
     // ---------- v2.22 中枢独立页：登录后顶栏出现入口，首页只留展示内容 ----------
     let hubMode = false;
     function enterHub(tab) {
+      document.body.classList.remove('me-view');
       if (!state.user || !state.user.token) { openLogin(); return; }
       hubMode = true;
       document.body.classList.add('hub-mode');
@@ -2181,6 +2182,7 @@
       logStep('已进入中枢', tab || '');
     }
     function showLanding() {
+      document.body.classList.remove('me-view');
       hubMode = false;
       document.body.classList.remove('hub-mode');
       document.body.classList.remove('console-mode');
@@ -2193,6 +2195,7 @@
 
     /* v2.42 入驻星系独立页：点导航跳页面，不再下滑 */
     function openPartners() {
+      document.body.classList.remove('me-view');
       hubMode = false;
       document.body.classList.remove('hub-mode', 'console-mode');
       document.body.classList.add('partners-view');
@@ -2249,6 +2252,7 @@
       });
     }
     function enterShop() {
+      document.body.classList.remove('me-view');
       if (window.SITE_CONFIG && window.SITE_CONFIG.shop === false) { showToast('商城暂未开放'); return; }
       var dh2 = document.getElementById('deckHead');
       if (dh2) dh2.hidden = true;
@@ -2598,6 +2602,9 @@
 
     document.addEventListener('click', function (ev) {
       if (ev.target && ev.target.id === 'wbOrgRefresh') wbLoadOrgApps();
+    });
+    document.addEventListener('click', function (ev) {
+      if (ev.target && ev.target.id === 'wbExport') wbExportMembers();
     });
     async function wbLoadOrgApps() {
       const box = document.getElementById('wbOrgList');
@@ -3412,17 +3419,11 @@
             pfEl.hidden = !isSa;
             if (isSa) wbLoadPlatform();
           }
-          ensureSiteCfgPanel();
           ensureAllMembersPanel();
           var amEl = document.getElementById('amPanel');
           if (amEl) {
             amEl.hidden = !isStaff;
             if (isStaff) loadAllMembers();
-          }
-          var cfgEl = document.getElementById('siteCfgPanel');
-          if (cfgEl) {
-            cfgEl.hidden = !(u.super_admin === true);
-            if (u.super_admin === true) fillSiteCfgForm();
           }
         } else {
           moveTeacherBar(null); // 离开控制台页，把控制条放回课堂板块原位置
@@ -4332,7 +4333,7 @@
         var wbc = document.getElementById('wbCourse');
         if (wbc) {
           var caEl = document.getElementById('courseAdmin');
-          if (t.dataset.wbt === 'course' && canSeeTeacherBackend()) {
+          if (t.dataset.wbt === 'course') {
             wbc.hidden = false;
             if (caEl) caEl.style.display = 'block';
             caBind(); caLoadSeries();
@@ -4678,7 +4679,12 @@
     async function wbLoadPlatform() {
       var box = document.getElementById('wbPfPanel');
       if (!box) return;
-      var r = await wbCall('web_platform_members');
+      var r;
+      try { r = await wbCall('web_platform_members'); }
+      catch (e) {
+        box.querySelector('#wbPfTbody').innerHTML = '<tr><td colspan="5" style="text-align:center;color:#f0a8a8">加载异常：' + String(e.message || e).slice(0, 60) + '</td></tr>';
+        return;
+      }
       if (!r || r.code !== 0) {
         box.querySelector('#wbPfTbody').innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--faint)">读取失败：' + ((r && r.message) || '无权限') + '</td></tr>';
         return;
@@ -4879,7 +4885,8 @@
     /* v2.84 「我的」个人主页：点右上角名字进入 */
     function openMe() {
       var u = state.user || {};
-      document.body.classList.add('console-mode');
+      document.body.classList.add('me-view');
+      document.body.classList.remove('console-mode', 'partners-view', 'hub-mode');
       document.body.classList.remove('partners-view', 'hub-mode');
       hubMode = false;
       var area = document.getElementById('hubArea'); if (area) area.hidden = true;
@@ -4916,6 +4923,7 @@
         '  <button class="btn" id="meLogout" type="button">退出登录</button>' +
         '</div>';
       document.getElementById('meEdit').onclick = function () {
+        document.body.classList.remove('me-view');
         page.hidden = true;
         enterHub('workbench');
         setTimeout(function () {
@@ -4946,6 +4954,8 @@
         '<div class="ap-toolbar"><input id="amKw" placeholder="搜索姓名 / 账号" style="flex:1;min-width:180px;min-height:36px;padding:0 14px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.03);color:var(--text);font-size:12px;outline:none" />' +
         '<select id="amOrg" style="min-height:36px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:rgba(9,9,13,.8);color:var(--text);font-size:12px"><option value="all">全部社团</option><option value="astro">天文协会</option><option value="bio">生物科技协会</option><option value="outdoor">户外协会</option><option value="nankai_astro">南开天协</option><option value="metaverse">元宇宙发展协会</option><option value="sagittarius">南斗天文社</option></select>' +
         '<select id="amRole" style="min-height:36px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:rgba(9,9,13,.8);color:var(--text);font-size:12px"><option value="all">全部身份</option><option value="admin">社团主管理员</option><option value="sub">次级管理员</option><option value="member">普通成员</option></select>' +
+        '<button class="btn btn-gold" id="amAdd" type="button" style="min-height:36px;font-size:12px">新建账号</button>' +
+        '<button class="btn" id="amBatch" type="button" style="min-height:36px;font-size:12px">批量导入</button>' +
         '<button class="res-btn" id="amRefresh" type="button">刷新</button></div>' +
         '<div class="ap-table-wrap"><table class="ap-table"><thead><tr><th>姓名</th><th>账号</th><th>社团</th><th>身份</th><th style="width:300px">操作</th></tr></thead><tbody id="amTbody"></tbody></table></div>' +
         '</div></div>';
@@ -4955,6 +4965,12 @@
       document.getElementById('amOrg').addEventListener('change', function () { amState.org = this.value; renderAllMembers(); });
       document.getElementById('amRole').addEventListener('change', function () { amState.role = this.value; renderAllMembers(); });
       document.getElementById('amRefresh').addEventListener('click', loadAllMembers);
+      document.getElementById('amAdd').addEventListener('click', function () {
+        var b = document.getElementById('wbAddMember'); if (b) b.click();
+      });
+      document.getElementById('amBatch').addEventListener('click', function () {
+        var b = document.getElementById('wbBatchAdd'); if (b) b.click();
+      });
     }
     async function loadAllMembers() {
       var r = await wbCall('web_am_list', {});
@@ -4997,3 +5013,25 @@
       if (m.subadmin) return '次级管理员';
       return '成员';
     }
+
+    /* v2.91 成员名单导出 CSV（Excel 可直接打开，UTF-8 BOM 防中文乱码） */
+    window.wbExportMembers = function () {
+      var q = (document.getElementById('wbSearch') || { value: '' }).value.trim();
+      var rows = wbState.members.filter(function (m) {
+        return !q || [m.name, m.username, m.department, m.campus].join('|').indexOf(q) !== -1;
+      });
+      var esc = function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
+      var header = '姓名,账号,组织,部门,校区,身份';
+      var lines = rows.map(function (m) {
+        var role = m.role === 'admin' ? '管理员' : m.subadmin ? '次级管理员' : '成员';
+        return [m.name, m.username, m.org, m.department, m.campus, role].map(esc).join(',');
+      });
+      var csv = '﻿' + header + '\n' + lines.join('\n');
+      var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = '成员名单-' + new Date().toISOString().slice(0, 10) + '.csv';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+      showToast('已导出 ' + rows.length + ' 条（可用 Excel 打开）');
+    };

@@ -6958,3 +6958,14 @@ body.partners-view .cosmos-glow { display: none !important; }
 .me-kv { padding: 12px 16px; border: 1px solid rgba(255,255,255,.07); border-radius: 12px; background: rgba(255,255,255,.015); }
 .me-kv p { margin: 0; color: var(--faint); font-size: 10px; letter-spacing: .08em; }
 .me-kv b { display: block; margin-top: 6px; color: var(--text); font-size: 13px; font-weight: 500; }
+
+
+/* v2.87 导航直达：撤掉「课堂监控中枢」门头与分隔带，点导航即到内容 */
+.deck-head, .deck-rail { display: none !important; }
+
+
+/* v2.90 「我的」独立页：激活时隐藏一切其他内容 */
+body.me-view #deck,
+body.me-view .hero,
+body.me-view #partners { display: none !important; }
+body.me-view .me-page { margin: 0 auto; padding-top: 100px; min-height: 100vh; border: 0; background: transparent; box-shadow: none; backdrop-filter: none; }
