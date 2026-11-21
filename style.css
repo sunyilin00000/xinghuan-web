@@ -6944,3 +6944,17 @@ body.partners-view .cosmos-glow { display: none !important; }
   box-shadow: 0 0 0 5px rgba(var(--accent), 0.12), 0 6px 22px rgba(0,0,0,.55);
 }
 .partner-sagittarius { --accent: 96, 140, 214; }
+
+
+/* v2.84 我的 · 个人主页 */
+.me-page { margin-top: 18px; }
+.me-head { display: flex; align-items: center; gap: 18px; margin-bottom: 22px; }
+.me-ava { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; border: 1px solid rgba(230,199,143,.4); background: radial-gradient(circle at 35% 28%, rgba(230,199,143,.2), rgba(230,199,143,.05)); color: var(--gold-bright, #f8ebd0); font-size: 24px; font-weight: 500; }
+.me-head h3 { margin: 0; color: #f4f5f9; font-size: 20px; font-weight: 500; }
+.me-username { color: var(--faint); font-size: 12px; font-weight: 400; margin-left: 8px; }
+.me-orgs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.me-orgchip { padding: 3px 12px; border: 1px solid rgba(230,199,143,.35); border-radius: 999px; color: #e6c78f; font-size: 11px; }
+.me-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; max-width: 900px; }
+.me-kv { padding: 12px 16px; border: 1px solid rgba(255,255,255,.07); border-radius: 12px; background: rgba(255,255,255,.015); }
+.me-kv p { margin: 0; color: var(--faint); font-size: 10px; letter-spacing: .08em; }
+.me-kv b { display: block; margin-top: 6px; color: var(--text); font-size: 13px; font-weight: 500; }

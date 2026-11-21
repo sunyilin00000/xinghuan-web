@@ -21,7 +21,7 @@
       rel="stylesheet"
     />
   </noscript>
-  <link rel="stylesheet" href="style.css?v=263" />
+  <link rel="stylesheet" href="style.css?v=286" />
   <!-- 星屿 · Telescope Garden（学习资源内嵌版）样式 -->
   <link rel="stylesheet" href="xingyu/xingyu.css" />
   <script>
@@ -338,6 +338,14 @@
         </div>
 
         
+    <!-- v2.84 我的 · 个人主页 -->
+    <section id="mePage" class="panel me-page" hidden aria-label="我的">
+      <header class="panel-head">
+        <div class="panel-title-wrap"><h2 class="panel-title">我的</h2><p class="panel-subtitle">个人主页</p></div>
+      </header>
+      <div id="meBody" style="padding:22px"></div>
+    </section>
+
     <!-- v2.24 文创商城（公开可见） -->
     <section id="shopPage" class="panel shop-page" hidden aria-label="文创商城">
       <header class="panel-head">
@@ -474,18 +482,6 @@
               <button id="generateDiagnosisButton" class="btn btn-gold diagnosis-button" type="button" hidden>生成 AI 诊断</button>
             </div>
           </header>
-      <div id="courseAdmin" style="margin:14px;display:none">
-        <div style="border:1px solid rgba(124,167,220,.18);border-radius:14px;background:rgba(255,255,255,.015);overflow:hidden">
-          <div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.06);flex-wrap:wrap">
-            <strong style="font-size:14px;letter-spacing:.1em;color:#ebe0cc">课程管理</strong>
-            <select id="caSeries" style="min-width:200px;padding:8px 12px;border:1px solid rgba(124,167,220,.2);border-radius:9px;background:#0a1220;color:#eaf2fb;font-size:12px"></select>
-            <input id="caSeriesName" placeholder="新系列名称" style="width:160px;padding:8px 12px;border:1px solid rgba(124,167,220,.2);border-radius:9px;background:#0a1220;color:#eaf2fb;font-size:12px" />
-            <button class="btn" id="caSeriesAdd" type="button" style="min-height:34px;font-size:12px">新建系列</button>
-            <button class="btn btn-gold" id="caLectureAdd" type="button" style="min-height:34px;font-size:12px">新建讲次</button>
-          </div>
-          <div style="padding:14px 18px">
-            <div id="caLectures" style="display:grid;gap:10px"></div>
-          </div>
         </div>
       </div>
           <div id="teacherControlBar" class="teacher-control-bar" hidden>
@@ -803,6 +799,7 @@
       <div class="wb-body">
         <div class="wb-tabs">
           <button class="wb-tab active" data-wbt="members" type="button">成员管理</button>
+          <button class="wb-tab" data-wbt="course" type="button">课堂管理</button>
           <button class="wb-tab" data-wbt="res" type="button">资料管理</button>
                     </div>
         <div id="wbMembers" style="padding:16px 18px">
@@ -820,7 +817,21 @@
             </table>
           </div>
         </div>
-<div id="wbRes" style="padding:16px 18px" hidden>
+<div id="wbCourse" style="padding:16px 18px" hidden>
+          <div id="courseAdmin" style="margin:14px;display:none">
+        <div style="border:1px solid rgba(124,167,220,.18);border-radius:14px;background:rgba(255,255,255,.015);overflow:hidden">
+          <div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.06);flex-wrap:wrap">
+            <strong style="font-size:14px;letter-spacing:.1em;color:#ebe0cc">课程管理</strong>
+            <select id="caSeries" style="min-width:200px;padding:8px 12px;border:1px solid rgba(124,167,220,.2);border-radius:9px;background:#0a1220;color:#eaf2fb;font-size:12px"></select>
+            <input id="caSeriesName" placeholder="新系列名称" style="width:160px;padding:8px 12px;border:1px solid rgba(124,167,220,.2);border-radius:9px;background:#0a1220;color:#eaf2fb;font-size:12px" />
+            <button class="btn" id="caSeriesAdd" type="button" style="min-height:34px;font-size:12px">新建系列</button>
+            <button class="btn btn-gold" id="caLectureAdd" type="button" style="min-height:34px;font-size:12px">新建讲次</button>
+          </div>
+          <div style="padding:14px 18px">
+            <div id="caLectures" style="display:grid;gap:10px"></div>
+          </div>
+        </div>
+        <div id="wbRes" style="padding:16px 18px" hidden>
           <div class="ap-toolbar">
             
             <span style="flex:1"></span>
@@ -1156,11 +1167,11 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="script.js?v=263"></script>
+  <script src="script.js?v=286"></script>
   <script src="echarts.min.js"></script>
   <script src="world-boundaries.js"></script>
-  <script src="globe.js?v=263"></script>
-  <script src="app.v236.js?v=263"></script>
+  <script src="globe.js?v=286"></script>
+  <script src="app.v236.js?v=286"></script>
   <!-- 星屿 · Telescope Garden：学习资源页入口（作品与素材由 7uanm 提供，GPL-3.0） -->
   <script src="xingyu/xingyu-config.js"></script>
   <script src="xingyu/xingyu.js"></script>
