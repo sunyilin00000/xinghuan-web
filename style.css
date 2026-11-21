@@ -6916,3 +6916,18 @@ body.partners-view .ring-stage { display: none !important; }
 body.console-mode .cosmos-glow,
 body.hub-mode .cosmos-glow,
 body.partners-view .cosmos-glow { display: none !important; }
+
+
+/* v2.72 星系卡片「加入我们」（跟随卡片 --accent 配色） */
+.partner-join {
+  min-height: 28px; padding: 0 16px;
+  border: 1px solid rgba(var(--accent), 0.5); border-radius: 999px;
+  background: rgba(var(--accent), 0.08); color: rgb(var(--accent));
+  font-size: 11px; letter-spacing: .06em; cursor: pointer; font-family: inherit;
+  transition: all .25s var(--ease-out, ease-out);
+}
+.partner-join:hover {
+  background: rgb(var(--accent)); color: #0a0c12;
+  box-shadow: 0 0 22px rgba(var(--accent), 0.35);
+  transform: translateY(-1px);
+}

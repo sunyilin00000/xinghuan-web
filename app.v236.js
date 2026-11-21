@@ -4334,6 +4334,7 @@
       document.querySelectorAll('.wb-tab').forEach(t => t.onclick = () => {
         document.querySelectorAll('.wb-tab').forEach(x => x.classList.toggle('active', x === t));
         document.getElementById('wbMembers').hidden = t.dataset.wbt !== 'members';
+        if (t.dataset.wbt === 'members' && window.wbLoadJoinApps) wbLoadJoinApps();
         document.getElementById('wbRes').hidden = t.dataset.wbt !== 'res';
         if (t.dataset.wbt === 'res') wbLoadRes();
         document.getElementById('wbOrg').hidden = t.dataset.wbt !== 'orgapp';
@@ -4832,3 +4833,39 @@
       };
       input.click();
     }
+
+    /* v2.72 星系卡片「加入我们」：提交入社申请，由该星系管理员在工作台审核 */
+    document.addEventListener('click', function (ev) {
+      var btn = ev.target.closest && ev.target.closest('.partner-join');
+      if (!btn) return;
+      ev.preventDefault();
+      if (!state.user || !state.user.token) { openLogin(); showToast('登录后即可申请加入星系'); return; }
+      apiFetch('/member-bridge', { method: 'POST', body: { action: 'apply_join_org', data: { target_org: btn.dataset.org } } }).then(function (r) {
+        if (r && r.code === 0) showToast('申请已提交，等待该星系管理员审核');
+        else showToast((r && r.message) || '提交失败', true);
+      }).catch(function () { showToast('网络异常', true); });
+    });
+
+    /* 工作台·成员管理：入社申请审核（该星系管理员可见） */
+    window.wbLoadJoinApps = async function () {
+      var box = document.getElementById('wbJoinApps');
+      if (!box) return;
+      var u = state.user || {};
+      var org = u.org || (u.orgs && u.orgs[0]) || 'astro';
+      var r = await wbCall('org_apply_list', { target_org: org });
+      if (!r || r.code !== 0) { box.innerHTML = ''; box.style.display = 'none'; return; }
+      var list = r.data || [];
+      box.style.display = list.length ? '' : 'none';
+      box.innerHTML = '<div class="ap-toolbar"><span style="color:var(--faint);font-size:12px">入社申请（' + list.length + ' 条待审核）</span></div>' +
+        list.map(function (a) {
+          return '<div class="ap-li"><span class="grow"><b>' + a.member_name + '</b> <span style="color:var(--faint)">' + (a.username || '') + ' · 申请加入</span></span>' +
+            '<button class="ap-mini" onclick="wbReviewJoin(\'' + a._id + '\',true)">通过</button>' +
+            '<button class="ap-mini danger" onclick="wbReviewJoin(\'' + a._id + '\',false)">拒绝</button></div>';
+        }).join('');
+    };
+    window.wbReviewJoin = async function (applyId, approve) {
+      var r = await wbCall('review_join_org', { apply_id: applyId, approve: approve });
+      showToast((r && r.code === 0) ? (approve ? '已通过，成员已加入' : '已拒绝') : ((r && r.message) || '操作失败'), !(r && r.code === 0));
+      wbLoadJoinApps();
+      wbLoadMembers();
+    };
