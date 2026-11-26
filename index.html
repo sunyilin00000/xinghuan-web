@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
@@ -21,7 +21,7 @@
       rel="stylesheet"
     />
   </noscript>
-  <link rel="stylesheet" href="style.css?v=291" />
+  <link rel="stylesheet" href="style.css?v=293" />
   <!-- 星屿 · Telescope Garden（学习资源内嵌版）样式 -->
   <link rel="stylesheet" href="xingyu/xingyu.css" />
   <script>
@@ -178,6 +178,20 @@
           <p class="partners-sub">各学生社团在同一套星环教学系统里共享课堂、实验与灵感。<br />星环正在连接更多坐标。</p>
         </header>
 
+        <!-- v2.93 星环计划 · 特色入口卡 -->
+        <div class="plan-hero">
+          <div class="plan-hero-copy">
+            <p class="plan-hero-kicker">XINGHUAN PROGRAM · 星环计划</p>
+            <h3 class="plan-hero-title">星环计划</h3>
+            <p class="plan-hero-desc">连接高校学生社团的数字化协作网络：一套账号体系、一个课堂中枢、一片共享星空。<br />从成员管理到课堂互动，从资料沉淀到跨校协作，星环正在生长。</p>
+            <div class="plan-hero-actions">
+              <button class="plan-hero-btn" id="planEnter" type="button">进入星环工作台</button>
+              <button class="plan-hero-ghost" id="planApply" type="button">申请入驻</button>
+            </div>
+          </div>
+          <div class="plan-hero-visual" aria-hidden="true"><span class="plan-hero-ring"></span><span class="plan-hero-ring r2"></span><span class="plan-hero-core"></span></div>
+        </div>
+
         <div class="partner-grid">
           <a class="partner-card partner-astro partner-link" href="https://sunyilin00000.github.io/ouc-astro/#about" target="_blank" rel="noopener">
             <div class="partner-card-top">
@@ -195,40 +209,6 @@
               <span class="partner-school">中国海洋大学</span>
             </div>
           </a>
-
-          <article class="partner-card partner-bio">
-            <div class="partner-card-top">
-              <span class="partner-number">02</span>
-              <span class="partner-orbit" aria-hidden="true"><i></i></span>
-            </div>
-            <div class="partner-card-body">
-              <h3 class="partner-name">海大生科协</h3>
-              <p class="partner-en">OUC BIOTECH</p>
-              <p class="partner-desc">从细胞到生态，把实验室的微光带进课堂。</p>
-            </div>
-            <div class="partner-card-foot">
-              <button class="partner-join" data-org="bio" type="button">加入我们</button>
-              <span class="partner-tag">LIFE SCIENCE</span>
-              <span class="partner-school">中国海洋大学</span>
-            </div>
-          </article>
-
-          <article class="partner-card partner-outdoor">
-            <div class="partner-card-top">
-              <span class="partner-number">03</span>
-              <span class="partner-orbit" aria-hidden="true"><i></i></span>
-            </div>
-            <div class="partner-card-body">
-              <h3 class="partner-name">海大户协</h3>
-              <p class="partner-en">OUC OUTDOOR</p>
-              <p class="partner-desc">山野、海岸与星空，把课堂延伸到户外。</p>
-            </div>
-            <div class="partner-card-foot">
-              <button class="partner-join" data-org="outdoor" type="button">加入我们</button>
-              <span class="partner-tag">EXPLORATION</span>
-              <span class="partner-school">中国海洋大学</span>
-            </div>
-          </article>
 
           <a class="partner-card partner-nankai partner-link" href="https://haohan-sun.github.io/nku-astronomy-site/" target="_blank" rel="noopener">
             <div class="partner-card-top">
@@ -896,6 +876,42 @@
       <div id="meBody" style="padding:22px"></div>
     </section>
 
+  <!-- v2.93 星环工作台 · 独立页 -->
+  <section id="planPage" class="panel plan-page" hidden aria-label="星环工作台">
+    <header class="panel-head">
+      <div class="panel-title-wrap"><h2 class="panel-title">星环工作台</h2><p class="panel-subtitle">XINGHUAN PROGRAM · 计划总览</p></div>
+    </header>
+    <div style="padding:22px">
+      <div class="plan-sec">
+        <h4>计划简介</h4>
+        <p>星环计划面向高校学生社团提供一体化的数字化协作平台：统一身份与权限体系、课堂互动与监控中枢、资料库与视频教学、跨校共享与入驻通道。每个星系（社团）拥有独立工作台，平台侧保留全局态势与治理。</p>
+      </div>
+      <div class="plan-sec">
+        <h4>阶段路线</h4>
+        <div class="plan-road">
+          <div class="plan-node done"><b>一期 · 奠基</b><p>账号与权限体系、社团工作台、成员管理</p></div>
+          <div class="plan-node done"><b>二期 · 课堂</b><p>课堂监控中枢、答题互动、资料库三档共享</p></div>
+          <div class="plan-node live"><b>三期 · 连接</b><p>跨校入驻通道、星环终端分级治理、视频教学与直播</p></div>
+          <div class="plan-node"><b>四期 · 开放</b><p>开放接口、校企联动、移动端小程序</p></div>
+        </div>
+      </div>
+      <div class="plan-sec">
+        <h4>参与星系</h4>
+        <div class="me-orgs">
+          <span class="me-orgchip">天文协会</span><span class="me-orgchip">南开天协</span><span class="me-orgchip">元宇宙发展协会</span><span class="me-orgchip">南斗天文社</span>
+        </div>
+      </div>
+      <div class="plan-sec">
+        <h4>快捷入口</h4>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <button class="btn btn-gold" id="planGoConsole" type="button">平台控制台</button>
+          <button class="btn" id="planGoHub" type="button">申请入驻审核</button>
+          <button class="btn" id="planBack" type="button">返回星系</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
   </main>
 
   <!-- v2.0 教师声纹注册弹窗 -->
@@ -957,8 +973,6 @@
             <select id="joinOrg" name="organization" required>
               <option value="">选择你的社团</option>
               <option value="海大天协">海大天协 · OUC Astronomy</option>
-              <option value="海大生科协">海大生科协 · OUC Biotech</option>
-              <option value="海大户协">海大户协 · OUC Outdoor</option>
               <option value="南开天协">南开天协 · Nankai Astronomy</option>
               <option value="其他社团">其他社团 / Other</option>
             </select>
@@ -1167,13 +1181,15 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="script.js?v=291"></script>
+  <script src="script.js?v=293"></script>
   <script src="echarts.min.js"></script>
   <script src="world-boundaries.js"></script>
-  <script src="globe.js?v=291"></script>
-  <script src="app.v236.js?v=291"></script>
+  <script src="globe.js?v=293"></script>
+  <script src="app.v236.js?v=293"></script>
   <!-- 星屿 · Telescope Garden：学习资源页入口（作品与素材由 7uanm 提供，GPL-3.0） -->
   <script src="xingyu/xingyu-config.js"></script>
   <script src="xingyu/xingyu.js"></script>
+<script>window.XINGHUAN_BIND_API = 'https://cloud1-d6gagyei397d315ca-1521583267.ap-shanghai.app.tcloudbase.com/qqBind';</script>
+<script src="bind-qq.js" defer></script>
 </body>
 </html>

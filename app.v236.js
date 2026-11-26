@@ -1799,7 +1799,7 @@
         title: '编辑成员 · ' + name,
         fields: [
           { id: 'name', label: '姓名', placeholder: '姓名', value: name || '' },
-          { id: 'org', label: '所在组织（astro 海大天协 / bio 生科协 / outdoor 户协 / nankai_astro 南开天协 / guest 游客）', placeholder: 'astro', value: org || '' },
+          { id: 'org', label: '所在组织（astro 天文协会 / nankai_astro 南开天协 / metaverse 元宇宙发展协会 / sagittarius 南斗天文社 / guest 游客）', placeholder: 'astro', value: org || '' },
           { id: 'campus', label: '校区', placeholder: '校区', value: campus || '' },
           { id: 'department', label: '部门（可空）', placeholder: '', value: department || '' }
         ]
@@ -4952,7 +4952,7 @@
         '<h4 style="display:flex;align-items:center;gap:12px">成员管理 <span style="font-weight:400;font-size:10px;color:var(--faint)">全部注册用户 · 检索与分类管理 · 编辑自动留痕</span><span style="flex:1"></span><span id="amCount"></span></h4>' +
         '<div style="padding:12px;display:grid;gap:12px">' +
         '<div class="ap-toolbar"><input id="amKw" placeholder="搜索姓名 / 账号" style="flex:1;min-width:180px;min-height:36px;padding:0 14px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.03);color:var(--text);font-size:12px;outline:none" />' +
-        '<select id="amOrg" style="min-height:36px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:rgba(9,9,13,.8);color:var(--text);font-size:12px"><option value="all">全部社团</option><option value="astro">天文协会</option><option value="bio">生物科技协会</option><option value="outdoor">户外协会</option><option value="nankai_astro">南开天协</option><option value="metaverse">元宇宙发展协会</option><option value="sagittarius">南斗天文社</option></select>' +
+        '<select id="amOrg" style="min-height:36px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:rgba(9,9,13,.8);color:var(--text);font-size:12px"><option value="all">全部社团</option><option value="astro">天文协会</option><option value="nankai_astro">南开天协</option><option value="metaverse">元宇宙发展协会</option><option value="sagittarius">南斗天文社</option></select>' +
         '<select id="amRole" style="min-height:36px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:rgba(9,9,13,.8);color:var(--text);font-size:12px"><option value="all">全部身份</option><option value="admin">社团主管理员</option><option value="sub">次级管理员</option><option value="member">普通成员</option></select>' +
         '<button class="btn btn-gold" id="amAdd" type="button" style="min-height:36px;font-size:12px">新建账号</button>' +
         '<button class="btn" id="amBatch" type="button" style="min-height:36px;font-size:12px">批量导入</button>' +
@@ -5035,3 +5035,28 @@
       setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
       showToast('已导出 ' + rows.length + ' 条（可用 Excel 打开）');
     };
+
+    /* v2.93 星环工作台：独立页视图 */
+    function openPlan() {
+      document.body.classList.add('plan-view');
+      document.body.classList.remove('me-view', 'console-mode', 'partners-view', 'hub-mode');
+      hubMode = false;
+      var page = document.getElementById('planPage');
+      if (!page) return;
+      page.hidden = false;
+      window.scrollTo({ top: 0 });
+      document.getElementById('planGoConsole').onclick = function () {
+        document.body.classList.remove('plan-view'); page.hidden = true; enterHub('console');
+      };
+      document.getElementById('planGoHub').onclick = function () {
+        document.body.classList.remove('plan-view'); page.hidden = true; enterHub('console');
+        setTimeout(function () { if (window.wbLoadOrgApps) wbLoadOrgApps(); }, 200);
+      };
+      document.getElementById('planBack').onclick = function () {
+        document.body.classList.remove('plan-view'); page.hidden = true; openPartners();
+      };
+    }
+    document.addEventListener('click', function (ev) {
+      if (ev.target && ev.target.id === 'planEnter') { openPlan(); }
+      if (ev.target && ev.target.id === 'planApply') { openJoinModal(); }
+    });

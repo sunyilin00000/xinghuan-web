@@ -6969,3 +6969,51 @@ body.me-view #deck,
 body.me-view .hero,
 body.me-view #partners { display: none !important; }
 body.me-view .me-page { margin: 0 auto; padding-top: 100px; min-height: 100vh; border: 0; background: transparent; box-shadow: none; backdrop-filter: none; }
+
+
+/* v2.93 星环计划特色卡 + 星环工作台独立页 */
+.plan-hero {
+  display: flex; align-items: center; justify-content: space-between; gap: 30px;
+  margin-bottom: 20px; padding: 30px 34px; overflow: hidden; position: relative;
+  border: 1px solid rgba(230,199,143,.3); border-radius: 22px;
+  background: linear-gradient(120deg, rgba(230,199,143,.1), rgba(255,255,255,.015) 55%, rgba(124,154,232,.06)), rgba(8,10,17,.55);
+  box-shadow: 0 26px 70px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.05);
+}
+.plan-hero::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 90% at 85% 50%, rgba(230,199,143,.12), transparent 60%); pointer-events: none; }
+.plan-hero-kicker { margin: 0 0 10px; color: rgba(230,199,143,.65); font-size: 9px; letter-spacing: .3em; }
+.plan-hero-title { margin: 0; color: #f8f3e6; font-size: 34px; font-weight: 500; letter-spacing: .1em; }
+.plan-hero-desc { margin: 14px 0 0; color: rgba(200,205,218,.62); font-size: 13px; line-height: 2; }
+.plan-hero-actions { display: flex; gap: 12px; margin-top: 22px; flex-wrap: wrap; }
+.plan-hero-btn {
+  min-height: 44px; padding: 0 28px; border: 1px solid rgba(255,238,205,.6); border-radius: 999px;
+  background: linear-gradient(135deg, #fbf0d6, #e9cf98 40%, #cfa363 74%, #bb8a48);
+  color: #1a1206; font-size: 13px; font-weight: 600; letter-spacing: .1em; cursor: pointer;
+  box-shadow: 0 12px 36px rgba(201,157,85,.25); font-family: inherit; transition: all .3s ease;
+}
+.plan-hero-btn:hover { transform: translateY(-2px); box-shadow: 0 16px 48px rgba(201,157,85,.4); }
+.plan-hero-ghost {
+  min-height: 44px; padding: 0 24px; border: 1px solid rgba(255,255,255,.14); border-radius: 999px;
+  background: rgba(255,255,255,.03); color: rgba(235,233,227,.8); font-size: 13px; cursor: pointer;
+  font-family: inherit; transition: all .3s ease;
+}
+.plan-hero-ghost:hover { border-color: rgba(230,199,143,.4); color: #f8ebd0; }
+.plan-hero-visual { position: relative; width: 180px; height: 180px; flex: 0 0 180px; }
+.plan-hero-ring { position: absolute; inset: 0; border: 1px solid rgba(230,199,143,.4); border-radius: 50%; transform: rotateX(68deg); }
+.plan-hero-ring.r2 { inset: 22px; border-color: rgba(124,154,232,.35); transform: rotateX(68deg) rotate(30deg); }
+.plan-hero-core { position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; border-radius: 50%; background: #f3dcb0; box-shadow: 0 0 26px rgba(230,199,143,.9); transform: translate(-50%,-50%); }
+
+/* 星环工作台独立页 */
+body.plan-view #deck, body.plan-view .hero, body.plan-view #partners { display: none !important; }
+body.plan-view .plan-page { margin: 0 auto; padding-top: 100px; min-height: 100vh; border: 0; background: transparent; box-shadow: none; backdrop-filter: none; }
+.plan-sec { margin-bottom: 26px; max-width: 960px; }
+.plan-sec h4 { margin: 0 0 12px; color: #f8ebd0; font-size: 14px; letter-spacing: .12em; }
+.plan-sec p { margin: 0; color: rgba(200,205,218,.7); font-size: 13px; line-height: 2; }
+.plan-road { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.plan-node { padding: 16px 18px; border: 1px solid rgba(255,255,255,.08); border-radius: 14px; background: rgba(255,255,255,.02); }
+.plan-node b { display: block; color: var(--text); font-size: 13px; margin-bottom: 8px; font-weight: 500; }
+.plan-node p { font-size: 12px; color: rgba(160,166,184,.6); line-height: 1.8; }
+.plan-node.done { border-color: rgba(134,181,160,.3); }
+.plan-node.done b { color: #a9dcc4; }
+.plan-node.live { border-color: rgba(230,199,143,.4); background: rgba(230,199,143,.05); }
+.plan-node.live b { color: #e6c78f; }
+@media (max-width: 900px) { .plan-hero { flex-direction: column; align-items: flex-start; } .plan-hero-visual { display: none; } }
