@@ -85,6 +85,7 @@
     <a href="#family">家人</a>
     <a href="#wechat">微信与守则</a>
     <a href="#chat">对话</a>
+    <a href="#box">盒子</a>
     <a href="#admin" id="navAdmin" hidden>管理员</a>
   </nav>
   <span class="spacer"></span>
@@ -143,6 +144,25 @@
       <span class="muted" id="chatCount"></span>
     </div>
     <div class="list" id="chatList"><div class="empty">暂无对话</div></div>
+  </section>
+
+  <section id="box">
+    <h2>盒子留言</h2>
+    <p class="lead">在网站给老人房间的音箱留言；盒子告警也会显示在这里</p>
+    <div class="admin-form" style="margin:0 0 12px">
+      <input type="text" id="boxText" placeholder="跟妈说：记得吃药" style="flex:1;min-width:240px" />
+      <button class="primary" id="boxSend">发送到盒子</button>
+    </div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
+      <div>
+        <h3 class="muted" style="font-size:13px;margin:0 0 8px">留言记录</h3>
+        <div class="list" id="boxMessages"><div class="empty">暂无</div></div>
+      </div>
+      <div>
+        <h3 class="muted" style="font-size:13px;margin:0 0 8px">告警</h3>
+        <div class="list" id="boxAlerts"><div class="empty">暂无</div></div>
+      </div>
+    </div>
   </section>
 
   <section id="admin" hidden>
@@ -352,6 +372,34 @@
     select.value = current;
   }
 
+  function renderBox(data) {
+    var box = document.getElementById('boxMessages');
+    box.innerHTML = '';
+    var rows = (data.box_messages || []).slice().reverse();
+    if (!rows.length) box.appendChild(el('div', 'empty', '暂无留言'));
+    rows.forEach(function (row) {
+      var line = el('div', 'row');
+      line.appendChild(el('span', 'who-name', row.account || '网站'));
+      line.appendChild(el('span', 'body', row.text || ''));
+      var status = row.status === 'done' ? '已播报' : (row.status === 'error' ? '失败' : '排队');
+      line.appendChild(el('span', 'pill ' + (row.status === 'done' ? 'ok' : (row.status === 'error' ? 'bad' : 'warn')), status));
+      line.appendChild(el('span', 'time', fmt(row.created_at)));
+      box.appendChild(line);
+    });
+
+    var alerts = document.getElementById('boxAlerts');
+    alerts.innerHTML = '';
+    var list = (data.box_alerts || []).slice(0, 15);
+    if (!list.length) alerts.appendChild(el('div', 'empty', '暂无告警'));
+    list.forEach(function (row) {
+      var line = el('div', 'row');
+      line.appendChild(el('span', 'pill ' + (row.level === 'danger' ? 'bad' : 'warn'), row.level === 'danger' ? '危险' : '提醒'));
+      line.appendChild(el('span', 'body', row.text || ''));
+      line.appendChild(el('span', 'time', fmt(row.created_at)));
+      alerts.appendChild(line);
+    });
+  }
+
   async function loadData() {
     try {
       var payload = await api('/console/data');
@@ -371,6 +419,7 @@
       renderWechat(snapshot);
       renderChatFilter(snapshot);
       renderChat();
+      renderBox(data);
       var who = document.getElementById('whoami');
       who.innerHTML = '';
       who.appendChild(el('b', null, data.name || ''));
@@ -423,6 +472,18 @@
 
   document.getElementById('refresh').onclick = loadData;
   document.getElementById('chatFilter').onchange = renderChat;
+  document.getElementById('boxSend').onclick = async function () {
+    var input = document.getElementById('boxText');
+    var text = input.value.trim();
+    if (!text) { showError('请输入留言内容'); return; }
+    var r = await api('/box/send', { text: text });
+    if (r && r.code === 0) {
+      input.value = '';
+      setTimeout(loadData, 800);
+    } else {
+      showError((r && r.message) || '发送失败');
+    }
+  };
   document.getElementById('addAdmin').onclick = async function () {
     var username = document.getElementById('newUsername').value.trim();
     var name = document.getElementById('newName').value.trim();
