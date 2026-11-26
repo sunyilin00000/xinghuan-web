@@ -8,12 +8,14 @@
   :root { --gold:#d6b774; --bg:#0f1013; --panel:#17181c; --line:rgba(214,183,116,.22); --text:#e9e4d8; --muted:#9c978b; }
   * { box-sizing: border-box; }
   body { margin:0; background:var(--bg); color:var(--text); font:14px/1.7 system-ui,-apple-system,"Segoe UI","Noto Sans SC",sans-serif; }
-  header { display:flex; align-items:center; gap:14px; padding:18px 26px; border-bottom:1px solid var(--line); }
+  header { display:flex; align-items:center; gap:14px; padding:18px 26px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
   header h1 { margin:0; font-size:17px; font-weight:600; letter-spacing:.04em; }
   header .badge { font-size:12px; color:var(--gold); border:1px solid var(--line); border-radius:999px; padding:2px 10px; }
   header .spacer { flex:1; }
   button { background:var(--panel); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:6px 14px; cursor:pointer; font-size:13px; }
   button:hover { border-color:var(--gold); }
+  button.primary { border-color:var(--gold); color:var(--gold); }
+  button.danger { color:#e0a69a; }
   main { padding:22px 26px 60px; max-width:1100px; margin:0 auto; }
   .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:22px; }
   .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px; }
@@ -21,7 +23,7 @@
   .card span { color:var(--muted); font-size:12px; }
   section { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin-bottom:18px; }
   section h2 { margin:0 0 12px; font-size:14px; font-weight:600; color:var(--gold); letter-spacing:.05em; }
-  .row { display:flex; gap:10px; padding:8px 0; border-bottom:1px dashed rgba(255,255,255,.06); font-size:13px; }
+  .row { display:flex; gap:10px; align-items:center; padding:8px 0; border-bottom:1px dashed rgba(255,255,255,.06); font-size:13px; }
   .row:last-child { border-bottom:0; }
   .tag { flex:0 0 auto; font-size:11px; padding:1px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted); }
   .tag.site { color:#9fd0ff; border-color:rgba(120,170,255,.4); }
@@ -33,18 +35,33 @@
   .empty { color:var(--muted); font-size:13px; }
   .err { background:rgba(255,120,100,.08); border:1px solid rgba(255,120,100,.35); color:#ffb3a6; border-radius:10px; padding:10px 14px; margin-bottom:16px; display:none; }
   .err.show { display:block; }
+  .chk { display:inline-flex; align-items:center; gap:4px; font-size:12px; color:var(--muted); }
+  .form { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  input[type=text] { background:#0f1013; border:1px solid var(--line); color:var(--text); border-radius:8px; padding:6px 10px; font-size:13px; }
 </style>
 </head>
 <body>
 <header>
   <h1>星环中枢 · 控制台</h1>
-  <span class="badge">管理员</span>
+  <span class="badge" id="whoami">…</span>
   <span class="spacer"></span>
-  <button id="refresh">刷新</button>
   <button onclick="location.href='/'">返回网站</button>
+  <button id="refresh">刷新</button>
 </header>
 <main>
   <div class="err" id="err"></div>
+  <section id="adminSection" style="display:none">
+    <h2>管理员与查看权限（仅超级管理员）</h2>
+    <div id="adminList"><div class="empty">加载中…</div></div>
+    <div class="form">
+      <input type="text" id="newUsername" placeholder="账号（username）" />
+      <input type="text" id="newName" placeholder="姓名（可选）" />
+      <label class="chk"><input type="checkbox" class="addScope" value="messages" checked /> 对话</label>
+      <label class="chk"><input type="checkbox" class="addScope" value="family" /> 家庭摘要</label>
+      <label class="chk"><input type="checkbox" class="addScope" value="bindings" /> QQ 绑定</label>
+      <button class="primary" id="addAdmin">添加管理员</button>
+    </div>
+  </section>
   <div class="cards" id="cards"></div>
   <section>
     <h2>家庭助手（摘要）</h2>
@@ -65,12 +82,7 @@
   var token = '';
   try { token = localStorage.getItem('hub_token') || ''; } catch (e) {}
   var errBox = document.getElementById('err');
-  var timer = null;
-
-  function fail(msg) {
-    errBox.textContent = msg;
-    errBox.classList.add('show');
-  }
+  var SCOPE_LABEL = { messages: '对话', family: '家庭摘要', bindings: 'QQ 绑定' };
 
   function el(tag, cls, text) {
     var node = document.createElement(tag);
@@ -78,105 +90,182 @@
     if (text != null) node.textContent = text;
     return node;
   }
-
   function fmt(ts) {
     if (!ts) return '';
     var d = new Date(ts);
     return isNaN(d) ? '' : d.toLocaleString('zh-CN', { hour12: false });
   }
+  function fail(msg) {
+    errBox.textContent = msg;
+    errBox.classList.add('show');
+  }
+  function okHide() { errBox.classList.remove('show'); }
 
-  function render(data) {
-    errBox.classList.remove('show');
+  async function api(path, body) {
+    var response = await fetch(API + path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ token: token }, body || {}))
+    });
+    return response.json();
+  }
+
+  function renderCards(data) {
     var cards = document.getElementById('cards');
     cards.innerHTML = '';
-    var items = [
-      [data.total_messages || 0, '对话消息总数'],
-      [(data.bindings || []).length, '已绑定 QQ'],
-      [data.family && data.family.updated_at ? fmt(data.family.updated_at) : '未同步', '家庭摘要更新时间']
-    ];
+    var items = [];
+    if (typeof data.total_messages === 'number') items.push([data.total_messages, '对话消息总数']);
+    if (data.bindings) items.push([data.bindings.length, '已绑定 QQ']);
+    if (data.family && data.family.updated_at) items.push([fmt(data.family.updated_at), '家庭摘要更新时间']);
     items.forEach(function (item) {
       var card = el('div', 'card');
       card.appendChild(el('b', null, String(item[0])));
       card.appendChild(el('span', null, item[1]));
       cards.appendChild(card);
     });
-
-    var famBox = document.getElementById('family');
-    famBox.innerHTML = '';
-    var summary = data.family && data.family.snapshot && data.family.snapshot.summary;
-    if (!summary) {
-      famBox.appendChild(el('div', 'empty', '尚未同步（运行 sync-family.mjs 后出现）'));
-    } else {
-      var meta = el('div', 'row');
-      meta.appendChild(el('span', 'tag', summary.paused ? '已暂停' : '运行中'));
-      meta.appendChild(el('span', 'content', '时区 ' + (summary.timeZone || '-') + ' · 成员 ' + summary.peopleCount + ' · 已连接 ' + summary.connected + ' · 活跃提醒 ' + summary.reminderCount + ' · 待发 ' + summary.pendingOutbox));
-      famBox.appendChild(meta);
-      (summary.people || []).forEach(function (person) {
-        var row = el('div', 'row');
-        row.appendChild(el('span', 'tag', person.role === 'owner' ? '本人' : '家人'));
-        row.appendChild(el('span', 'who', person.label || ''));
-        row.appendChild(el('span', 'content', person.dailyEnabled ? ('日报 ' + (person.dailyTime || '')) : '日报未开'));
-        famBox.appendChild(row);
-      });
-    }
-
-    var bindBox = document.getElementById('bindings');
-    bindBox.innerHTML = '';
-    if (!data.bindings || !data.bindings.length) {
-      bindBox.appendChild(el('div', 'empty', '暂无绑定'));
-    } else {
-      data.bindings.forEach(function (row) {
-        var line = el('div', 'row');
-        line.appendChild(el('span', 'tag qq', 'QQ'));
-        line.appendChild(el('span', 'who', row.nickname || row.user_key || ''));
-        line.appendChild(el('span', 'content', row.openid_mask + ' · ' + fmt(row.bound_at)));
-        bindBox.appendChild(line);
-      });
-    }
-
-    var msgBox = document.getElementById('messages');
-    msgBox.innerHTML = '';
-    var rows = (data.messages || []).slice(-80);
-    if (!rows.length) {
-      msgBox.appendChild(el('div', 'empty', '暂无对话'));
-    } else {
-      rows.forEach(function (row) {
-        var line = el('div', 'row');
-        line.appendChild(el('span', 'tag ' + (row.source === 'qq' ? 'qq' : 'site'), row.source === 'qq' ? 'QQ' : '网站'));
-        line.appendChild(el('span', 'tag ' + (row.role === 'assistant' ? 'assistant' : ''), row.role === 'assistant' ? '助手' : '用户'));
-        line.appendChild(el('span', 'who', row.account || row.user_key || ''));
-        line.appendChild(el('span', 'content', row.content || ''));
-        line.appendChild(el('span', 'ts', fmt(row.ts)));
-        msgBox.appendChild(line);
-      });
-    }
   }
 
-  async function load() {
-    if (!token) {
-      fail('未登录：请先回到网站登录，再打开本页。');
-      return;
-    }
+  function renderFamily(family) {
+    var box = document.getElementById('family');
+    box.innerHTML = '';
+    var summary = family && family.snapshot && family.snapshot.summary;
+    if (!summary) { box.appendChild(el('div', 'empty', '尚未同步或无权查看')); return; }
+    var meta = el('div', 'row');
+    meta.appendChild(el('span', 'tag', summary.paused ? '已暂停' : '运行中'));
+    meta.appendChild(el('span', 'content', '时区 ' + (summary.timeZone || '-') + ' · 成员 ' + summary.peopleCount + ' · 已连接 ' + summary.connected + ' · 活跃提醒 ' + summary.reminderCount + ' · 待发 ' + summary.pendingOutbox));
+    box.appendChild(meta);
+    (summary.people || []).forEach(function (person) {
+      var row = el('div', 'row');
+      row.appendChild(el('span', 'tag', person.role === 'owner' ? '本人' : '家人'));
+      row.appendChild(el('span', 'who', person.label || ''));
+      row.appendChild(el('span', 'content', person.dailyEnabled ? ('日报 ' + (person.dailyTime || '')) : '日报未开'));
+      box.appendChild(row);
+    });
+  }
+
+  function renderBindings(bindings) {
+    var box = document.getElementById('bindings');
+    box.innerHTML = '';
+    if (!bindings || !bindings.length) { box.appendChild(el('div', 'empty', '暂无或无权查看')); return; }
+    bindings.forEach(function (row) {
+      var line = el('div', 'row');
+      line.appendChild(el('span', 'tag qq', 'QQ'));
+      line.appendChild(el('span', 'who', row.nickname || row.user_key || ''));
+      line.appendChild(el('span', 'content', (row.openid_mask || '') + ' · ' + fmt(row.bound_at)));
+      box.appendChild(line);
+    });
+  }
+
+  function renderMessages(messages) {
+    var box = document.getElementById('messages');
+    box.innerHTML = '';
+    if (!messages || !messages.length) { box.appendChild(el('div', 'empty', '暂无或无权查看')); return; }
+    messages.slice(-80).forEach(function (row) {
+      var line = el('div', 'row');
+      line.appendChild(el('span', 'tag ' + (row.source === 'qq' ? 'qq' : 'site'), row.source === 'qq' ? 'QQ' : '网站'));
+      line.appendChild(el('span', 'tag ' + (row.role === 'assistant' ? 'assistant' : ''), row.role === 'assistant' ? '助手' : '用户'));
+      line.appendChild(el('span', 'who', row.account || row.user_key || ''));
+      line.appendChild(el('span', 'content', row.content || ''));
+      line.appendChild(el('span', 'ts', fmt(row.ts)));
+      box.appendChild(line);
+    });
+  }
+
+  async function loadData() {
     try {
-      var response = await fetch(API + '/console/data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: token })
-      });
-      var payload = await response.json();
-      if (!payload || payload.code !== 0) {
-        fail((payload && payload.message) || '加载失败');
-        return;
-      }
-      render(payload.data || {});
+      var payload = await api('/console/data');
+      if (!payload || payload.code !== 0) { fail((payload && payload.message) || '加载失败'); return; }
+      okHide();
+      var data = payload.data || {};
+      document.getElementById('whoami').textContent =
+        (data.name || '') + ' · ' + (data.level === 'owner' ? '超级管理员' : '管理员');
+      renderCards(data);
+      if ((data.scopes || []).indexOf('family') >= 0) renderFamily(data.family);
+      if ((data.scopes || []).indexOf('bindings') >= 0) renderBindings(data.bindings);
+      if ((data.scopes || []).indexOf('messages') >= 0) renderMessages(data.messages);
     } catch (e) {
       fail('连接失败：' + (e.message || e));
     }
   }
 
-  document.getElementById('refresh').onclick = load;
-  load();
-  timer = setInterval(load, 15000);
+  async function loadAdmins() {
+    var payload = await api('/console/admins');
+    var box = document.getElementById('adminList');
+    box.innerHTML = '';
+    if (!payload || payload.code !== 0) { box.appendChild(el('div', 'empty', (payload && payload.message) || '无权限')); return; }
+    var admins = (payload.data && payload.data.admins) || [];
+    if (!admins.length) { box.appendChild(el('div', 'empty', '还没有额外管理员')); }
+    admins.forEach(function (admin) {
+      var row = el('div', 'row');
+      row.appendChild(el('span', 'tag', '管理员'));
+      row.appendChild(el('span', 'who', admin.name || admin.username || ''));
+      var scopes = el('span', 'content', '');
+      ['messages', 'family', 'bindings'].forEach(function (scope) {
+        var label = el('label', 'chk');
+        var input = document.createElement('input');
+        input.type = 'checkbox';
+        input.checked = (admin.scopes || []).indexOf(scope) >= 0;
+        input.dataset.scope = scope;
+        label.appendChild(input);
+        label.appendChild(document.createTextNode(' ' + SCOPE_LABEL[scope] + ' '));
+        scopes.appendChild(label);
+      });
+      row.appendChild(scopes);
+      var save = el('button', null, '保存');
+      save.onclick = async function () {
+        var selected = Array.prototype.filter
+          .call(scopes.querySelectorAll('input[data-scope]'), function (input) { return input.checked; })
+          .map(function (input) { return input.dataset.scope; });
+        var result = await api('/console/admins/save', { action: 'update', id: admin.id, scopes: selected });
+        if (result && result.code === 0) loadAdmins(); else fail(result && result.message);
+      };
+      var remove = el('button', 'danger', '删除');
+      remove.onclick = async function () {
+        if (!confirm('确定删除该管理员？')) return;
+        var result = await api('/console/admins/save', { action: 'remove', id: admin.id });
+        if (result && result.code === 0) loadAdmins(); else fail(result && result.message);
+      };
+      row.appendChild(save);
+      row.appendChild(remove);
+      box.appendChild(row);
+    });
+  }
+
+  document.getElementById('refresh').onclick = function () { loadData(); };
+  document.getElementById('addAdmin').onclick = async function () {
+    var username = document.getElementById('newUsername').value.trim();
+    var name = document.getElementById('newName').value.trim();
+    var scopes = Array.prototype.filter
+      .call(document.querySelectorAll('.addScope'), function (input) { return input.checked; })
+      .map(function (input) { return input.value; });
+    if (!username && !name) { fail('请填写账号或姓名'); return; }
+    var result = await api('/console/admins/save', { action: 'add', username, name, scopes });
+    if (result && result.code === 0) {
+      document.getElementById('newUsername').value = '';
+      document.getElementById('newName').value = '';
+      loadAdmins();
+    } else { fail((result && result.message) || '添加失败'); }
+  };
+
+  async function boot() {
+    if (!token) { fail('未登录：请先回到网站登录，再打开本页。'); return; }
+    try {
+      var me = await api('/console/me');
+      if (!me || me.code !== 0) { fail((me && me.message) || '需要管理员权限'); return; }
+      document.getElementById('whoami').textContent =
+        (me.data.name || '') + ' · ' + (me.data.level === 'owner' ? '超级管理员' : '管理员');
+      if (me.data.level === 'owner') {
+        document.getElementById('adminSection').style.display = 'block';
+        loadAdmins();
+      }
+      loadData();
+    } catch (e) {
+      fail('连接失败：' + (e.message || e));
+    }
+  }
+
+  boot();
+  setInterval(loadData, 15000);
 })();
 </script>
 </body>
