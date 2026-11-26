@@ -1928,6 +1928,14 @@
       box.appendChild(div);
       box.scrollTop = box.scrollHeight;
     }
+    function hubBridge(path, body) {
+      var base = window.XINGHUAN_BIND_API || '';
+      return fetch(base + path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body || {})
+      }).then(function (r) { return r.json(); });
+    }
     async function hubAiAsk() {
       const input = document.getElementById('hubAiText');
       const q = input.value.trim();
@@ -1937,6 +1945,34 @@
       hubAiHistory.push({ role: 'user', content: q });
       hubAiPush('bot', '思考中…');
       const thinking = document.getElementById('hubAiMsgs').lastChild;
+      const token = state.user.token;
+      let bridged = false;
+      try {
+        const sent = await hubBridge('/ai/send', { token: token, text: q });
+        if (sent && sent.code === 0) {
+          bridged = true;
+          const since = new Date().toISOString();
+          const started = Date.now();
+          let reply = '';
+          while (Date.now() - started < 60000) {
+            await new Promise(function (resolve) { setTimeout(resolve, 1500); });
+            const polled = await hubBridge('/ai/poll', { token: token, after: since });
+            if (polled && polled.code === 0 && polled.data && polled.data.messages && polled.data.messages.length) {
+              reply = polled.data.messages.map(function (m) { return m.content; }).join('\n\n');
+              break;
+            }
+          }
+          if (reply) {
+            thinking.textContent = reply;
+            hubAiHistory.push({ role: 'assistant', content: reply });
+          } else {
+            thinking.textContent = '（60 秒内没有回应，稍后再试）';
+          }
+        }
+      } catch (e) {
+        console.warn('[ai] bridge failed', e);
+      }
+      if (bridged) return;
       try {
         const r = await apiFetch('/ai/chat', { method: 'POST', body: { messages: hubAiHistory, channel: 'hub' } });
         const reply = (r && r.data && r.data.reply) || '';

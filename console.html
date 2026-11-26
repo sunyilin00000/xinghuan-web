@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>星环中枢 · 控制台</title>
+<style>
+  :root { --gold:#d6b774; --bg:#0f1013; --panel:#17181c; --line:rgba(214,183,116,.22); --text:#e9e4d8; --muted:#9c978b; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.7 system-ui,-apple-system,"Segoe UI","Noto Sans SC",sans-serif; }
+  header { display:flex; align-items:center; gap:14px; padding:18px 26px; border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:17px; font-weight:600; letter-spacing:.04em; }
+  header .badge { font-size:12px; color:var(--gold); border:1px solid var(--line); border-radius:999px; padding:2px 10px; }
+  header .spacer { flex:1; }
+  button { background:var(--panel); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:6px 14px; cursor:pointer; font-size:13px; }
+  button:hover { border-color:var(--gold); }
+  main { padding:22px 26px 60px; max-width:1100px; margin:0 auto; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:22px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px; }
+  .card b { display:block; font-size:22px; color:var(--gold); }
+  .card span { color:var(--muted); font-size:12px; }
+  section { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin-bottom:18px; }
+  section h2 { margin:0 0 12px; font-size:14px; font-weight:600; color:var(--gold); letter-spacing:.05em; }
+  .row { display:flex; gap:10px; padding:8px 0; border-bottom:1px dashed rgba(255,255,255,.06); font-size:13px; }
+  .row:last-child { border-bottom:0; }
+  .tag { flex:0 0 auto; font-size:11px; padding:1px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted); }
+  .tag.site { color:#9fd0ff; border-color:rgba(120,170,255,.4); }
+  .tag.qq { color:#ffc98a; border-color:rgba(255,180,90,.4); }
+  .tag.assistant { color:#b7d7a8; border-color:rgba(140,200,120,.4); }
+  .who { color:var(--muted); min-width:96px; }
+  .content { flex:1; word-break:break-word; }
+  .ts { color:#6f6a60; font-size:11px; flex:0 0 auto; }
+  .empty { color:var(--muted); font-size:13px; }
+  .err { background:rgba(255,120,100,.08); border:1px solid rgba(255,120,100,.35); color:#ffb3a6; border-radius:10px; padding:10px 14px; margin-bottom:16px; display:none; }
+  .err.show { display:block; }
+</style>
+</head>
+<body>
+<header>
+  <h1>星环中枢 · 控制台</h1>
+  <span class="badge">管理员</span>
+  <span class="spacer"></span>
+  <button id="refresh">刷新</button>
+  <button onclick="location.href='/'">返回网站</button>
+</header>
+<main>
+  <div class="err" id="err"></div>
+  <div class="cards" id="cards"></div>
+  <section>
+    <h2>家庭助手（摘要）</h2>
+    <div id="family"><div class="empty">尚未同步</div></div>
+  </section>
+  <section>
+    <h2>QQ 绑定</h2>
+    <div id="bindings"><div class="empty">暂无</div></div>
+  </section>
+  <section>
+    <h2>最近对话（QQ + 网站）</h2>
+    <div id="messages"><div class="empty">暂无</div></div>
+  </section>
+</main>
+<script>
+(function () {
+  var API = (window.XINGHUAN_BIND_API || 'https://cloud1-d6gagyei397d315ca-1521583267.ap-shanghai.app.tcloudbase.com/qqBind').replace(/\/+$/, '');
+  var token = '';
+  try { token = localStorage.getItem('hub_token') || ''; } catch (e) {}
+  var errBox = document.getElementById('err');
+  var timer = null;
+
+  function fail(msg) {
+    errBox.textContent = msg;
+    errBox.classList.add('show');
+  }
+
+  function el(tag, cls, text) {
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text != null) node.textContent = text;
+    return node;
+  }
+
+  function fmt(ts) {
+    if (!ts) return '';
+    var d = new Date(ts);
+    return isNaN(d) ? '' : d.toLocaleString('zh-CN', { hour12: false });
+  }
+
+  function render(data) {
+    errBox.classList.remove('show');
+    var cards = document.getElementById('cards');
+    cards.innerHTML = '';
+    var items = [
+      [data.total_messages || 0, '对话消息总数'],
+      [(data.bindings || []).length, '已绑定 QQ'],
+      [data.family && data.family.updated_at ? fmt(data.family.updated_at) : '未同步', '家庭摘要更新时间']
+    ];
+    items.forEach(function (item) {
+      var card = el('div', 'card');
+      card.appendChild(el('b', null, String(item[0])));
+      card.appendChild(el('span', null, item[1]));
+      cards.appendChild(card);
+    });
+
+    var famBox = document.getElementById('family');
+    famBox.innerHTML = '';
+    var summary = data.family && data.family.snapshot && data.family.snapshot.summary;
+    if (!summary) {
+      famBox.appendChild(el('div', 'empty', '尚未同步（运行 sync-family.mjs 后出现）'));
+    } else {
+      var meta = el('div', 'row');
+      meta.appendChild(el('span', 'tag', summary.paused ? '已暂停' : '运行中'));
+      meta.appendChild(el('span', 'content', '时区 ' + (summary.timeZone || '-') + ' · 成员 ' + summary.peopleCount + ' · 已连接 ' + summary.connected + ' · 活跃提醒 ' + summary.reminderCount + ' · 待发 ' + summary.pendingOutbox));
+      famBox.appendChild(meta);
+      (summary.people || []).forEach(function (person) {
+        var row = el('div', 'row');
+        row.appendChild(el('span', 'tag', person.role === 'owner' ? '本人' : '家人'));
+        row.appendChild(el('span', 'who', person.label || ''));
+        row.appendChild(el('span', 'content', person.dailyEnabled ? ('日报 ' + (person.dailyTime || '')) : '日报未开'));
+        famBox.appendChild(row);
+      });
+    }
+
+    var bindBox = document.getElementById('bindings');
+    bindBox.innerHTML = '';
+    if (!data.bindings || !data.bindings.length) {
+      bindBox.appendChild(el('div', 'empty', '暂无绑定'));
+    } else {
+      data.bindings.forEach(function (row) {
+        var line = el('div', 'row');
+        line.appendChild(el('span', 'tag qq', 'QQ'));
+        line.appendChild(el('span', 'who', row.nickname || row.user_key || ''));
+        line.appendChild(el('span', 'content', row.openid_mask + ' · ' + fmt(row.bound_at)));
+        bindBox.appendChild(line);
+      });
+    }
+
+    var msgBox = document.getElementById('messages');
+    msgBox.innerHTML = '';
+    var rows = (data.messages || []).slice(-80);
+    if (!rows.length) {
+      msgBox.appendChild(el('div', 'empty', '暂无对话'));
+    } else {
+      rows.forEach(function (row) {
+        var line = el('div', 'row');
+        line.appendChild(el('span', 'tag ' + (row.source === 'qq' ? 'qq' : 'site'), row.source === 'qq' ? 'QQ' : '网站'));
+        line.appendChild(el('span', 'tag ' + (row.role === 'assistant' ? 'assistant' : ''), row.role === 'assistant' ? '助手' : '用户'));
+        line.appendChild(el('span', 'who', row.account || row.user_key || ''));
+        line.appendChild(el('span', 'content', row.content || ''));
+        line.appendChild(el('span', 'ts', fmt(row.ts)));
+        msgBox.appendChild(line);
+      });
+    }
+  }
+
+  async function load() {
+    if (!token) {
+      fail('未登录：请先回到网站登录，再打开本页。');
+      return;
+    }
+    try {
+      var response = await fetch(API + '/console/data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token })
+      });
+      var payload = await response.json();
+      if (!payload || payload.code !== 0) {
+        fail((payload && payload.message) || '加载失败');
+        return;
+      }
+      render(payload.data || {});
+    } catch (e) {
+      fail('连接失败：' + (e.message || e));
+    }
+  }
+
+  document.getElementById('refresh').onclick = load;
+  load();
+  timer = setInterval(load, 15000);
+})();
+</script>
+</body>
+</html>
