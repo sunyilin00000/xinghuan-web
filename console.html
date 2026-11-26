@@ -3,86 +3,170 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>星环中枢 · 控制台</title>
+<title>星环终端 · 家庭助手控制台</title>
 <style>
-  :root { --gold:#d6b774; --bg:#0f1013; --panel:#17181c; --line:rgba(214,183,116,.22); --text:#e9e4d8; --muted:#9c978b; }
+  :root {
+    --bg: #0a0a0c; --bg-deep: #060608;
+    --surface: #111115; --surface-raised: #17171c;
+    --line: rgba(255,255,255,.075); --line-strong: rgba(232,201,142,.32);
+    --gold: #e5c68d; --gold-bright: #f8ebce;
+    --ice: #8db8c6; --mint: #86b5a0; --danger: #ff8b8b;
+    --text: #f2f5f8; --muted: #92a0af; --faint: #5e6b79;
+    --radius: 14px;
+    --font: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Segoe UI", sans-serif;
+  }
   * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.7 system-ui,-apple-system,"Segoe UI","Noto Sans SC",sans-serif; }
-  header { display:flex; align-items:center; gap:14px; padding:18px 26px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
-  header h1 { margin:0; font-size:17px; font-weight:600; letter-spacing:.04em; }
-  header .badge { font-size:12px; color:var(--gold); border:1px solid var(--line); border-radius:999px; padding:2px 10px; }
-  header .spacer { flex:1; }
-  button { background:var(--panel); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:6px 14px; cursor:pointer; font-size:13px; }
-  button:hover { border-color:var(--gold); }
-  button.primary { border-color:var(--gold); color:var(--gold); }
-  button.danger { color:#e0a69a; }
-  main { padding:22px 26px 60px; max-width:1100px; margin:0 auto; }
-  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:22px; }
-  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px; }
-  .card b { display:block; font-size:22px; color:var(--gold); }
-  .card span { color:var(--muted); font-size:12px; }
-  section { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin-bottom:18px; }
-  section h2 { margin:0 0 12px; font-size:14px; font-weight:600; color:var(--gold); letter-spacing:.05em; }
-  .row { display:flex; gap:10px; align-items:center; padding:8px 0; border-bottom:1px dashed rgba(255,255,255,.06); font-size:13px; }
+  html { scroll-behavior: smooth; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:var(--font); font-size:14px; line-height:1.65; }
+  a { color: inherit; text-decoration: none; }
+  header.topbar {
+    position: sticky; top: 0; z-index: 50;
+    display:flex; align-items:center; gap:18px; flex-wrap:wrap;
+    padding:14px 26px;
+    background: rgba(10,10,12,.86); backdrop-filter: blur(12px);
+    border-bottom:1px solid var(--line);
+  }
+  .brand { display:flex; flex-direction:column; line-height:1.2; }
+  .brand b { font-size:15px; letter-spacing:.08em; color:var(--gold-bright); font-weight:600; }
+  .brand span { font-size:10px; letter-spacing:.22em; color:var(--faint); }
+  nav { display:flex; gap:4px; margin-left:12px; }
+  nav a { padding:6px 12px; border-radius:999px; font-size:13px; color:var(--muted); }
+  nav a:hover { color:var(--gold-bright); background:rgba(232,201,142,.08); }
+  .spacer { flex:1; }
+  .who { font-size:12px; color:var(--muted); }
+  .who b { color:var(--gold); font-weight:600; }
+  main { max-width:1200px; margin:0 auto; padding:26px 26px 90px; }
+  section { scroll-margin-top: 84px; margin-bottom:34px; }
+  section h2 { margin:0 0 4px; font-size:20px; font-weight:600; letter-spacing:.04em; color:var(--gold-bright); }
+  section .lead { margin:0 0 16px; color:var(--faint); font-size:12px; letter-spacing:.04em; }
+  .grid { display:grid; gap:14px; }
+  .grid.cards { grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); }
+  .grid.members { grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); }
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:16px 18px; }
+  .card:hover { border-color:var(--line-strong); }
+  .stat b { display:block; font-size:26px; color:var(--gold); font-weight:600; letter-spacing:.02em; }
+  .stat span { font-size:12px; color:var(--muted); }
+  .pill { display:inline-block; font-size:11px; padding:1px 9px; border-radius:999px; border:1px solid var(--line); color:var(--muted); }
+  .pill.ok { color:var(--mint); border-color:rgba(134,181,160,.4); }
+  .pill.warn { color:var(--gold); border-color:var(--line-strong); }
+  .pill.bad { color:var(--danger); border-color:rgba(255,139,139,.4); }
+  .list { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; }
+  .row { display:flex; gap:12px; align-items:flex-start; padding:11px 16px; border-bottom:1px solid var(--line); font-size:13px; }
   .row:last-child { border-bottom:0; }
-  .tag { flex:0 0 auto; font-size:11px; padding:1px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted); }
-  .tag.site { color:#9fd0ff; border-color:rgba(120,170,255,.4); }
-  .tag.qq { color:#ffc98a; border-color:rgba(255,180,90,.4); }
-  .tag.assistant { color:#b7d7a8; border-color:rgba(140,200,120,.4); }
-  .who { color:var(--muted); min-width:96px; }
-  .content { flex:1; word-break:break-word; }
-  .ts { color:#6f6a60; font-size:11px; flex:0 0 auto; }
-  .empty { color:var(--muted); font-size:13px; }
-  .err { background:rgba(255,120,100,.08); border:1px solid rgba(255,120,100,.35); color:#ffb3a6; border-radius:10px; padding:10px 14px; margin-bottom:16px; display:none; }
-  .err.show { display:block; }
-  .chk { display:inline-flex; align-items:center; gap:4px; font-size:12px; color:var(--muted); }
-  .form { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
-  input[type=text] { background:#0f1013; border:1px solid var(--line); color:var(--text); border-radius:8px; padding:6px 10px; font-size:13px; }
+  .row .who-name { color:var(--muted); min-width:88px; }
+  .row .body { flex:1; word-break:break-word; }
+  .row .time { color:var(--faint); font-size:11px; white-space:nowrap; }
+  .member h3 { margin:0 0 2px; font-size:16px; font-weight:600; color:var(--gold-bright); display:flex; align-items:center; gap:8px; }
+  .member .meta { color:var(--muted); font-size:12px; margin-bottom:10px; }
+  .member ul { margin:8px 0 0; padding-left:16px; color:var(--muted); font-size:12px; }
+  .chips { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .empty { color:var(--faint); font-size:13px; padding:14px 16px; }
+  .error { background:rgba(255,139,139,.08); border:1px solid rgba(255,139,139,.35); color:var(--danger); border-radius:12px; padding:10px 14px; margin-bottom:18px; display:none; }
+  .error.show { display:block; }
+  .admin-form { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+  input[type=text], select { background:var(--bg-deep); border:1px solid var(--line); color:var(--text); border-radius:9px; padding:7px 11px; font-size:13px; font-family:inherit; }
+  button { background:var(--surface-raised); color:var(--text); border:1px solid var(--line); border-radius:9px; padding:7px 14px; cursor:pointer; font-size:13px; font-family:inherit; }
+  button:hover { border-color:var(--line-strong); color:var(--gold-bright); }
+  button.primary { border-color:var(--line-strong); color:var(--gold); }
+  button.danger { color:var(--danger); }
+  .chk { display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--muted); }
+  .muted { color:var(--faint); }
+  @media (max-width: 720px) {
+    nav { width:100%; overflow-x:auto; margin-left:0; }
+    main { padding:20px 16px 70px; }
+  }
 </style>
 </head>
 <body>
-<header>
-  <h1>星环中枢 · 控制台</h1>
-  <span class="badge" id="whoami">…</span>
+<header class="topbar">
+  <span class="brand"><b>星环终端</b><span>XINGHUAN TERMINAL</span></span>
+  <nav>
+    <a href="#home">家里</a>
+    <a href="#family">家人</a>
+    <a href="#wechat">微信与守则</a>
+    <a href="#chat">对话</a>
+    <a href="#admin" id="navAdmin" hidden>管理员</a>
+  </nav>
   <span class="spacer"></span>
-  <button onclick="location.href='/'">返回网站</button>
+  <span class="who" id="whoami">未登录</span>
   <button id="refresh">刷新</button>
+  <button onclick="location.href='/'">返回网站</button>
 </header>
+
 <main>
-  <div class="err" id="err"></div>
-  <section id="adminSection" style="display:none">
-    <h2>管理员与查看权限（仅超级管理员）</h2>
-    <div id="adminList"><div class="empty">加载中…</div></div>
-    <div class="form">
+  <div class="error" id="err"></div>
+
+  <section id="home">
+    <h2>家里</h2>
+    <p class="lead">运行状态、最近动态与需要你留意的事</p>
+    <div class="grid cards" id="stats"></div>
+    <div style="height:14px"></div>
+    <div class="list" id="attention"><div class="empty">暂无需要留意的事项</div></div>
+    <div style="height:14px"></div>
+    <div class="list" id="timeline"><div class="empty">暂无动态</div></div>
+  </section>
+
+  <section id="family">
+    <h2>家人</h2>
+    <p class="lead">档案、日报设置与连接状态</p>
+    <div class="grid members" id="members"><div class="empty">尚未同步</div></div>
+  </section>
+
+  <section id="wechat">
+    <h2>微信与守则</h2>
+    <p class="lead">通道状态、提醒、待发与偏好</p>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
+      <div>
+        <h3 class="muted" style="font-size:13px;margin:0 0 8px">连接状态</h3>
+        <div class="list" id="bindings"><div class="empty">暂无</div></div>
+      </div>
+      <div>
+        <h3 class="muted" style="font-size:13px;margin:0 0 8px">提醒</h3>
+        <div class="list" id="reminders"><div class="empty">暂无</div></div>
+      </div>
+      <div>
+        <h3 class="muted" style="font-size:13px;margin:0 0 8px">待发</h3>
+        <div class="list" id="outbox"><div class="empty">暂无</div></div>
+      </div>
+      <div>
+        <h3 class="muted" style="font-size:13px;margin:0 0 8px">守则与偏好</h3>
+        <div class="list" id="prefs"><div class="empty">暂无</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="chat">
+    <h2>对话</h2>
+    <p class="lead">家庭成员与助手的往来记录</p>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+      <select id="chatFilter"><option value="">全部成员</option></select>
+      <span class="muted" id="chatCount"></span>
+    </div>
+    <div class="list" id="chatList"><div class="empty">暂无对话</div></div>
+  </section>
+
+  <section id="admin" hidden>
+    <h2>管理员与查看权限</h2>
+    <p class="lead">仅超级管理员可见</p>
+    <div class="list" id="adminList"><div class="empty">加载中…</div></div>
+    <div class="admin-form">
       <input type="text" id="newUsername" placeholder="账号（username）" />
       <input type="text" id="newName" placeholder="姓名（可选）" />
       <label class="chk"><input type="checkbox" class="addScope" value="messages" checked /> 对话</label>
-      <label class="chk"><input type="checkbox" class="addScope" value="family" /> 家庭摘要</label>
+      <label class="chk"><input type="checkbox" class="addScope" value="family" checked /> 家庭</label>
       <label class="chk"><input type="checkbox" class="addScope" value="bindings" /> QQ 绑定</label>
       <button class="primary" id="addAdmin">添加管理员</button>
     </div>
   </section>
-  <div class="cards" id="cards"></div>
-  <section>
-    <h2>家庭助手（摘要）</h2>
-    <div id="family"><div class="empty">尚未同步</div></div>
-  </section>
-  <section>
-    <h2>QQ 绑定</h2>
-    <div id="bindings"><div class="empty">暂无</div></div>
-  </section>
-  <section>
-    <h2>最近对话（QQ + 网站）</h2>
-    <div id="messages"><div class="empty">暂无</div></div>
-  </section>
 </main>
+
 <script>
 (function () {
   var API = (window.XINGHUAN_BIND_API || 'https://cloud1-d6gagyei397d315ca-1521583267.ap-shanghai.app.tcloudbase.com/qqBind').replace(/\/+$/, '');
   var token = '';
   try { token = localStorage.getItem('hub_token') || ''; } catch (e) {}
-  var errBox = document.getElementById('err');
-  var SCOPE_LABEL = { messages: '对话', family: '家庭摘要', bindings: 'QQ 绑定' };
+  var SCOPE_LABEL = { messages: '对话', family: '家庭', bindings: 'QQ 绑定' };
+  var state = { snapshot: null, messages: [], labels: {} };
 
   function el(tag, cls, text) {
     var node = document.createElement(tag);
@@ -93,13 +177,17 @@
   function fmt(ts) {
     if (!ts) return '';
     var d = new Date(ts);
-    return isNaN(d) ? '' : d.toLocaleString('zh-CN', { hour12: false });
+    if (isNaN(d)) return '';
+    return d.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
   }
-  function fail(msg) {
-    errBox.textContent = msg;
-    errBox.classList.add('show');
+  function showError(msg) {
+    var box = document.getElementById('err');
+    box.textContent = msg;
+    box.classList.add('show');
   }
-  function okHide() { errBox.classList.remove('show'); }
+  function clearError() { document.getElementById('err').classList.remove('show'); }
+  function setText(id, text) { var node = document.getElementById(id); if (node) node.textContent = text; }
+  function labelOf(personId) { return state.labels[personId] || personId || '未知'; }
 
   async function api(path, body) {
     var response = await fetch(API + path, {
@@ -110,81 +198,185 @@
     return response.json();
   }
 
-  function renderCards(data) {
-    var cards = document.getElementById('cards');
-    cards.innerHTML = '';
-    var items = [];
-    if (typeof data.total_messages === 'number') items.push([data.total_messages, '对话消息总数']);
-    if (data.bindings) items.push([data.bindings.length, '已绑定 QQ']);
-    if (data.family && data.family.updated_at) items.push([fmt(data.family.updated_at), '家庭摘要更新时间']);
+  function renderStats(data) {
+    var box = document.getElementById('stats');
+    box.innerHTML = '';
+    var s = data.snapshot || {};
+    var cfg = s.config || {};
+    var people = s.people || [];
+    var bindings = s.bindings || [];
+    var reminders = s.reminders || [];
+    var outbox = s.outbox || [];
+    var items = [
+      [cfg.paused ? '已暂停' : '运行中', '服务状态'],
+      [people.length, '家庭成员'],
+      [bindings.filter(function (b) { return b.status === 'connected'; }).length, '已连接微信'],
+      [reminders.filter(function (r) { return r.status === 'active'; }).length, '活跃提醒'],
+      [outbox.filter(function (o) { return o.status === 'pending'; }).length, '待发消息'],
+      [(cfg.ownerBriefEnabled ? '每日 ' + (cfg.ownerBriefTime || '') : '未开启'), '简报']
+    ];
     items.forEach(function (item) {
-      var card = el('div', 'card');
+      var card = el('div', 'card stat');
       card.appendChild(el('b', null, String(item[0])));
       card.appendChild(el('span', null, item[1]));
-      cards.appendChild(card);
+      box.appendChild(card);
     });
   }
 
-  function renderFamily(family) {
-    var box = document.getElementById('family');
+  function renderAttention(snapshot) {
+    var box = document.getElementById('attention');
     box.innerHTML = '';
-    var summary = family && family.snapshot && family.snapshot.summary;
-    if (!summary) { box.appendChild(el('div', 'empty', '尚未同步或无权查看')); return; }
-    var meta = el('div', 'row');
-    meta.appendChild(el('span', 'tag', summary.paused ? '已暂停' : '运行中'));
-    meta.appendChild(el('span', 'content', '时区 ' + (summary.timeZone || '-') + ' · 成员 ' + summary.peopleCount + ' · 已连接 ' + summary.connected + ' · 活跃提醒 ' + summary.reminderCount + ' · 待发 ' + summary.pendingOutbox));
-    box.appendChild(meta);
-    (summary.people || []).forEach(function (person) {
-      var row = el('div', 'row');
-      row.appendChild(el('span', 'tag', person.role === 'owner' ? '本人' : '家人'));
-      row.appendChild(el('span', 'who', person.label || ''));
-      row.appendChild(el('span', 'content', person.dailyEnabled ? ('日报 ' + (person.dailyTime || '')) : '日报未开'));
-      box.appendChild(row);
-    });
-  }
-
-  function renderBindings(bindings) {
-    var box = document.getElementById('bindings');
-    box.innerHTML = '';
-    if (!bindings || !bindings.length) { box.appendChild(el('div', 'empty', '暂无或无权查看')); return; }
-    bindings.forEach(function (row) {
+    var cases = (snapshot.attention && snapshot.attention.cases) || [];
+    if (!cases.length) { box.appendChild(el('div', 'empty', '暂无需要留意的事项')); return; }
+    cases.slice(-10).reverse().forEach(function (row) {
       var line = el('div', 'row');
-      line.appendChild(el('span', 'tag qq', 'QQ'));
-      line.appendChild(el('span', 'who', row.nickname || row.user_key || ''));
-      line.appendChild(el('span', 'content', (row.openid_mask || '') + ' · ' + fmt(row.bound_at)));
+      var bad = row.urgency === 'now' || row.category === 'safety';
+      line.appendChild(el('span', 'pill ' + (bad ? 'bad' : 'warn'), row.category || '事项'));
+      line.appendChild(el('span', 'body', (row.eventState || '') + ' · ' + (row.status || '')));
+      line.appendChild(el('span', 'time', fmt(row.createdAt)));
       box.appendChild(line);
     });
   }
 
-  function renderMessages(messages) {
-    var box = document.getElementById('messages');
+  function renderTimeline(snapshot) {
+    var box = document.getElementById('timeline');
     box.innerHTML = '';
-    if (!messages || !messages.length) { box.appendChild(el('div', 'empty', '暂无或无权查看')); return; }
-    messages.slice(-80).forEach(function (row) {
+    var rows = (snapshot.messages || []).slice(-10).reverse();
+    if (!rows.length) { box.appendChild(el('div', 'empty', '暂无动态')); return; }
+    rows.forEach(function (row) {
       var line = el('div', 'row');
-      line.appendChild(el('span', 'tag ' + (row.source === 'qq' ? 'qq' : 'site'), row.source === 'qq' ? 'QQ' : '网站'));
-      line.appendChild(el('span', 'tag ' + (row.role === 'assistant' ? 'assistant' : ''), row.role === 'assistant' ? '助手' : '用户'));
-      line.appendChild(el('span', 'who', row.account || row.user_key || ''));
-      line.appendChild(el('span', 'content', row.content || ''));
-      line.appendChild(el('span', 'ts', fmt(row.ts)));
+      line.appendChild(el('span', 'who-name', labelOf(row.personId)));
+      line.appendChild(el('span', 'body', (row.role === 'assistant' ? '助手：' : '') + (row.text || '')));
+      line.appendChild(el('span', 'time', fmt(row.at)));
       box.appendChild(line);
     });
+  }
+
+  function renderMembers(snapshot) {
+    var box = document.getElementById('members');
+    box.innerHTML = '';
+    var people = snapshot.people || [];
+    var bindings = snapshot.bindings || [];
+    if (!people.length) { box.appendChild(el('div', 'empty', '尚未同步')); return; }
+    people.forEach(function (person) {
+      var binding = bindings.filter(function (row) { return row.personId === person.id; })[0];
+      var card = el('div', 'card member');
+      var title = el('h3', null, person.label || '成员');
+      title.appendChild(el('span', 'pill ' + (person.role === 'owner' ? 'warn' : ''), person.role === 'owner' ? '本人' : '家人'));
+      if (binding) title.appendChild(el('span', 'pill ' + (binding.status === 'connected' ? 'ok' : 'bad'), binding.status === 'connected' ? '微信已连接' : '未连接'));
+      card.appendChild(title);
+      card.appendChild(el('div', 'meta', (person.timeZone || '') + (person.dailyEnabled ? ' · 日报 ' + (person.dailyTime || '') : ' · 日报未开') + ' · 分享：' + (person.shareWithOwner || 'none')));
+      if (person.notes) card.appendChild(el('div', 'muted', person.notes));
+      if (person.interests && person.interests.length) {
+        var chips = el('div', 'chips');
+        person.interests.forEach(function (tag) { chips.appendChild(el('span', 'pill', tag)); });
+        card.appendChild(chips);
+      }
+      box.appendChild(card);
+    });
+  }
+
+  function renderWechat(snapshot) {
+    var bindings = document.getElementById('bindings');
+    bindings.innerHTML = '';
+    (snapshot.bindings || []).forEach(function (row) {
+      var line = el('div', 'row');
+      line.appendChild(el('span', 'who-name', labelOf(row.personId)));
+      line.appendChild(el('span', 'body', row.status === 'connected' ? '微信已连接' : (row.status || '未连接')));
+      line.appendChild(el('span', 'pill ' + (row.status === 'connected' ? 'ok' : 'bad'), row.status || ''));
+      bindings.appendChild(line);
+    });
+    if (!(snapshot.bindings || []).length) bindings.appendChild(el('div', 'empty', '暂无'));
+
+    var reminders = document.getElementById('reminders');
+    reminders.innerHTML = '';
+    (snapshot.reminders || []).slice(-20).reverse().forEach(function (row) {
+      var line = el('div', 'row');
+      line.appendChild(el('span', 'who-name', labelOf(row.personId)));
+      line.appendChild(el('span', 'body', row.text || ''));
+      line.appendChild(el('span', 'pill ' + (row.status === 'active' ? 'ok' : ''), row.status || ''));
+      line.appendChild(el('span', 'time', fmt(row.dueAt)));
+      reminders.appendChild(line);
+    });
+    if (!(snapshot.reminders || []).length) reminders.appendChild(el('div', 'empty', '暂无'));
+
+    var outbox = document.getElementById('outbox');
+    outbox.innerHTML = '';
+    (snapshot.outbox || []).slice(-20).reverse().forEach(function (row) {
+      var line = el('div', 'row');
+      line.appendChild(el('span', 'who-name', labelOf(row.personId)));
+      line.appendChild(el('span', 'body', (row.kind || '') + ' · ' + (row.text || '')));
+      line.appendChild(el('span', 'pill ' + (row.status === 'pending' ? 'warn' : ''), row.status || ''));
+      outbox.appendChild(line);
+    });
+    if (!(snapshot.outbox || []).length) outbox.appendChild(el('div', 'empty', '暂无'));
+
+    var prefs = document.getElementById('prefs');
+    prefs.innerHTML = '';
+    var items = (snapshot.preferences && snapshot.preferences.items) || [];
+    var requests = (snapshot.workbench && snapshot.workbench.requests) || [];
+    items.concat(requests).slice(-20).forEach(function (row) {
+      var line = el('div', 'row');
+      line.appendChild(el('span', 'body', row.instruction || row.text || JSON.stringify(row).slice(0, 120)));
+      prefs.appendChild(line);
+    });
+    if (!items.length && !requests.length) prefs.appendChild(el('div', 'empty', '暂无'));
+  }
+
+  function renderChat() {
+    var box = document.getElementById('chatList');
+    var filter = document.getElementById('chatFilter').value;
+    box.innerHTML = '';
+    var rows = state.messages.filter(function (row) { return !filter || row.personId === filter; });
+    setText('chatCount', rows.length ? rows.length + ' 条' : '');
+    if (!rows.length) { box.appendChild(el('div', 'empty', '暂无对话')); return; }
+    rows.slice(-120).forEach(function (row) {
+      var line = el('div', 'row');
+      line.appendChild(el('span', 'who-name', labelOf(row.personId)));
+      line.appendChild(el('span', 'body', (row.role === 'assistant' ? '助手：' : '') + (row.text || '')));
+      line.appendChild(el('span', 'time', fmt(row.at)));
+      box.appendChild(line);
+    });
+  }
+
+  function renderChatFilter(snapshot) {
+    var select = document.getElementById('chatFilter');
+    var current = select.value;
+    select.innerHTML = '<option value="">全部成员</option>';
+    (snapshot.people || []).forEach(function (person) {
+      var option = document.createElement('option');
+      option.value = person.id;
+      option.textContent = person.label || person.id;
+      select.appendChild(option);
+    });
+    select.value = current;
   }
 
   async function loadData() {
     try {
       var payload = await api('/console/data');
-      if (!payload || payload.code !== 0) { fail((payload && payload.message) || '加载失败'); return; }
-      okHide();
+      if (!payload || payload.code !== 0) { showError((payload && payload.message) || '加载失败'); return; }
+      clearError();
       var data = payload.data || {};
-      document.getElementById('whoami').textContent =
-        (data.name || '') + ' · ' + (data.level === 'owner' ? '超级管理员' : '管理员');
-      renderCards(data);
-      if ((data.scopes || []).indexOf('family') >= 0) renderFamily(data.family);
-      if ((data.scopes || []).indexOf('bindings') >= 0) renderBindings(data.bindings);
-      if ((data.scopes || []).indexOf('messages') >= 0) renderMessages(data.messages);
+      var snapshot = (data.family && data.family.snapshot) || null;
+      if (!snapshot) { showError('还没有家庭助手数据：先运行 sync-family.mjs'); return; }
+      state.snapshot = snapshot;
+      state.messages = snapshot.messages || [];
+      state.labels = {};
+      (snapshot.people || []).forEach(function (person) { state.labels[person.id] = person.label || person.id; });
+      renderStats(data);
+      renderAttention(snapshot);
+      renderTimeline(snapshot);
+      renderMembers(snapshot);
+      renderWechat(snapshot);
+      renderChatFilter(snapshot);
+      renderChat();
+      var who = document.getElementById('whoami');
+      who.innerHTML = '';
+      who.appendChild(el('b', null, data.name || ''));
+      who.appendChild(document.createTextNode(' · ' + (data.level === 'owner' ? '超级管理员' : '管理员')));
     } catch (e) {
-      fail('连接失败：' + (e.message || e));
+      showError('连接失败：' + (e.message || e));
     }
   }
 
@@ -194,12 +386,11 @@
     box.innerHTML = '';
     if (!payload || payload.code !== 0) { box.appendChild(el('div', 'empty', (payload && payload.message) || '无权限')); return; }
     var admins = (payload.data && payload.data.admins) || [];
-    if (!admins.length) { box.appendChild(el('div', 'empty', '还没有额外管理员')); }
+    if (!admins.length) box.appendChild(el('div', 'empty', '还没有额外管理员'));
     admins.forEach(function (admin) {
       var row = el('div', 'row');
-      row.appendChild(el('span', 'tag', '管理员'));
-      row.appendChild(el('span', 'who', admin.name || admin.username || ''));
-      var scopes = el('span', 'content', '');
+      row.appendChild(el('span', 'who-name', admin.name || admin.username || ''));
+      var scopes = el('span', 'body', '');
       ['messages', 'family', 'bindings'].forEach(function (scope) {
         var label = el('label', 'chk');
         var input = document.createElement('input');
@@ -213,17 +404,16 @@
       row.appendChild(scopes);
       var save = el('button', null, '保存');
       save.onclick = async function () {
-        var selected = Array.prototype.filter
-          .call(scopes.querySelectorAll('input[data-scope]'), function (input) { return input.checked; })
-          .map(function (input) { return input.dataset.scope; });
-        var result = await api('/console/admins/save', { action: 'update', id: admin.id, scopes: selected });
-        if (result && result.code === 0) loadAdmins(); else fail(result && result.message);
+        var selected = Array.prototype.filter.call(scopes.querySelectorAll('input[data-scope]'), function (i) { return i.checked; })
+          .map(function (i) { return i.dataset.scope; });
+        var r = await api('/console/admins/save', { action: 'update', id: admin.id, scopes: selected });
+        if (r && r.code === 0) loadAdmins(); else showError(r && r.message);
       };
       var remove = el('button', 'danger', '删除');
       remove.onclick = async function () {
-        if (!confirm('确定删除该管理员？')) return;
-        var result = await api('/console/admins/save', { action: 'remove', id: admin.id });
-        if (result && result.code === 0) loadAdmins(); else fail(result && result.message);
+        if (!confirm('删除该管理员？')) return;
+        var r = await api('/console/admins/save', { action: 'remove', id: admin.id });
+        if (r && r.code === 0) loadAdmins(); else showError(r && r.message);
       };
       row.appendChild(save);
       row.appendChild(remove);
@@ -231,36 +421,37 @@
     });
   }
 
-  document.getElementById('refresh').onclick = function () { loadData(); };
+  document.getElementById('refresh').onclick = loadData;
+  document.getElementById('chatFilter').onchange = renderChat;
   document.getElementById('addAdmin').onclick = async function () {
     var username = document.getElementById('newUsername').value.trim();
     var name = document.getElementById('newName').value.trim();
-    var scopes = Array.prototype.filter
-      .call(document.querySelectorAll('.addScope'), function (input) { return input.checked; })
-      .map(function (input) { return input.value; });
-    if (!username && !name) { fail('请填写账号或姓名'); return; }
-    var result = await api('/console/admins/save', { action: 'add', username, name, scopes });
-    if (result && result.code === 0) {
+    var scopes = Array.prototype.filter.call(document.querySelectorAll('.addScope'), function (i) { return i.checked; })
+      .map(function (i) { return i.value; });
+    if (!username && !name) { showError('请填写账号或姓名'); return; }
+    var r = await api('/console/admins/save', { action: 'add', username: username, name: name, scopes: scopes });
+    if (r && r.code === 0) {
       document.getElementById('newUsername').value = '';
       document.getElementById('newName').value = '';
       loadAdmins();
-    } else { fail((result && result.message) || '添加失败'); }
+    } else {
+      showError((r && r.message) || '添加失败');
+    }
   };
 
   async function boot() {
-    if (!token) { fail('未登录：请先回到网站登录，再打开本页。'); return; }
+    if (!token) { showError('未登录：请先回到网站登录，再打开本页。'); return; }
     try {
       var me = await api('/console/me');
-      if (!me || me.code !== 0) { fail((me && me.message) || '需要管理员权限'); return; }
-      document.getElementById('whoami').textContent =
-        (me.data.name || '') + ' · ' + (me.data.level === 'owner' ? '超级管理员' : '管理员');
+      if (!me || me.code !== 0) { showError((me && me.message) || '需要管理员权限'); return; }
       if (me.data.level === 'owner') {
-        document.getElementById('adminSection').style.display = 'block';
+        document.getElementById('navAdmin').hidden = false;
+        document.getElementById('admin').hidden = false;
         loadAdmins();
       }
       loadData();
     } catch (e) {
-      fail('连接失败：' + (e.message || e));
+      showError('连接失败：' + (e.message || e));
     }
   }
 

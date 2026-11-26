@@ -2628,10 +2628,11 @@
       var id = b.id || '';
       try {
         if (id === 'navHome') { showLanding(); var sp = document.getElementById('shopPage'); if (sp) sp.hidden = true; window.scrollTo({ top: 0, behavior: 'smooth' }); }
-        else if (id === 'navPartners') { openPartners(); }
+        else if (id === 'navPartners') { openPartners(); var partnersEl = document.querySelector('#partners'); if (partnersEl) setTimeout(function () { partnersEl.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60); }
         else if (id === 'navShop') enterShop();
         else if (id === 'navMonitor') enterHub('classroom');
         else if (b.dataset.hub) enterHub(b.dataset.hub);
+        else if (b.dataset.scroll) { var navTarget = document.querySelector(b.dataset.scroll); if (navTarget) navTarget.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
       } catch (err) { if (window.__rec) window.__rec('navERR:' + err.message); }
     }, true);
 

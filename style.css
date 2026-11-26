@@ -7017,3 +7017,7 @@ body.plan-view .plan-page { margin: 0 auto; padding-top: 100px; min-height: 100v
 .plan-node.live { border-color: rgba(230,199,143,.4); background: rgba(230,199,143,.05); }
 .plan-node.live b { color: #e6c78f; }
 @media (max-width: 900px) { .plan-hero { flex-direction: column; align-items: flex-start; } .plan-hero-visual { display: none; } }
+
+/* 顶部导航跳转时避免被吸顶头部遮挡 */
+section[id], main [id] { scroll-margin-top: 92px; }
+
