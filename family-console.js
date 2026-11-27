@@ -514,7 +514,11 @@
     if (!mount()) return;
     if (!token()) { err('请先登录网站'); return; }
     api('/console/me').then(function (me) {
-      if (!me || me.code !== 0) { err((me && me.message) || '需要管理员权限'); return; }
+      if (!me || me.code !== 0) {
+        var root = document.getElementById(MOUNT_ID);
+        if (root) root.style.display = 'none';
+        return;
+      }
       var who = document.getElementById('xhfaWho');
       if (who) who.textContent = (me.data.name || '') + ' · ' + (me.data.level === 'owner' ? '超级管理员' : '管理员');
       return api('/console/data').then(function (payload) {
