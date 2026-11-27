@@ -108,6 +108,7 @@
       '<div class="xhfa-error" id="xhfaErr"></div>' +
       '<div class="xhfa-grid" id="xhfaStats"></div>' +
       '<div class="xhfa-list" id="xhfaBoxStatus"></div>' +
+      '<div class="xhfa-list" id="xhfaBoxSettings" style="display:none"></div>' +
       '<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button id="xhfaBind">绑定 QQ</button></div>' +
       '<div class="xhfa-list" id="xhfaElder"><div class="xhfa-empty">被监护者 / 服务对象可以通过客厅盒子交流，不强制需要智能手机。</div></div>' +
       '<div class="xhfa-list" id="xhfaPortrait" style="display:none"></div>' +
@@ -194,6 +195,102 @@
     if (s.awaiting_name) line2.appendChild(el('span', 'xhfa-tag ok', '正在问称呼'));
     if (s.pending_task) line2.appendChild(el('span', 'xhfa-tag qq', '任务录音中'));
     box.appendChild(line2);
+  }
+
+  // 盒子参数：工作台里在线调，盒子每 60 秒拉一次热更新
+  var boxSettingsLoaded = false;
+
+  function settingRow(label, key, value, attrs) {
+    var line = el('div', 'xhfa-row');
+    line.appendChild(el('span', 'xhfa-tag', label));
+    var input = document.createElement('input');
+    input.type = (attrs && attrs.type) || 'number';
+    if (attrs && attrs.min !== undefined) input.min = attrs.min;
+    if (attrs && attrs.max !== undefined) input.max = attrs.max;
+    if (attrs && attrs.step !== undefined) input.step = attrs.step;
+    input.value = value == null ? '' : value;
+    input.setAttribute('data-key', key);
+    input.style.cssText = 'width:120px;background:#060608;border:1px solid rgba(255,255,255,.12);color:#f2f5f8;border-radius:8px;padding:5px 9px;font-size:12px;font-family:inherit';
+    line.appendChild(input);
+    return line;
+  }
+
+  function renderBoxSettings(force) {
+    var box = document.getElementById('xhfaBoxSettings');
+    if (!box) return;
+    box.style.display = '';
+    if (boxSettingsLoaded && !force) return;
+    boxSettingsLoaded = true;
+    box.innerHTML = '<div class="xhfa-empty">正在读取盒子参数…</div>';
+    api('/console/box/settings').then(function (res) {
+      if (!res || res.code !== 0) {
+        box.innerHTML = '';
+        box.appendChild(el('div', 'xhfa-empty', (res && res.message) || '读取盒子参数失败'));
+        return;
+      }
+      var data = res.data || {};
+      var current = data.settings || data.applied || {};
+      box.innerHTML = '';
+
+      var head = el('div', 'xhfa-head');
+      head.appendChild(el('h3', null, '盒子参数'));
+      head.appendChild(el('span', 'xhfa-sub', data.box_online ? '盒子在线 · 保存后 60 秒内生效' : '盒子当前离线 · 上线后自动生效'));
+      var refresh = el('button', null, '刷新');
+      refresh.onclick = function () { boxSettingsLoaded = false; renderBoxSettings(true); };
+      head.appendChild(refresh);
+      box.appendChild(head);
+
+      var grid = el('div');
+      grid.style.cssText = 'padding:0 14px 6px';
+      grid.appendChild(settingRow('主动搭话间隔(分)', 'silence_min', current.silence_min, { min: 1, max: 240 }));
+      grid.appendChild(settingRow('两次搭话最小间隔(分)', 'cooldown_min', current.cooldown_min, { min: 1, max: 240 }));
+      grid.appendChild(settingRow('活跃时段开始(点)', 'active_start', current.active_start, { min: 0, max: 23 }));
+      grid.appendChild(settingRow('活跃时段结束(点)', 'active_end', current.active_end, { min: 1, max: 24 }));
+      grid.appendChild(settingRow('语速(%)', 'tts_rate', current.tts_rate, { type: 'text' }));
+      grid.appendChild(settingRow('麦克风灵敏度', 'rms_threshold', current.rms_threshold, { min: 50, max: 5000, step: 10 }));
+      grid.appendChild(settingRow('静音判定块数', 'silence_chunks', current.silence_chunks, { min: 10, max: 300 }));
+      grid.appendChild(settingRow('声纹相似度阈值', 'voice_match', current.voice_match, { min: 0.3, max: 0.95, step: 0.01 }));
+      box.appendChild(grid);
+
+      var saveRow = el('div', 'xhfa-row');
+      var save = el('button', 'xhfa-save', '保存到盒子');
+      var state = el('span', 'xhfa-meta', '');
+      save.onclick = function () {
+        var settings = {};
+        grid.querySelectorAll('input[data-key]').forEach(function (input) {
+          settings[input.getAttribute('data-key')] = input.value.trim();
+        });
+        save.disabled = true;
+        state.textContent = '保存中…';
+        api('/console/box/settings', { settings: settings }).then(function (r) {
+          save.disabled = false;
+          if (r && r.code === 0) {
+            state.textContent = '已保存，等盒子下一次心跳（≤60 秒）生效';
+            setTimeout(function () { boxSettingsLoaded = false; renderBoxSettings(true); }, 1500);
+          } else {
+            state.textContent = (r && r.message) || '保存失败';
+          }
+        });
+      };
+      saveRow.appendChild(save);
+      saveRow.appendChild(state);
+      box.appendChild(saveRow);
+
+      var applied = data.applied;
+      if (applied) {
+        var summary = '盒子当前生效：'
+          + '主动搭话 ' + (applied.silence_min != null ? applied.silence_min : '-') + ' 分'
+          + ' · 冷却 ' + (applied.cooldown_min != null ? applied.cooldown_min : '-') + ' 分'
+          + ' · 时段 ' + (applied.active_start != null ? applied.active_start : '-') + '-' + (applied.active_end != null ? applied.active_end : '-') + ' 点'
+          + ' · 语速 ' + (applied.tts_rate || '-')
+          + ' · 灵敏度 ' + (applied.rms_threshold != null ? applied.rms_threshold : '-')
+          + ' · 静音 ' + (applied.silence_chunks != null ? applied.silence_chunks : '-')
+          + ' · 声纹 ' + (applied.voice_match != null ? applied.voice_match : '-');
+        box.appendChild(el('div', 'xhfa-meta', summary));
+      } else {
+        box.appendChild(el('div', 'xhfa-meta', '还没收到盒子回传的生效值（等一次心跳即可）'));
+      }
+    });
   }
 
   function renderStats(data) {
@@ -793,6 +890,11 @@
           if (portraitBox) portraitBox.style.display = 'none';
         }
         renderAstrbot(me.data.level === 'owner');
+        renderBoxSettings(me.data.level === 'owner');
+        if (me.data.level !== 'owner') {
+          var settingsBox = document.getElementById('xhfaBoxSettings');
+          if (settingsBox) settingsBox.style.display = 'none';
+        }
       });
     }).catch(function () { err('连接失败'); });
   }
