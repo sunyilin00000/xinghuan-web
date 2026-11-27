@@ -118,3 +118,86 @@
     }
   });
 })();
+
+/* 浮标本身可拖拽：拖动后不触发打开 */
+(function () {
+  'use strict';
+  function ready(fn) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+  ready(function () {
+    var btn = document.getElementById('hubAiFloat');
+    if (!btn) return;
+    var KEY = 'hubAiBtnPos';
+    var pos = null;
+    try { pos = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { pos = null; }
+
+    function clamp(x, y) {
+      var r = btn.getBoundingClientRect();
+      return [
+        Math.min(Math.max(6, x), Math.max(6, window.innerWidth - r.width - 6)),
+        Math.min(Math.max(6, y), Math.max(6, window.innerHeight - r.height - 6))
+      ];
+    }
+    function place(x, y) {
+      var c = clamp(x, y);
+      btn.style.left = c[0] + 'px';
+      btn.style.top = c[1] + 'px';
+      btn.style.right = 'auto';
+      btn.style.bottom = 'auto';
+      return c;
+    }
+    if (pos) place(pos.x, pos.y);
+
+    var suppress = false;
+    btn.addEventListener('click', function (event) {
+      if (suppress) {
+        suppress = false;
+        event.stopImmediatePropagation();
+        event.preventDefault();
+      }
+    }, true);
+
+    btn.addEventListener('pointerdown', function (event) {
+      if (event.button !== undefined && event.button !== 0) return;
+      var rect = btn.getBoundingClientRect();
+      var startX = event.clientX, startY = event.clientY;
+      var offsetX = event.clientX - rect.left, offsetY = event.clientY - rect.top;
+      var moved = false;
+
+      function move(ev) {
+        if (!moved && (Math.abs(ev.clientX - startX) > 5 || Math.abs(ev.clientY - startY) > 5)) moved = true;
+        if (moved) place(ev.clientX - offsetX, ev.clientY - offsetY);
+      }
+      function up() {
+        btn.removeEventListener('pointermove', move);
+        btn.removeEventListener('pointerup', up);
+        btn.removeEventListener('pointercancel', up);
+        if (moved) {
+          suppress = true;
+          var r = btn.getBoundingClientRect();
+          pos = { x: r.left, y: r.top };
+          try { localStorage.setItem(KEY, JSON.stringify(pos)); } catch (e) {}
+        }
+      }
+      try { btn.setPointerCapture(event.pointerId); } catch (e) {}
+      btn.addEventListener('pointermove', move);
+      btn.addEventListener('pointerup', up);
+      btn.addEventListener('pointercancel', up);
+    });
+
+    btn.addEventListener('dblclick', function () {
+      try { localStorage.removeItem(KEY); } catch (e) {}
+      pos = null;
+      btn.style.left = '';
+      btn.style.top = '';
+      btn.style.right = '';
+      btn.style.bottom = '';
+    });
+
+    window.addEventListener('resize', function () {
+      if (pos) place(pos.x, pos.y);
+    });
+  });
+})();
