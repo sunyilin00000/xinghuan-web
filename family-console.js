@@ -1,4 +1,4 @@
-/* 星环 · QQ 家庭助手面板（嵌入网站「控制台」页）
+﻿/* 星环 · QQ 家庭助手面板（嵌入网站「控制台」页）
  * 依赖：window.XINGHUAN_BIND_API、localStorage.hub_token
  */
 (function () {
@@ -137,11 +137,11 @@
     }
     bindings.forEach(function (row) {
       var line = el('div', 'xhfa-member');
-      line.appendChild(el('span', 'xhfa-tag ' + (row.role === 'child' ? 'ok' : ''), row.role === 'child' ? '子女' : '老人'));
+      line.appendChild(el('span', 'xhfa-tag ' + (row.role === 'child' ? 'ok' : ''), row.role === 'child' ? '监护者' : '被监护者'));
       line.appendChild(el('span', 'xhfa-name', row.nickname || '家人'));
       line.appendChild(el('span', 'xhfa-body', row.openid_mask || ''));
       var role = document.createElement('select');
-      role.innerHTML = '<option value="elder">老人</option><option value="child">子女</option>';
+      role.innerHTML = '<option value="elder">被监护者</option><option value="child">监护者</option>';
       role.value = row.role || 'elder';
       var daily = document.createElement('label');
       daily.style.cssText = 'display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#92a0af';

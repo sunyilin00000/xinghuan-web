@@ -7074,3 +7074,4 @@ section[id], main [id] { scroll-margin-top: 92px; }
   transition: all .25s ease-out;
 }
 .plan-card .plan-join:hover { background: rgba(var(--accent), .20); }
+.wb-org-hint { font-size: 12px; color: var(--faint); align-self: center; }
