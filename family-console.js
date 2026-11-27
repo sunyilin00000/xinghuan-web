@@ -81,6 +81,8 @@
       '<div class="xhfa-error" id="xhfaErr"></div>' +
       '<div class="xhfa-grid" id="xhfaStats"></div>' +
       '<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button id="xhfaBind">绑定 QQ</button></div>' +
+      '<div class="xhfa-list" id="xhfaElder"><div class="xhfa-empty">被监护者通过客厅盒子交流，不需要智能手机，也不需要绑定 QQ。</div></div>' +
+      '<div class="xhfa-head" style="margin:14px 0 8px"><h3 style="font-size:14px">监护者（QQ 绑定）</h3></div>' +
       '<div class="xhfa-list" id="xhfaMembers"></div>' +
       '<div style="display:flex;gap:8px;margin-bottom:10px">' +
       '  <input type="text" id="xhfaBoxText" placeholder="跟妈说：记得吃药" style="flex:1;min-width:200px" />' +
@@ -137,12 +139,9 @@
     }
     bindings.forEach(function (row) {
       var line = el('div', 'xhfa-member');
-      line.appendChild(el('span', 'xhfa-tag ' + (row.role === 'child' ? 'ok' : ''), row.role === 'child' ? '监护者' : '被监护者'));
+      line.appendChild(el('span', 'xhfa-tag ok', '监护者'));
       line.appendChild(el('span', 'xhfa-name', row.nickname || '家人'));
       line.appendChild(el('span', 'xhfa-body', row.openid_mask || ''));
-      var role = document.createElement('select');
-      role.innerHTML = '<option value="elder">被监护者</option><option value="child">监护者</option>';
-      role.value = row.role || 'elder';
       var daily = document.createElement('label');
       daily.style.cssText = 'display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#92a0af';
       var check = document.createElement('input');
@@ -155,10 +154,9 @@
       time.value = row.dailyTime || '08:30';
       var save = el('button', null, '保存');
       save.onclick = function () {
-        api('/family/member/save', { id: row.id, role: role.value, dailyEnabled: check.checked, dailyTime: time.value })
+        api('/family/member/save', { id: row.id, role: 'child', dailyEnabled: check.checked, dailyTime: time.value })
           .then(function (r) { if (r && r.code === 0) load(); else err((r && r.message) || '保存失败'); });
       };
-      line.appendChild(role);
       line.appendChild(daily);
       line.appendChild(time);
       line.appendChild(save);
