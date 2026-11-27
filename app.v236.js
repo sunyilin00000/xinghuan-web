@@ -4437,6 +4437,13 @@
           }
         }
         document.getElementById('wbOrg').hidden = t.dataset.wbt !== 'orgapp';
+        var cp = document.getElementById('communityPage');
+        if (cp) {
+          var wbBody = document.querySelector('.wb-body');
+          if (wbBody && cp.parentNode !== wbBody) wbBody.appendChild(cp);
+          cp.hidden = t.dataset.wbt !== 'community';
+          if (t.dataset.wbt === 'community') { try { cmBind(); cmLoad(); } catch (e) {} }
+        }
         if (t.dataset.wbt === 'orgapp') wbLoadOrgApps();
         /* v2.46 动态页签面板互斥 */
         var dyn = { wbMe: 1, wbPlatform: 1, wbOpLogs: 1 };
