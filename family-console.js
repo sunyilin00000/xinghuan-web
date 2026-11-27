@@ -366,7 +366,7 @@
     return input;
   }
 
-  var RELATIONS = [['son', '儿子'], ['daughter', '女儿'], ['grandson', '孙子'], ['granddaughter', '孙女'], ['spouse', '配偶'], ['caregiver', '护工'], ['other', '其他']];
+  var RELATIONS = [['son', '儿子'], ['daughter', '女儿'], ['grandson', '孙子'], ['granddaughter', '孙女'], ['spouse', '配偶'], ['caregiver', '护工'], ['other', '其他'], ['custom', '自定义…']];
 
   async function renderElders() {
     var box = document.getElementById('xhfaElderForm');
@@ -440,7 +440,15 @@
     var add = el('button', 'xhfa-save', '添加人员');
     add.onclick = function () {
       if (!name.value.trim()) { err('请填写姓名'); return; }
-      api('/people/save', { name: name.value.trim(), relation: relSel.value, elder_id: elderSel.value }).then(function (r) {
+      var relationValue = relSel.value;
+      if (relationValue === 'custom') {
+        var custom = prompt('输入这个人的身份名称（比如：外甥、邻居、学生）');
+        if (custom == null) return;
+        custom = custom.trim().slice(0, 20);
+        if (!custom) { err('身份名称不能为空'); return; }
+        relationValue = custom;
+      }
+      api('/people/save', { name: name.value.trim(), relation: relationValue, elder_id: elderSel.value }).then(function (r) {
         if (r && r.code === 0) renderPeople(); else err((r && r.message) || '添加失败');
       });
     };
