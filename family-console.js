@@ -173,6 +173,14 @@
         api('/family/member/save', { id: row.id, role: 'child', dailyEnabled: check.checked, dailyTime: time.value })
           .then(function (r) { if (r && r.code === 0) load(); else err((r && r.message) || '保存失败'); });
       };
+      var unbind = el('button', null, '解绑');
+      unbind.onclick = function () {
+        if (!confirm('解除这个 QQ 的绑定？')) return;
+        api('/family/member/delete', { id: row.id }).then(function (r) {
+          if (r && r.code === 0) load(); else err((r && r.message) || '解绑失败');
+        });
+      };
+      line.appendChild(unbind);
       line.appendChild(daily);
       line.appendChild(time);
       line.appendChild(save);
