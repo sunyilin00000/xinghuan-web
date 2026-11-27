@@ -7063,3 +7063,14 @@ section[id], main [id] { scroll-margin-top: 92px; }
 .plan-card .plan-hero-ghost:hover { transform: none; }
 .plan-card .plan-hero-visual { position: absolute; right: -34px; bottom: -34px; width: 160px; height: 160px; opacity: .45; transform: scale(.7); pointer-events: none; }
 .plan-card-mark { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(232, 201, 142, .4); color: #f3dcb0; font-size: 16px; }
+
+/* 星环计划卡 · 加入按钮 */
+.plan-hero.plan-card { --accent: 232, 201, 142; }
+.plan-card .plan-join {
+  min-height: 34px; padding: 0 18px;
+  border: 1px solid rgba(var(--accent), .55); border-radius: 999px;
+  background: rgba(var(--accent), .10); color: rgb(var(--accent));
+  font-size: 12px; letter-spacing: .06em; cursor: pointer; font-family: inherit;
+  transition: all .25s ease-out;
+}
+.plan-card .plan-join:hover { background: rgba(var(--accent), .20); }

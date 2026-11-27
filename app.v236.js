@@ -5145,4 +5145,5 @@
     document.addEventListener('click', function (ev) {
       if (ev.target && ev.target.id === 'planEnter') { openPlan(); }
       if (ev.target && ev.target.id === 'planApply') { openJoinModal(); }
+      if (ev.target && ev.target.id === 'planJoin') { openJoinModal(); }
     });
