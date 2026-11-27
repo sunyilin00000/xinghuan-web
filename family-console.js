@@ -109,6 +109,7 @@
       '<div class="xhfa-grid" id="xhfaStats"></div>' +
       '<div class="xhfa-list" id="xhfaBoxStatus"></div>' +
       '<div class="xhfa-list" id="xhfaBoxSettings" style="display:none"></div>' +
+      '<div class="xhfa-list" id="xhfaLoginLogs" style="display:none"></div>' +
       '<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button id="xhfaBind">绑定 QQ</button></div>' +
       '<div class="xhfa-list" id="xhfaElder"><div class="xhfa-empty">被监护者 / 服务对象可以通过客厅盒子交流，不强制需要智能手机。</div></div>' +
       '<div class="xhfa-list" id="xhfaPortrait" style="display:none"></div>' +
@@ -245,6 +246,80 @@
     box.appendChild(document.createTextNode('开启（热加载 PANNs，约 10 秒）'));
     line.appendChild(box);
     return line;
+  }
+
+  // 登录日志：只有超级管理员（孙一琳）能看每个人什么时候登录过
+  var loginLogsLoaded = false;
+
+  function renderLoginLogs(force) {
+    var box = document.getElementById('xhfaLoginLogs');
+    if (!box) return;
+    box.style.display = '';
+    if (loginLogsLoaded && !force) return;
+    loginLogsLoaded = true;
+    box.innerHTML = '<div class="xhfa-empty">正在读取登录日志…</div>';
+    api('/console/login-logs', { limit: 120 }).then(function (res) {
+      if (!res || res.code !== 0) {
+        box.innerHTML = '';
+        box.appendChild(el('div', 'xhfa-empty', (res && res.message) || '读取登录日志失败'));
+        return;
+      }
+      var data = res.data || {};
+      var people = data.people || [];
+      var logs = data.logs || [];
+      box.innerHTML = '';
+      var head = el('div', 'xhfa-head');
+      head.appendChild(el('h3', null, '登录日志'));
+      head.appendChild(el('span', 'xhfa-sub', '仅孙一琳可见 · 记录来自网站登录（web_login）'));
+      var refresh = el('button', null, '刷新');
+      refresh.onclick = function () { loginLogsLoaded = false; renderLoginLogs(true); };
+      head.appendChild(refresh);
+      box.appendChild(head);
+
+      if (!logs.length) {
+        box.appendChild(el('div', 'xhfa-empty', data.note || '还没有登录记录'));
+        return;
+      }
+
+      var today = new Date().toDateString();
+      var todayCount = logs.filter(function (row) { return row.at && new Date(row.at).toDateString() === today; }).length;
+      var stats = el('div', 'xhfa-grid');
+      [[people.length, '登录过的人'], [todayCount, '今日登录次数'], [logs.length, '最近记录']].forEach(function (item) {
+        var card = el('div', 'xhfa-card');
+        card.appendChild(el('b', null, String(item[0])));
+        card.appendChild(el('span', null, item[1]));
+        stats.appendChild(card);
+      });
+      box.appendChild(stats);
+
+      var peopleHead = el('div', 'xhfa-head');
+      peopleHead.appendChild(el('h3', null, '按人汇总'));
+      box.appendChild(peopleHead);
+      var peopleList = el('div');
+      people.forEach(function (person) {
+        var row = el('div', 'xhfa-row');
+        row.appendChild(el('span', 'xhfa-tag ok', person.name || '未命名'));
+        row.appendChild(el('span', 'xhfa-body', (person.username || '') + ' · 登录 ' + person.count + ' 次'));
+        row.appendChild(el('span', 'xhfa-time', fmt(person.last_at)));
+        row.appendChild(el('span', 'xhfa-tag', person.last_addr || person.last_ip || '—'));
+        peopleList.appendChild(row);
+      });
+      box.appendChild(peopleList);
+
+      var detailHead = el('div', 'xhfa-head');
+      detailHead.appendChild(el('h3', null, '最近明细'));
+      box.appendChild(detailHead);
+      var detail = el('div');
+      logs.slice(0, 40).forEach(function (row) {
+        var line = el('div', 'xhfa-row');
+        line.appendChild(el('span', 'xhfa-time', fmt(row.at)));
+        line.appendChild(el('span', 'xhfa-body', (row.name || '') + '（' + (row.username || '') + '）'));
+        line.appendChild(el('span', 'xhfa-tag', row.channel === 'web' ? '网站' : (row.channel || '')));
+        line.appendChild(el('span', 'xhfa-tag', row.addr || row.ip || '—'));
+        detail.appendChild(line);
+      });
+      box.appendChild(detail);
+    });
   }
 
   function renderBoxSettings(force) {
@@ -940,9 +1015,12 @@
         }
         renderAstrbot(me.data.level === 'owner');
         renderBoxSettings(me.data.level === 'owner');
+        renderLoginLogs(me.data.level === 'owner');
         if (me.data.level !== 'owner') {
           var settingsBox = document.getElementById('xhfaBoxSettings');
           if (settingsBox) settingsBox.style.display = 'none';
+          var logsBox = document.getElementById('xhfaLoginLogs');
+          if (logsBox) logsBox.style.display = 'none';
         }
       });
     }).catch(function () { err('连接失败'); });
