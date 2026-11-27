@@ -1017,6 +1017,20 @@
         title.appendChild(document.createTextNode(person.name || '家人'));
         var riskText = person.risk === 'high' ? '需要关注' : (person.risk === 'medium' ? '留意一下' : '平稳');
         title.appendChild(el('span', 'xhfa-tag risk-' + (person.risk || 'low'), riskText));
+        var merge = el('button', null, '同一个人…');
+        merge.style.cssText = 'font-size:11px;padding:2px 8px;margin-left:6px';
+        merge.onclick = function () {
+          var others = people.map(function (p) { return p.name; }).filter(function (n) { return n && n !== person.name; });
+          var target = window.prompt('「' + person.name + '」其实是同一个人？\n输入要合并到的名字（可选：' + others.join(' / ') + '）', others[0] || '');
+          if (!target) return;
+          target = String(target).trim();
+          if (!target || target === person.name) return;
+          api('/console/portrait/merge', { from: person.name, to: target }).then(function (r) {
+            if (r && r.code === 0) { portraitLoaded = false; renderPortrait(true); }
+            else err((r && r.message) || '合并失败');
+          });
+        };
+        title.appendChild(merge);
         card.appendChild(title);
 
         var meta = [];
