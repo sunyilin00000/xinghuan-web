@@ -196,11 +196,15 @@
   function tileValue(m, data) {
     var s = data.box_status || {};
     if (m.key === 'boxStatus') return s.online ? '在线' : '离线';
-    if (m.key === 'boxMessages') return String((data.messages || []).length);
-    if (m.key === 'tasks') return String((data.tasks || []).length);
-    if (m.key === 'recordings') return String((data.recordings || []).length);
-    if (m.key === 'chat') return String((data.chats || []).length);
-    if (m.key === 'members') return String((data.members || []).length);
+    if (m.key === 'boxMessages') return String(data.box_message_count != null ? data.box_message_count : (data.box_messages || []).length);
+    if (m.key === 'schedule') return String(data.schedule_count != null ? data.schedule_count : 0);
+    if (m.key === 'tasks') return String(data.task_count != null ? data.task_count : (data.tasks || []).length);
+    if (m.key === 'recordings') return String(data.recording_count != null ? data.recording_count : (data.recordings || []).length);
+    if (m.key === 'chat') return String(data.total_messages != null ? data.total_messages : (data.messages || []).length);
+    if (m.key === 'members') return String((data.bindings || []).length);
+    if (m.key === 'elders') return String(data.elder_count != null ? data.elder_count : 0);
+    if (m.key === 'people') return String(data.people_count != null ? data.people_count : 0);
+    if (m.key === 'reviews') return String(data.review_count != null ? data.review_count : 0);
     return '';
   }
 
