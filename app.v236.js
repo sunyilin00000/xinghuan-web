@@ -5093,7 +5093,7 @@
       var amToggle = document.getElementById('amToggle');
       function applyAmCollapsed(collapsed) {
         if (!amBody || !amToggle) return;
-        amBody.hidden = collapsed;
+        amBody.style.display = collapsed ? 'none' : '';
         amToggle.textContent = collapsed ? '展开' : '收起';
         try { localStorage.setItem('amCollapsed', collapsed ? '1' : '0'); } catch (e) {}
       }
