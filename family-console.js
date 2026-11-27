@@ -461,15 +461,18 @@
     var all = el('button', logFilter === '' ? 'xhfa-save' : null, '全部');
     var boxBtn = el('button', logFilter === 'box' ? 'xhfa-save' : null, '盒子');
     var qqBtn = el('button', logFilter === 'qq_group' ? 'xhfa-save' : null, '群聊');
+    var privBtn = el('button', logFilter === 'qq_private' ? 'xhfa-save' : null, '私聊');
     all.onclick = function () { logFilter = ''; renderLogs(); };
+    privBtn.onclick = function () { logFilter = 'qq_private'; renderLogs(); };
     boxBtn.onclick = function () { logFilter = 'box'; renderLogs(); };
     qqBtn.onclick = function () { logFilter = 'qq_group'; renderLogs(); };
-    head.appendChild(all); head.appendChild(boxBtn); head.appendChild(qqBtn);
+    head.appendChild(all); head.appendChild(boxBtn); head.appendChild(qqBtn); head.appendChild(privBtn);
     box.appendChild(head);
     if (!rows.length) { box.appendChild(el('div', 'xhfa-empty', '还没有记录')); return; }
     rows.slice(-40).reverse().forEach(function (m) {
       var line = el('div', 'xhfa-row');
-      line.appendChild(el('span', 'xhfa-tag ' + (m.source === 'box' ? 'ok' : 'qq'), m.source === 'box' ? '盒子' : '群聊'));
+      var srcLabel = m.source === 'box' ? '盒子' : (m.source === 'qq_private' ? '私聊' : '群聊');
+      line.appendChild(el('span', 'xhfa-tag ' + (m.source === 'box' ? 'ok' : 'qq'), srcLabel));
       var text = m.corrected_text ? m.corrected_text : (m.content || '');
       var body = el('span', 'xhfa-body', (m.person_name || '') + '：' + text);
       if (m.corrected_text) body.appendChild(el('span', 'xhfa-tag ok', '已修正'));
