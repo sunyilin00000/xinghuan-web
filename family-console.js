@@ -84,6 +84,10 @@
       '<div class="xhfa-list" id="xhfaElder"><div class="xhfa-empty">被监护者通过客厅盒子交流，不需要智能手机，也不需要绑定 QQ。</div></div>' +
       '<div class="xhfa-head" style="margin:14px 0 8px"><h3 style="font-size:14px">监护者（QQ 绑定）</h3></div>' +
       '<div class="xhfa-list" id="xhfaMembers"></div>' +
+      '<div class="xhfa-list" id="xhfaElderForm"></div>' +
+      '<div class="xhfa-list" id="xhfaContentForm"></div>' +
+      '<div class="xhfa-list" id="xhfaTasks"></div>' +
+      '<div class="xhfa-list" id="xhfaRecordings"></div>' +
       '<div style="display:flex;gap:8px;margin-bottom:10px">' +
       '  <input type="text" id="xhfaBoxText" placeholder="跟妈说：记得吃药" style="flex:1;min-width:200px" />' +
       '  <button id="xhfaBoxSend">发到盒子</button>' +
@@ -194,6 +198,143 @@
     });
   }
 
+
+  function fieldLine(label, value, placeholder, area) {
+    var line = el('div', 'xhfa-row');
+    line.appendChild(el('span', 'xhfa-tag', label));
+    var field = area ? document.createElement('textarea') : document.createElement('input');
+    if (area) field.rows = 3; else field.type = 'text';
+    field.value = value == null ? '' : value;
+    field.placeholder = placeholder || '';
+    field.style.cssText = 'flex:1;min-width:120px;background:#060608;border:1px solid rgba(255,255,255,.12);color:#f2f5f8;border-radius:8px;padding:5px 9px;font-size:12px;font-family:inherit';
+    line.appendChild(field);
+    return { line: line, field: field };
+  }
+
+  function renderElder(data) {
+    var box = document.getElementById('xhfaElderForm');
+    if (!box) return;
+    box.innerHTML = '';
+    var e = data.elder || {};
+    var head = el('div', 'xhfa-head');
+    head.appendChild(el('h3', null, '被监护者'));
+    head.appendChild(el('span', 'xhfa-sub', '客厅盒子，不需要智能手机'));
+    box.appendChild(head);
+    var values = {};
+    [['name', '称呼', '例如：爷爷'], ['age', '年龄', ''], ['wake', '起床', '07:00'], ['sleep', '睡觉', '21:30'], ['likes', '喜欢', '下棋、听戏'], ['dislikes', '不喜欢', ''], ['notes', '备注', '']].forEach(function (item) {
+      var f = fieldLine(item[1], e[item[0]] || '', item[2]);
+      values[item[0]] = f.field;
+      box.appendChild(f.line);
+    });
+    var save = el('button', 'xhfa-save', '保存档案');
+    box.appendChild(save);
+    save.onclick = function () {
+      var elder = {};
+      Object.keys(values).forEach(function (k) { elder[k] = values[k].value.trim(); });
+      api('/elder/save', { elder: elder }).then(function (r) {
+        if (r && r.code === 0) { err('已保存'); setTimeout(load, 600); } else err((r && r.message) || '保存失败');
+      });
+    };
+  }
+
+  function renderContent(data) {
+    var box = document.getElementById('xhfaContentForm');
+    if (!box) return;
+    box.innerHTML = '';
+    var c = data.content || {};
+    var head = el('div', 'xhfa-head');
+    head.appendChild(el('h3', null, '盒子内容'));
+    head.appendChild(el('span', 'xhfa-sub', '盒子对老人说什么'));
+    box.appendChild(head);
+    var greeting = fieldLine('开场白', c.greeting || '', '例如：爷爷，今天感觉怎么样？', true);
+    var topics = fieldLine('话题库', c.topics || '', '每行一个话题', true);
+    var persona = fieldLine('语气', c.persona || '', '例如：温和、慢一点、像家人', true);
+    var times = fieldLine('每日次数', c.dailyTimes || '', '例如：09:00,15:00,20:00');
+    box.appendChild(greeting.line); box.appendChild(topics.line); box.appendChild(persona.line); box.appendChild(times.line);
+    var save = el('button', 'xhfa-save', '保存内容');
+    box.appendChild(save);
+    save.onclick = function () {
+      var content = {
+        greeting: greeting.field.value.trim(),
+        topics: topics.field.value.trim(),
+        persona: persona.field.value.trim(),
+        dailyTimes: times.field.value.trim()
+      };
+      api('/elder/save', { content: content }).then(function (r) {
+        if (r && r.code === 0) { err('已保存'); setTimeout(load, 600); } else err((r && r.message) || '保存失败');
+      });
+    };
+  }
+
+  function renderTasks(data) {
+    var box = document.getElementById('xhfaTasks');
+    if (!box) return;
+    box.innerHTML = '';
+    var head = el('div', 'xhfa-head');
+    head.appendChild(el('h3', null, '任务'));
+    head.appendChild(el('span', 'xhfa-sub', '让盒子问老人、并录音存档'));
+    box.appendChild(head);
+    var list = data.tasks || [];
+    list.forEach(function (task) {
+      var line = el('div', 'xhfa-row');
+      line.appendChild(el('span', 'xhfa-tag ' + (task.status === 'done' ? 'ok' : ''), task.status === 'done' ? '已完成' : '待办'));
+      line.appendChild(el('span', 'xhfa-body', task.text || ''));
+      if (task.require_recording) line.appendChild(el('span', 'xhfa-tag', '必录音'));
+      var done = el('button', null, '完成');
+      done.onclick = function () { api('/task/complete', { id: task._id }).then(function () { load(); }); };
+      var del = el('button', null, '删除');
+      del.onclick = function () { if (confirm('删除任务？')) api('/task/delete', { id: task._id }).then(function () { load(); }); };
+      line.appendChild(done); line.appendChild(del);
+      box.appendChild(line);
+    });
+    var form = el('div', 'xhfa-row');
+    var text = document.createElement('input');
+    text.type = 'text'; text.placeholder = '任务内容，例如：问问爷爷今天吃了什么';
+    text.style.cssText = 'flex:1;min-width:160px;background:#060608;border:1px solid rgba(255,255,255,.12);color:#f2f5f8;border-radius:8px;padding:5px 9px;font-size:12px;font-family:inherit';
+    var due = document.createElement('input');
+    due.type = 'datetime-local';
+    due.style.cssText = 'background:#060608;border:1px solid rgba(255,255,255,.12);color:#f2f5f8;border-radius:8px;padding:4px 8px;font-size:12px;font-family:inherit';
+    var rec = document.createElement('label');
+    rec.style.cssText = 'display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#92a0af';
+    var chk = document.createElement('input'); chk.type = 'checkbox'; chk.checked = true;
+    rec.appendChild(chk); rec.appendChild(document.createTextNode('必须录音'));
+    var add = el('button', 'xhfa-save', '添加任务');
+    add.onclick = function () {
+      var value = text.value.trim();
+      if (!value) { err('请输入任务内容'); return; }
+      api('/task/save', { text: value, due_at: due.value ? new Date(due.value).getTime() : 0, require_recording: chk.checked }).then(function (r) {
+        if (r && r.code === 0) { text.value = ''; load(); } else err((r && r.message) || '添加失败');
+      });
+    };
+    form.appendChild(text); form.appendChild(due); form.appendChild(rec); form.appendChild(add);
+    box.appendChild(form);
+  }
+
+  function renderRecordings(data) {
+    var box = document.getElementById('xhfaRecordings');
+    if (!box) return;
+    box.innerHTML = '';
+    var head = el('div', 'xhfa-head');
+    head.appendChild(el('h3', null, '录音'));
+    head.appendChild(el('span', 'xhfa-sub', '任务期间的录音，点击播放'));
+    box.appendChild(head);
+    var list = data.recordings || [];
+    if (!list.length) { box.appendChild(el('div', 'xhfa-empty', '还没有录音')); return; }
+    list.forEach(function (rec) {
+      var line = el('div', 'xhfa-row');
+      line.appendChild(el('span', 'xhfa-tag', fmt(rec.created_at)));
+      line.appendChild(el('span', 'xhfa-body', rec.text || '（无转写）'));
+      var play = el('button', null, '播放');
+      play.onclick = function () {
+        api('/recording/url', { id: rec._id }).then(function (r) {
+          if (r && r.code === 0 && r.data.url) new Audio(r.data.url).play(); else err((r && r.message) || '无法获取录音');
+        });
+      };
+      line.appendChild(play);
+      box.appendChild(line);
+    });
+  }
+
   function sendBox() {
     var input = document.getElementById('xhfaBoxText');
     var text = input.value.trim();
@@ -219,6 +360,10 @@
         renderMembers(data);
         renderBox(data);
         renderChat(data);
+        renderElder(data);
+        renderContent(data);
+        renderTasks(data);
+        renderRecordings(data);
       });
     }).catch(function () { err('连接失败'); });
   }
