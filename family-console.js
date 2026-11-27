@@ -1029,6 +1029,17 @@
     if (!box) return;
     var res = await api('/schedule/list');
     var items = (res && res.data && res.data.items) || [];
+    var groups = [];
+    try {
+      var gres = await api('/console/groups');
+      groups = (gres && gres.data && gres.data.groups) || [];
+    } catch (e) { groups = []; }
+    var groupLabel = function (id) {
+      for (var i = 0; i < groups.length; i += 1) {
+        if (groups[i].id === id) return groups[i].name || groups[i].id;
+      }
+      return id || '默认群';
+    };
     box.innerHTML = '';
     var head = el('div', 'xhfa-head');
     head.appendChild(el('h3', null, '定时消息'));
@@ -1038,7 +1049,13 @@
     items.forEach(function (it) {
       var line = el('div', 'xhfa-row');
       line.appendChild(el('span', 'xhfa-tag ' + (it.channel === 'box' ? 'ok' : 'qq'), labels[it.channel] || it.channel));
-      line.appendChild(el('span', 'xhfa-body', (it.text || '') + ' · ' + fmt(it.due_at) + ' · ' + (it.repeat || 'once') + ' · ' + (it.status || '')));
+      var targetText = it.channel === 'group'
+        ? ('→ ' + groupLabel(it.target_id))
+        : (it.channel === 'private' ? ('→ ' + (it.target_id || '最近私聊')) : '');
+      var statusText = it.status === 'failed'
+        ? ('失败' + (it.last_error ? '：' + String(it.last_error).slice(0, 40) : ''))
+        : (it.status === 'sent' ? '已发' : '待发');
+      line.appendChild(el('span', 'xhfa-body', (it.text || '') + ' · ' + fmt(it.due_at) + ' · ' + (it.repeat || 'once') + (targetText ? ' · ' + targetText : '') + ' · ' + statusText));
       var del = el('button', null, '删除');
       del.onclick = function () { api('/schedule/delete', { id: it._id }).then(function () { renderSched(); }); };
       line.appendChild(del);
@@ -1046,6 +1063,14 @@
     });
     var form = el('div', 'xhfa-row');
     var ch = selectBox([['box', '盒子'], ['group', '群聊'], ['private', '私聊']], 'box');
+    var targetSel = selectBox([['', '默认群（最后活跃）']].concat(groups.map(function (g) { return [g.id, g.name || g.id]; })), '');
+    targetSel.style.display = 'none';
+    var privTarget = textInput('私聊对象（留空=最近私聊的人）');
+    privTarget.style.display = 'none';
+    ch.onchange = function () {
+      targetSel.style.display = ch.value === 'group' ? '' : 'none';
+      privTarget.style.display = ch.value === 'private' ? '' : 'none';
+    };
     var text = textInput('要发送的内容');
     var due = document.createElement('input'); due.type = 'datetime-local';
     due.style.cssText = 'background:#060608;border:1px solid rgba(255,255,255,.12);color:#f2f5f8;border-radius:8px;padding:4px 8px;font-size:12px;font-family:inherit';
@@ -1055,11 +1080,12 @@
       var v = text.value.trim();
       if (!v) { err('请输入内容'); return; }
       var when = due.value ? new Date(due.value).getTime() : Date.now();
-      api('/schedule/save', { channel: ch.value, text: v, due_at: when, repeat: rep.value }).then(function (r) {
+      var target = ch.value === 'group' ? targetSel.value : (ch.value === 'private' ? privTarget.value.trim() : '');
+      api('/schedule/save', { channel: ch.value, target_id: target, text: v, due_at: when, repeat: rep.value }).then(function (r) {
         if (r && r.code === 0) { text.value = ''; renderSched(); } else err((r && r.message) || '添加失败');
       });
     };
-    form.appendChild(ch); form.appendChild(text); form.appendChild(due); form.appendChild(rep); form.appendChild(add);
+    form.appendChild(ch); form.appendChild(targetSel); form.appendChild(privTarget); form.appendChild(text); form.appendChild(due); form.appendChild(rep); form.appendChild(add);
     box.appendChild(form);
   }
 
