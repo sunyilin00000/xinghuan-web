@@ -492,7 +492,7 @@
 
       var head = el('div', 'xhfa-head');
       head.appendChild(el('h3', null, '盒子参数'));
-      head.appendChild(el('span', 'xhfa-sub', data.box_online ? '盒子在线 · 保存后 60 秒内生效；换声纹模型/声音事件约 10 秒热切换' : '盒子当前离线 · 上线后自动生效'));
+      head.appendChild(el('span', 'xhfa-sub', data.box_online ? '盒子在线 · 保存后 60 秒内生效；识别/声纹/声音事件开关即时生效' : '盒子当前离线 · 上线后自动生效'));
       var refresh = el('button', null, '刷新');
       refresh.onclick = function () { boxSettingsLoaded = false; renderBoxSettings(true); };
       head.appendChild(refresh);
@@ -519,7 +519,9 @@
         ['zh-CN-shaanxi-XiaoniNeural', '晓妮（陕西女声）']
       ], current.tts_voice || 'zh-CN-XiaoxiaoNeural'));
       grid.appendChild(settingSelect('声纹模型', 'sv_model', [['cam++', 'cam++（当前）'], ['eres2netv2', 'ERes2NetV2（更准，热切换）']], current.sv_model || 'cam++'));
-      grid.appendChild(settingToggle('声音事件检测', 'sed_enabled', current.sed_enabled));
+      grid.appendChild(settingToggle('语音识别（ASR）', 'asr_enabled', current.asr_enabled !== false));
+      grid.appendChild(settingToggle('声纹认人', 'voiceprint_enabled', current.voiceprint_enabled !== false));
+      grid.appendChild(settingToggle('声音事件检测', 'sed_enabled', current.sed_enabled !== false));
       box.appendChild(grid);
 
       var saveRow = el('div', 'xhfa-row');
@@ -560,7 +562,7 @@
           + ' · 声纹 ' + (applied.voice_match != null ? applied.voice_match : '-')
           + ' · 引擎 ' + (applied.tts_engine || '-')
           + ' · 模型 ' + (applied.sv_model || '-')
-          + ' · 声音事件 ' + (applied.sed_enabled ? '开' : '关');
+          + ' · 识别 ' + (applied.asr_enabled === false ? '关' : '开') + ' · 声纹 ' + (applied.voiceprint_enabled === false ? '关' : '开') + ' · 声音事件 ' + (applied.sed_enabled ? '开' : '关');
         box.appendChild(el('div', 'xhfa-meta', summary));
       } else {
         box.appendChild(el('div', 'xhfa-meta', '还没收到盒子回传的生效值（等一次心跳即可）'));
