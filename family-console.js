@@ -62,7 +62,7 @@
   `;
 
   function mount() {
-    var page = document.getElementById('consolePage');
+    var page = document.getElementById('workbenchPage');
     if (!page) return null;
     var existing = document.getElementById(MOUNT_ID);
     if (existing) return existing;
@@ -99,6 +99,16 @@
 
     document.getElementById('xhfaRefresh').onclick = load;
     document.getElementById('xhfaBoxSend').onclick = sendBox;
+    function syncProgramOnly() {
+      var root = document.getElementById(MOUNT_ID);
+      if (!root) return;
+      var org = '';
+      try { org = localStorage.getItem('wbOrg') || ''; } catch (e) {}
+      root.style.display = (org === 'program') ? '' : 'none';
+    }
+    syncProgramOnly();
+    setInterval(syncProgramOnly, 1500);
+
     var bindBtn = document.getElementById('xhfaBind');
     if (bindBtn) bindBtn.onclick = function () {
       if (window.XHBind && typeof window.XHBind.open === 'function') window.XHBind.open();
