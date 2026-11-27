@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>星环终端 · 家庭助手控制台</title>
+<title>星环终端 · QQ 家庭助手</title>
 <style>
   :root {
     --bg: #0a0a0c; --bg-deep: #060608;
@@ -41,10 +41,10 @@
   section .lead { margin:0 0 16px; color:var(--faint); font-size:12px; letter-spacing:.04em; }
   .grid { display:grid; gap:14px; }
   .grid.cards { grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); }
-  .grid.members { grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); }
+  .grid.members { grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); }
   .card { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:16px 18px; }
   .card:hover { border-color:var(--line-strong); }
-  .stat b { display:block; font-size:26px; color:var(--gold); font-weight:600; letter-spacing:.02em; }
+  .stat b { display:block; font-size:26px; color:var(--gold); font-weight:600; }
   .stat span { font-size:12px; color:var(--muted); }
   .pill { display:inline-block; font-size:11px; padding:1px 9px; border-radius:999px; border:1px solid var(--line); color:var(--muted); }
   .pill.ok { color:var(--mint); border-color:rgba(134,181,160,.4); }
@@ -56,25 +56,21 @@
   .row .who-name { color:var(--muted); min-width:88px; }
   .row .body { flex:1; word-break:break-word; }
   .row .time { color:var(--faint); font-size:11px; white-space:nowrap; }
-  .member h3 { margin:0 0 2px; font-size:16px; font-weight:600; color:var(--gold-bright); display:flex; align-items:center; gap:8px; }
+  .member h3 { margin:0 0 2px; font-size:16px; font-weight:600; color:var(--gold-bright); display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
   .member .meta { color:var(--muted); font-size:12px; margin-bottom:10px; }
-  .member ul { margin:8px 0 0; padding-left:16px; color:var(--muted); font-size:12px; }
-  .chips { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .member .controls { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px; }
   .empty { color:var(--faint); font-size:13px; padding:14px 16px; }
   .error { background:rgba(255,139,139,.08); border:1px solid rgba(255,139,139,.35); color:var(--danger); border-radius:12px; padding:10px 14px; margin-bottom:18px; display:none; }
   .error.show { display:block; }
   .admin-form { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
-  input[type=text], select { background:var(--bg-deep); border:1px solid var(--line); color:var(--text); border-radius:9px; padding:7px 11px; font-size:13px; font-family:inherit; }
+  input[type=text], input[type=time], select { background:var(--bg-deep); border:1px solid var(--line); color:var(--text); border-radius:9px; padding:7px 11px; font-size:13px; font-family:inherit; }
   button { background:var(--surface-raised); color:var(--text); border:1px solid var(--line); border-radius:9px; padding:7px 14px; cursor:pointer; font-size:13px; font-family:inherit; }
   button:hover { border-color:var(--line-strong); color:var(--gold-bright); }
   button.primary { border-color:var(--line-strong); color:var(--gold); }
   button.danger { color:var(--danger); }
   .chk { display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--muted); }
   .muted { color:var(--faint); }
-  @media (max-width: 720px) {
-    nav { width:100%; overflow-x:auto; margin-left:0; }
-    main { padding:20px 16px 70px; }
-  }
+  @media (max-width: 720px) { nav { width:100%; overflow-x:auto; margin-left:0; } main { padding:20px 16px 70px; } }
 </style>
 </head>
 <body>
@@ -83,7 +79,6 @@
   <nav>
     <a href="#home">家里</a>
     <a href="#family">家人</a>
-    <a href="#wechat">微信与守则</a>
     <a href="#chat">对话</a>
     <a href="#box">盒子</a>
     <a href="#admin" id="navAdmin" hidden>管理员</a>
@@ -99,56 +94,35 @@
 
   <section id="home">
     <h2>家里</h2>
-    <p class="lead">运行状态、最近动态与需要你留意的事</p>
+    <p class="lead">QQ 消息、绑定成员、盒子留言与告警</p>
     <div class="grid cards" id="stats"></div>
-    <div style="height:14px"></div>
-    <div class="list" id="attention"><div class="empty">暂无需要留意的事项</div></div>
     <div style="height:14px"></div>
     <div class="list" id="timeline"><div class="empty">暂无动态</div></div>
   </section>
 
   <section id="family">
     <h2>家人</h2>
-    <p class="lead">档案、日报设置与连接状态</p>
-    <div class="grid members" id="members"><div class="empty">尚未同步</div></div>
-  </section>
-
-  <section id="wechat">
-    <h2>微信与守则</h2>
-    <p class="lead">通道状态、提醒、待发与偏好</p>
-    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
-      <div>
-        <h3 class="muted" style="font-size:13px;margin:0 0 8px">连接状态</h3>
-        <div class="list" id="bindings"><div class="empty">暂无</div></div>
-      </div>
-      <div>
-        <h3 class="muted" style="font-size:13px;margin:0 0 8px">提醒</h3>
-        <div class="list" id="reminders"><div class="empty">暂无</div></div>
-      </div>
-      <div>
-        <h3 class="muted" style="font-size:13px;margin:0 0 8px">待发</h3>
-        <div class="list" id="outbox"><div class="empty">暂无</div></div>
-      </div>
-      <div>
-        <h3 class="muted" style="font-size:13px;margin:0 0 8px">守则与偏好</h3>
-        <div class="list" id="prefs"><div class="empty">暂无</div></div>
-      </div>
-    </div>
+    <p class="lead">已经用 QQ 绑定到星环账号的成员；可以设置身份和每日问候时间</p>
+    <div class="grid members" id="members"><div class="empty">还没有 QQ 成员绑定</div></div>
   </section>
 
   <section id="chat">
     <h2>对话</h2>
-    <p class="lead">家庭成员与助手的往来记录</p>
+    <p class="lead">QQ 群里/私聊的消息与网站对话</p>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
-      <select id="chatFilter"><option value="">全部成员</option></select>
+      <select id="chatFilter">
+        <option value="">全部来源</option>
+        <option value="qq">只看 QQ</option>
+        <option value="site">只看网站</option>
+      </select>
       <span class="muted" id="chatCount"></span>
     </div>
     <div class="list" id="chatList"><div class="empty">暂无对话</div></div>
   </section>
 
   <section id="box">
-    <h2>盒子留言</h2>
-    <p class="lead">在网站给老人房间的音箱留言；盒子告警也会显示在这里</p>
+    <h2>盒子</h2>
+    <p class="lead">给老人房间的音箱留言；盒子告警也在这里</p>
     <div class="admin-form" style="margin:0 0 12px">
       <input type="text" id="boxText" placeholder="跟妈说：记得吃药" style="flex:1;min-width:240px" />
       <button class="primary" id="boxSend">发送到盒子</button>
@@ -173,8 +147,7 @@
       <input type="text" id="newUsername" placeholder="账号（username）" />
       <input type="text" id="newName" placeholder="姓名（可选）" />
       <label class="chk"><input type="checkbox" class="addScope" value="messages" checked /> 对话</label>
-      <label class="chk"><input type="checkbox" class="addScope" value="family" checked /> 家庭</label>
-      <label class="chk"><input type="checkbox" class="addScope" value="bindings" /> QQ 绑定</label>
+      <label class="chk"><input type="checkbox" class="addScope" value="bindings" checked /> 家人</label>
       <button class="primary" id="addAdmin">添加管理员</button>
     </div>
   </section>
@@ -185,8 +158,8 @@
   var API = (window.XINGHUAN_BIND_API || 'https://cloud1-d6gagyei397d315ca-1521583267.ap-shanghai.app.tcloudbase.com/qqBind').replace(/\/+$/, '');
   var token = '';
   try { token = localStorage.getItem('hub_token') || ''; } catch (e) {}
-  var SCOPE_LABEL = { messages: '对话', family: '家庭', bindings: 'QQ 绑定' };
-  var state = { snapshot: null, messages: [], labels: {} };
+  var state = { data: null };
+  var SCOPE_LABEL = { messages: '对话', bindings: '家人' };
 
   function el(tag, cls, text) {
     var node = document.createElement(tag);
@@ -197,8 +170,7 @@
   function fmt(ts) {
     if (!ts) return '';
     var d = new Date(ts);
-    if (isNaN(d)) return '';
-    return d.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+    return isNaN(d) ? '' : d.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
   }
   function showError(msg) {
     var box = document.getElementById('err');
@@ -206,8 +178,7 @@
     box.classList.add('show');
   }
   function clearError() { document.getElementById('err').classList.remove('show'); }
-  function setText(id, text) { var node = document.getElementById(id); if (node) node.textContent = text; }
-  function labelOf(personId) { return state.labels[personId] || personId || '未知'; }
+  function setText(id, text) { var n = document.getElementById(id); if (n) n.textContent = text; }
 
   async function api(path, body) {
     var response = await fetch(API + path, {
@@ -218,161 +189,113 @@
     return response.json();
   }
 
-  function renderStats(data) {
-    var box = document.getElementById('stats');
-    box.innerHTML = '';
-    var s = data.snapshot || {};
-    var cfg = s.config || {};
-    var people = s.people || [];
-    var bindings = s.bindings || [];
-    var reminders = s.reminders || [];
-    var outbox = s.outbox || [];
+  function renderStats() {
+    var data = state.data || {};
+    var messages = data.messages || [];
+    var bindings = data.bindings || [];
+    var box = data.box_messages || [];
+    var alerts = data.box_alerts || [];
+    var today = new Date().toDateString();
+    var todayCount = messages.filter(function (m) { return new Date(m.ts).toDateString() === today; }).length;
+    var pending = box.filter(function (b) { return b.status === 'pending' || b.status === 'processing'; }).length;
     var items = [
-      [cfg.paused ? '已暂停' : '运行中', '服务状态'],
-      [people.length, '家庭成员'],
-      [bindings.filter(function (b) { return b.status === 'connected'; }).length, '已连接微信'],
-      [reminders.filter(function (r) { return r.status === 'active'; }).length, '活跃提醒'],
-      [outbox.filter(function (o) { return o.status === 'pending'; }).length, '待发消息'],
-      [(cfg.ownerBriefEnabled ? '每日 ' + (cfg.ownerBriefTime || '') : '未开启'), '简报']
+      [messages.length, '消息总数'],
+      [todayCount, '今日消息'],
+      [bindings.length, '已绑定家人'],
+      [pending, '待播报留言'],
+      [alerts.length, '盒子告警']
     ];
+    var boxEl = document.getElementById('stats');
+    boxEl.innerHTML = '';
     items.forEach(function (item) {
       var card = el('div', 'card stat');
       card.appendChild(el('b', null, String(item[0])));
       card.appendChild(el('span', null, item[1]));
-      box.appendChild(card);
+      boxEl.appendChild(card);
     });
   }
 
-  function renderAttention(snapshot) {
-    var box = document.getElementById('attention');
-    box.innerHTML = '';
-    var cases = (snapshot.attention && snapshot.attention.cases) || [];
-    if (!cases.length) { box.appendChild(el('div', 'empty', '暂无需要留意的事项')); return; }
-    cases.slice(-10).reverse().forEach(function (row) {
-      var line = el('div', 'row');
-      var bad = row.urgency === 'now' || row.category === 'safety';
-      line.appendChild(el('span', 'pill ' + (bad ? 'bad' : 'warn'), row.category || '事项'));
-      line.appendChild(el('span', 'body', (row.eventState || '') + ' · ' + (row.status || '')));
-      line.appendChild(el('span', 'time', fmt(row.createdAt)));
-      box.appendChild(line);
-    });
-  }
-
-  function renderTimeline(snapshot) {
+  function renderTimeline() {
+    var data = state.data || {};
     var box = document.getElementById('timeline');
     box.innerHTML = '';
-    var rows = (snapshot.messages || []).slice(-10).reverse();
+    var rows = (data.messages || []).slice(-8).reverse();
     if (!rows.length) { box.appendChild(el('div', 'empty', '暂无动态')); return; }
     rows.forEach(function (row) {
       var line = el('div', 'row');
-      line.appendChild(el('span', 'who-name', labelOf(row.personId)));
-      line.appendChild(el('span', 'body', (row.role === 'assistant' ? '助手：' : '') + (row.text || '')));
-      line.appendChild(el('span', 'time', fmt(row.at)));
+      line.appendChild(el('span', 'pill ' + (row.source === 'qq' ? 'warn' : ''), row.source === 'qq' ? 'QQ' : '网站'));
+      line.appendChild(el('span', 'body', (row.account || row.user_key || '') + '：' + (row.role === 'assistant' ? '助手回复 · ' : '') + (row.content || '')));
+      line.appendChild(el('span', 'time', fmt(row.ts)));
       box.appendChild(line);
     });
   }
 
-  function renderMembers(snapshot) {
+  function renderMembers() {
+    var data = state.data || {};
     var box = document.getElementById('members');
     box.innerHTML = '';
-    var people = snapshot.people || [];
-    var bindings = snapshot.bindings || [];
-    if (!people.length) { box.appendChild(el('div', 'empty', '尚未同步')); return; }
-    people.forEach(function (person) {
-      var binding = bindings.filter(function (row) { return row.personId === person.id; })[0];
+    var bindings = data.bindings || [];
+    if (!bindings.length) {
+      box.appendChild(el('div', 'empty', '还没有 QQ 成员绑定：让家人在 QQ 私聊机器人发 /绑定 验证码 即可'));
+      return;
+    }
+    bindings.forEach(function (row) {
       var card = el('div', 'card member');
-      var title = el('h3', null, person.label || '成员');
-      title.appendChild(el('span', 'pill ' + (person.role === 'owner' ? 'warn' : ''), person.role === 'owner' ? '本人' : '家人'));
-      if (binding) title.appendChild(el('span', 'pill ' + (binding.status === 'connected' ? 'ok' : 'bad'), binding.status === 'connected' ? '微信已连接' : '未连接'));
+      var title = el('h3', null, row.nickname || '家人');
+      title.appendChild(el('span', 'pill ' + (row.role === 'child' ? 'ok' : 'warn'), row.role === 'child' ? '子女' : '老人'));
       card.appendChild(title);
-      card.appendChild(el('div', 'meta', (person.timeZone || '') + (person.dailyEnabled ? ' · 日报 ' + (person.dailyTime || '') : ' · 日报未开') + ' · 分享：' + (person.shareWithOwner || 'none')));
-      if (person.notes) card.appendChild(el('div', 'muted', person.notes));
-      if (person.interests && person.interests.length) {
-        var chips = el('div', 'chips');
-        person.interests.forEach(function (tag) { chips.appendChild(el('span', 'pill', tag)); });
-        card.appendChild(chips);
-      }
+      card.appendChild(el('div', 'meta', row.openid_mask + ' · 绑定于 ' + fmt(row.bound_at)));
+
+      var controls = el('div', 'controls');
+      var role = document.createElement('select');
+      role.innerHTML = '<option value="elder">老人</option><option value="child">子女</option>';
+      role.value = row.role || 'elder';
+      var daily = document.createElement('label');
+      daily.className = 'chk';
+      var dailyCheck = document.createElement('input');
+      dailyCheck.type = 'checkbox';
+      dailyCheck.checked = Boolean(row.dailyEnabled);
+      daily.appendChild(dailyCheck);
+      daily.appendChild(document.createTextNode(' 每日问候'));
+      var time = document.createElement('input');
+      time.type = 'time';
+      time.value = row.dailyTime || '08:30';
+      var save = el('button', 'primary', '保存');
+      save.onclick = async function () {
+        var result = await api('/family/member/save', {
+          id: row.id, role: role.value, dailyEnabled: dailyCheck.checked, dailyTime: time.value
+        });
+        if (result && result.code === 0) loadData(); else showError((result && result.message) || '保存失败');
+      };
+      controls.appendChild(role);
+      controls.appendChild(daily);
+      controls.appendChild(time);
+      controls.appendChild(save);
+      card.appendChild(controls);
       box.appendChild(card);
     });
   }
 
-  function renderWechat(snapshot) {
-    var bindings = document.getElementById('bindings');
-    bindings.innerHTML = '';
-    (snapshot.bindings || []).forEach(function (row) {
-      var line = el('div', 'row');
-      line.appendChild(el('span', 'who-name', labelOf(row.personId)));
-      line.appendChild(el('span', 'body', row.status === 'connected' ? '微信已连接' : (row.status || '未连接')));
-      line.appendChild(el('span', 'pill ' + (row.status === 'connected' ? 'ok' : 'bad'), row.status || ''));
-      bindings.appendChild(line);
-    });
-    if (!(snapshot.bindings || []).length) bindings.appendChild(el('div', 'empty', '暂无'));
-
-    var reminders = document.getElementById('reminders');
-    reminders.innerHTML = '';
-    (snapshot.reminders || []).slice(-20).reverse().forEach(function (row) {
-      var line = el('div', 'row');
-      line.appendChild(el('span', 'who-name', labelOf(row.personId)));
-      line.appendChild(el('span', 'body', row.text || ''));
-      line.appendChild(el('span', 'pill ' + (row.status === 'active' ? 'ok' : ''), row.status || ''));
-      line.appendChild(el('span', 'time', fmt(row.dueAt)));
-      reminders.appendChild(line);
-    });
-    if (!(snapshot.reminders || []).length) reminders.appendChild(el('div', 'empty', '暂无'));
-
-    var outbox = document.getElementById('outbox');
-    outbox.innerHTML = '';
-    (snapshot.outbox || []).slice(-20).reverse().forEach(function (row) {
-      var line = el('div', 'row');
-      line.appendChild(el('span', 'who-name', labelOf(row.personId)));
-      line.appendChild(el('span', 'body', (row.kind || '') + ' · ' + (row.text || '')));
-      line.appendChild(el('span', 'pill ' + (row.status === 'pending' ? 'warn' : ''), row.status || ''));
-      outbox.appendChild(line);
-    });
-    if (!(snapshot.outbox || []).length) outbox.appendChild(el('div', 'empty', '暂无'));
-
-    var prefs = document.getElementById('prefs');
-    prefs.innerHTML = '';
-    var items = (snapshot.preferences && snapshot.preferences.items) || [];
-    var requests = (snapshot.workbench && snapshot.workbench.requests) || [];
-    items.concat(requests).slice(-20).forEach(function (row) {
-      var line = el('div', 'row');
-      line.appendChild(el('span', 'body', row.instruction || row.text || JSON.stringify(row).slice(0, 120)));
-      prefs.appendChild(line);
-    });
-    if (!items.length && !requests.length) prefs.appendChild(el('div', 'empty', '暂无'));
-  }
-
   function renderChat() {
-    var box = document.getElementById('chatList');
+    var data = state.data || {};
     var filter = document.getElementById('chatFilter').value;
+    var box = document.getElementById('chatList');
     box.innerHTML = '';
-    var rows = state.messages.filter(function (row) { return !filter || row.personId === filter; });
+    var rows = (data.messages || []).filter(function (row) { return !filter || row.source === filter; });
     setText('chatCount', rows.length ? rows.length + ' 条' : '');
     if (!rows.length) { box.appendChild(el('div', 'empty', '暂无对话')); return; }
     rows.slice(-120).forEach(function (row) {
       var line = el('div', 'row');
-      line.appendChild(el('span', 'who-name', labelOf(row.personId)));
-      line.appendChild(el('span', 'body', (row.role === 'assistant' ? '助手：' : '') + (row.text || '')));
-      line.appendChild(el('span', 'time', fmt(row.at)));
+      line.appendChild(el('span', 'pill ' + (row.source === 'qq' ? 'warn' : ''), row.source === 'qq' ? 'QQ' : '网站'));
+      line.appendChild(el('span', 'who-name', row.account || row.user_key || ''));
+      line.appendChild(el('span', 'body', (row.role === 'assistant' ? '助手：' : '') + (row.content || '')));
+      line.appendChild(el('span', 'time', fmt(row.ts)));
       box.appendChild(line);
     });
   }
 
-  function renderChatFilter(snapshot) {
-    var select = document.getElementById('chatFilter');
-    var current = select.value;
-    select.innerHTML = '<option value="">全部成员</option>';
-    (snapshot.people || []).forEach(function (person) {
-      var option = document.createElement('option');
-      option.value = person.id;
-      option.textContent = person.label || person.id;
-      select.appendChild(option);
-    });
-    select.value = current;
-  }
-
-  function renderBox(data) {
+  function renderBox() {
+    var data = state.data || {};
     var box = document.getElementById('boxMessages');
     box.innerHTML = '';
     var rows = (data.box_messages || []).slice().reverse();
@@ -405,25 +328,16 @@
       var payload = await api('/console/data');
       if (!payload || payload.code !== 0) { showError((payload && payload.message) || '加载失败'); return; }
       clearError();
-      var data = payload.data || {};
-      var snapshot = (data.family && data.family.snapshot) || null;
-      if (!snapshot) { showError('还没有家庭助手数据：先运行 sync-family.mjs'); return; }
-      state.snapshot = snapshot;
-      state.messages = snapshot.messages || [];
-      state.labels = {};
-      (snapshot.people || []).forEach(function (person) { state.labels[person.id] = person.label || person.id; });
-      renderStats(data);
-      renderAttention(snapshot);
-      renderTimeline(snapshot);
-      renderMembers(snapshot);
-      renderWechat(snapshot);
-      renderChatFilter(snapshot);
-      renderChat();
-      renderBox(data);
+      state.data = payload.data || {};
       var who = document.getElementById('whoami');
       who.innerHTML = '';
-      who.appendChild(el('b', null, data.name || ''));
-      who.appendChild(document.createTextNode(' · ' + (data.level === 'owner' ? '超级管理员' : '管理员')));
+      who.appendChild(el('b', null, state.data.name || ''));
+      who.appendChild(document.createTextNode(' · ' + (state.data.level === 'owner' ? '超级管理员' : '管理员')));
+      renderStats();
+      renderTimeline();
+      renderMembers();
+      renderChat();
+      renderBox();
     } catch (e) {
       showError('连接失败：' + (e.message || e));
     }
@@ -440,14 +354,14 @@
       var row = el('div', 'row');
       row.appendChild(el('span', 'who-name', admin.name || admin.username || ''));
       var scopes = el('span', 'body', '');
-      ['messages', 'family', 'bindings'].forEach(function (scope) {
+      ['messages', 'bindings'].forEach(function (scope) {
         var label = el('label', 'chk');
         var input = document.createElement('input');
         input.type = 'checkbox';
         input.checked = (admin.scopes || []).indexOf(scope) >= 0;
         input.dataset.scope = scope;
         label.appendChild(input);
-        label.appendChild(document.createTextNode(' ' + SCOPE_LABEL[scope] + ' '));
+        label.appendChild(document.createTextNode(' ' + (SCOPE_LABEL[scope] || scope) + ' '));
         scopes.appendChild(label);
       });
       row.appendChild(scopes);
@@ -477,12 +391,8 @@
     var text = input.value.trim();
     if (!text) { showError('请输入留言内容'); return; }
     var r = await api('/box/send', { text: text });
-    if (r && r.code === 0) {
-      input.value = '';
-      setTimeout(loadData, 800);
-    } else {
-      showError((r && r.message) || '发送失败');
-    }
+    if (r && r.code === 0) { input.value = ''; setTimeout(loadData, 800); }
+    else showError((r && r.message) || '发送失败');
   };
   document.getElementById('addAdmin').onclick = async function () {
     var username = document.getElementById('newUsername').value.trim();
@@ -495,9 +405,7 @@
       document.getElementById('newUsername').value = '';
       document.getElementById('newName').value = '';
       loadAdmins();
-    } else {
-      showError((r && r.message) || '添加失败');
-    }
+    } else showError((r && r.message) || '添加失败');
   };
 
   async function boot() {
