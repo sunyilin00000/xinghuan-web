@@ -1735,12 +1735,6 @@
         });
         var communityTab = document.querySelector('.wb-tab[data-wbt="community"]');
         if (communityTab) communityTab.hidden = (ORG_CATEGORY[activeOrg] || 'general') !== 'astro';
-        if (myOrgs.length <= 1) {
-          var hint = document.createElement('span');
-          hint.className = 'wb-org-hint';
-          hint.textContent = '你只加入了 1 个社团；加入更多后这里会出现切换按钮';
-          sw.appendChild(hint);
-        }
       }
       /* v2.58 平台管理：位于控制台，仅最高权限可见，界面不含任何人名 */
       if (u.super_admin === true && !document.getElementById('wbPfPanel')) {
