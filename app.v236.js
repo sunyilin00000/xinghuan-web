@@ -1688,10 +1688,36 @@
       const myOrgs = (Array.isArray(u.orgs) && u.orgs.length ? u.orgs : [orgKey]).filter(function (k) { return k !== 'guest'; });
       const orgNames = myOrgs.map(function (k) { return (ORG_DEFS[k] && ORG_DEFS[k].name) || k; });
       const primaryOrg = myOrgs[0] || 'astro';
+      var activeOrg = primaryOrg;
+      try { var savedOrg = localStorage.getItem('wbOrg'); if (savedOrg && myOrgs.indexOf(savedOrg) >= 0) activeOrg = savedOrg; } catch (e) {}
+      state.wbOrg = activeOrg;
+      var activeDef = ORG_DEFS[activeOrg] || ORG_DEFS.astro;
       const logoEl2 = document.getElementById('wbLogo');
-      if (logoEl2) logoEl2.src = (ORG_DEFS[primaryOrg] && ORG_DEFS[primaryOrg].logo) || 'logo.png';
-      if (titleEl) titleEl.textContent = (orgNames.join(' · ') || '星环终端') + ' · 工作台';
-      if (orgEl) orgEl.textContent = 'ORG / ' + myOrgs.join(' + ') + (wbState.isAdmin ? ' · 管理员视图' : ' · 只读视图');
+      if (logoEl2) logoEl2.src = activeDef.logo || 'logo.png';
+      if (titleEl) titleEl.textContent = (activeDef.name || activeOrg) + ' · 工作台';
+      if (orgEl) orgEl.textContent = 'ORG / ' + activeOrg + (wbState.isAdmin ? ' · 管理员视图' : ' · 只读视图');
+      var sw = document.getElementById('wbOrgSwitch');
+      if (!sw) {
+        sw = document.createElement('div');
+        sw.id = 'wbOrgSwitch';
+        sw.className = 'wb-org-switch';
+        if (orgEl && orgEl.parentNode) orgEl.parentNode.insertBefore(sw, orgEl.nextSibling);
+      }
+      if (sw) {
+        sw.innerHTML = myOrgs.map(function (k) {
+          var d = ORG_DEFS[k] || { name: k };
+          return '<button type="button" class="wb-org-btn' + (k === activeOrg ? ' active' : '') + '" data-org="' + k + '">' + d.name + '</button>';
+        }).join('');
+        sw.querySelectorAll('button').forEach(function (btn) {
+          btn.onclick = function () {
+            try { localStorage.setItem('wbOrg', btn.dataset.org); } catch (e) {}
+            state.wbOrg = btn.dataset.org;
+            wbSetup();
+            wbLoadMembers();
+            wbLoadRes();
+          };
+        });
+      }
       /* v2.58 平台管理：位于控制台，仅最高权限可见，界面不含任何人名 */
       if (u.super_admin === true && !document.getElementById('wbPfPanel')) {
         var cpEl = document.getElementById('consolePage');
@@ -1777,8 +1803,11 @@
     }
     function wbRenderMembers() {
       const q = (document.getElementById('wbSearch').value || '').trim();
-      const rows = wbState.members.filter(m => !q || [m.name, m.username, m.department, m.campus].join('|').indexOf(q) !== -1);
-      document.getElementById('wbCount').textContent = rows.length + ' / ' + wbState.members.length;
+      const currentOrg = state.wbOrg || '';
+      const hasMultiOrg = new Set(wbState.members.map(m => m.org || '')).size > 1;
+      const scoped = (hasMultiOrg && currentOrg) ? wbState.members.filter(m => (m.org || '') === currentOrg) : wbState.members;
+      const rows = scoped.filter(m => !q || [m.name, m.username, m.department, m.campus].join('|').indexOf(q) !== -1);
+      document.getElementById('wbCount').textContent = rows.length + ' / ' + scoped.length;
       document.getElementById('wbTbody').innerHTML = rows.map(m => {
         const tags = [];
         if (m.role === 'admin') tags.push('<span class="ap-tag">管理员</span>');
