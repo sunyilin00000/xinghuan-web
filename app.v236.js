@@ -4994,8 +4994,8 @@
       var panel = document.createElement('div');
       panel.id = 'amPanel'; panel.className = 'ops-dash'; panel.hidden = true; panel.style.paddingTop = '0';
       panel.innerHTML = '<div class="ops-panel" style="border-color:rgba(141,184,198,.22)">' +
-        '<h4 style="display:flex;align-items:center;gap:12px">成员管理 <span style="font-weight:400;font-size:10px;color:var(--faint)">全部注册用户 · 检索与分类管理 · 编辑自动留痕</span><span style="flex:1"></span><span id="amCount"></span></h4>' +
-        '<div style="padding:12px;display:grid;gap:12px">' +
+        '<h4 style="display:flex;align-items:center;gap:12px">成员管理 <span style="font-weight:400;font-size:10px;color:var(--faint)">全部注册用户 · 检索与分类管理 · 编辑自动留痕</span><span style="flex:1"></span><span id="amCount"></span><button id="amToggle" class="ap-mini" type="button" style="margin-left:10px">收起</button></h4>' +
+        '<div id="amBody" style="padding:12px;display:grid;gap:12px">' +
         '<div class="ap-toolbar"><input id="amKw" placeholder="搜索姓名 / 账号" style="flex:1;min-width:180px;min-height:36px;padding:0 14px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.03);color:var(--text);font-size:12px;outline:none" />' +
         '<select id="amOrg" style="min-height:36px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:rgba(9,9,13,.8);color:var(--text);font-size:12px"><option value="all">全部社团</option><option value="astro">天文协会</option><option value="nankai_astro">南开天协</option><option value="metaverse">元宇宙发展协会</option><option value="sagittarius">南斗天文社</option></select>' +
         '<select id="amRole" style="min-height:36px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:rgba(9,9,13,.8);color:var(--text);font-size:12px"><option value="all">全部身份</option><option value="admin">社团主管理员</option><option value="sub">次级管理员</option><option value="member">普通成员</option></select>' +
@@ -5016,6 +5016,18 @@
       document.getElementById('amBatch').addEventListener('click', function () {
         var b = document.getElementById('wbBatchAdd'); if (b) b.click();
       });
+      var amBody = document.getElementById('amBody');
+      var amToggle = document.getElementById('amToggle');
+      function applyAmCollapsed(collapsed) {
+        if (!amBody || !amToggle) return;
+        amBody.hidden = collapsed;
+        amToggle.textContent = collapsed ? '展开' : '收起';
+        try { localStorage.setItem('amCollapsed', collapsed ? '1' : '0'); } catch (e) {}
+      }
+      var amSaved = '0';
+      try { amSaved = localStorage.getItem('amCollapsed') || '0'; } catch (e) {}
+      applyAmCollapsed(amSaved === '1');
+      amToggle.addEventListener('click', function () { applyAmCollapsed(!amBody.hidden); });
     }
     async function loadAllMembers() {
       var r = await wbCall('web_am_list', {});
