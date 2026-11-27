@@ -460,8 +460,32 @@
     rows.slice(-40).reverse().forEach(function (m) {
       var line = el('div', 'xhfa-row');
       line.appendChild(el('span', 'xhfa-tag ' + (m.source === 'box' ? 'ok' : 'qq'), m.source === 'box' ? '盒子' : '群聊'));
-      line.appendChild(el('span', 'xhfa-body', (m.person_name || m.person_id || '') + '：' + (m.content || '')));
+      var text = m.corrected_text ? m.corrected_text : (m.content || '');
+      var body = el('span', 'xhfa-body', (m.person_name || '') + '：' + text);
+      if (m.corrected_text) body.appendChild(el('span', 'xhfa-tag ok', '已修正'));
+      line.appendChild(body);
       line.appendChild(el('span', 'xhfa-time', fmt(m.ts)));
+      if (m.audio_file_id) {
+        var play = el('button', null, '播放');
+        play.onclick = function () {
+          api('/family/message/audio', { id: m._id }).then(function (r) {
+            if (r && r.code === 0 && r.data.url) new Audio(r.data.url).play();
+            else err((r && r.message) || '没有录音');
+          });
+        };
+        line.appendChild(play);
+      }
+      if (m.source === 'box') {
+        var fix = el('button', null, '修正');
+        fix.onclick = function () {
+          var value = prompt('修正识别结果（原：' + (m.content || '') + '）', m.corrected_text || m.content || '');
+          if (value == null) return;
+          api('/family/message/correct', { id: m._id, corrected_text: value.trim() }).then(function (r) {
+            if (r && r.code === 0) renderLogs(); else err((r && r.message) || '修正失败');
+          });
+        };
+        line.appendChild(fix);
+      }
       box.appendChild(line);
     });
   }
