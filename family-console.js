@@ -538,7 +538,7 @@
   var logFilter = '';
   var portraitLoaded = false;
   // AstrBot WebUI 的公网 HTTPS 入口（服务器 Caddy 反代 127.0.0.1:6185）
-  var ASTRBOT_URL = (window.XINGHUAN_ASTRBOT_URL || 'https://81-69-162-106.sslip.io/');
+  var ASTRBOT_URL = (window.XINGHUAN_ASTRBOT_URL || 'https://cloud1-d6gagyei397d315ca-1521583267.ap-shanghai.app.tcloudbase.com/');
 
   function loadAstrbotFrame() {
     var holder = document.getElementById('xhfaAstrbotFrame');
