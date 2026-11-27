@@ -58,6 +58,14 @@
   #${MOUNT_ID} button:hover{border-color:rgba(232,201,142,.4);color:var(--gold-bright,#f8ebce)}
   #${MOUNT_ID} .xhfa-error{color:#ffb3a6;font-size:12px;margin-bottom:8px;display:none}
   #${MOUNT_ID} .xhfa-error.show{display:block}
+  #${MOUNT_ID} .xhfa-portrait{background:rgba(17,17,21,.85);border:1px solid rgba(255,255,255,.075);border-radius:14px;padding:12px 14px;margin-bottom:10px}
+  #${MOUNT_ID} .xhfa-portrait h4{margin:0 0 6px;font-size:14px;color:var(--gold-bright,#f8ebce);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  #${MOUNT_ID} .xhfa-portrait p{margin:4px 0;font-size:12.5px;color:var(--text,#f2f5f8);line-height:1.6}
+  #${MOUNT_ID} .xhfa-portrait .xhfa-meta{font-size:11.5px;color:var(--faint,#5e6b79);margin:3px 0 6px}
+  #${MOUNT_ID} .xhfa-portrait .xhfa-quote{border-left:2px solid rgba(232,201,142,.35);padding-left:8px;margin:5px 0;color:var(--muted,#92a0af);font-size:12px;line-height:1.5}
+  #${MOUNT_ID} .xhfa-tag.risk-high{color:#ff8b8b;border-color:rgba(255,139,139,.5)}
+  #${MOUNT_ID} .xhfa-tag.risk-medium{color:#ffc98a;border-color:rgba(255,180,90,.45)}
+  #${MOUNT_ID} .xhfa-tag.risk-low{color:#86b5a0;border-color:rgba(134,181,160,.4)}
   @media (max-width:720px){ #${MOUNT_ID} .xhfa-member .xhfa-name{min-width:0} }
   `;
 
@@ -82,6 +90,8 @@
       '<div class="xhfa-grid" id="xhfaStats"></div>' +
       '<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button id="xhfaBind">绑定 QQ</button></div>' +
       '<div class="xhfa-list" id="xhfaElder"><div class="xhfa-empty">被监护者 / 服务对象可以通过客厅盒子交流，不强制需要智能手机。</div></div>' +
+      '<div class="xhfa-list" id="xhfaPortrait" style="display:none"></div>' +
+      '<div class="xhfa-list" id="xhfaAstrbot" style="display:none"></div>' +
       '<div class="xhfa-head" style="margin:14px 0 8px"><h3 style="font-size:14px">监护者（QQ 绑定）</h3></div>' +
       '<div class="xhfa-list" id="xhfaMembers"></div>' +
       '<div class="xhfa-list" id="xhfaElderForm"></div>' +
@@ -466,6 +476,126 @@
   }
 
   var logFilter = '';
+  var portraitLoaded = false;
+  // AstrBot WebUI 的公网 HTTPS 入口（服务器 Caddy 反代 127.0.0.1:6185）
+  var ASTRBOT_URL = (window.XINGHUAN_ASTRBOT_URL || 'https://81-69-162-106.sslip.io/');
+
+  function loadAstrbotFrame() {
+    var holder = document.getElementById('xhfaAstrbotFrame');
+    if (!holder) return;
+    holder.innerHTML = '';
+    var frame = document.createElement('iframe');
+    frame.src = ASTRBOT_URL;
+    frame.style.cssText = 'width:100%;height:100%;border:0;background:#fff';
+    frame.setAttribute('allow', 'clipboard-read; clipboard-write');
+    frame.setAttribute('referrerpolicy', 'no-referrer');
+    holder.appendChild(frame);
+  }
+
+  // AstrBot 面板：只有超级管理员能看（服务端另有人工入口限制）
+  function renderAstrbot(visible) {
+    var box = document.getElementById('xhfaAstrbot');
+    if (!box) return;
+    box.style.display = visible ? '' : 'none';
+    if (!visible || box.getAttribute('data-ready')) return;
+    box.setAttribute('data-ready', '1');
+    box.innerHTML = '';
+    var head = el('div', 'xhfa-head');
+    head.appendChild(el('h3', null, 'AstrBot 面板'));
+    head.appendChild(el('span', 'xhfa-sub', '机器人配置 / 插件 / 日志（首次需用 AstrBot 账号登录）'));
+    var open = el('button', null, '打开面板');
+    var popup = document.createElement('a');
+    popup.href = ASTRBOT_URL;
+    popup.target = '_blank';
+    popup.rel = 'noopener';
+    popup.textContent = '新窗口打开';
+    popup.style.cssText = 'font-size:12px;color:var(--muted,#92a0af)';
+    head.appendChild(open);
+    head.appendChild(popup);
+    box.appendChild(head);
+    var holder = el('div');
+    holder.id = 'xhfaAstrbotFrame';
+    holder.style.cssText = 'height:70vh;min-height:480px;border:1px solid rgba(255,255,255,.08);border-radius:12px;overflow:hidden;background:#0b0b0f';
+    holder.appendChild(el('div', 'xhfa-empty', '点「打开面板」加载；如果一直白屏，说明服务器 443 还没放行，或浏览器拦了第三方 Cookie，请用「新窗口打开」。'));
+    box.appendChild(holder);
+    open.onclick = loadAstrbotFrame;
+  }
+
+  // 心理画像：只对超级管理员本人（孙一琳）开放，服务端也会再校验一次
+  function renderPortrait(force) {
+    var box = document.getElementById('xhfaPortrait');
+    if (!box) return;
+    box.style.display = '';
+    if (!force && portraitLoaded) return;
+    portraitLoaded = true;
+    box.innerHTML = '<div class="xhfa-empty">正在整理画像…（首次或重新分析需要几秒）</div>';
+    api('/console/portrait', force ? { refresh: true } : {}).then(function (res) {
+      if (!res || res.code !== 0) {
+        box.innerHTML = '';
+        box.appendChild(el('div', 'xhfa-empty', (res && res.message) || '画像加载失败'));
+        return;
+      }
+      var data = res.data || {};
+      box.innerHTML = '';
+      var head = el('div', 'xhfa-head');
+      head.appendChild(el('h3', null, '心理画像'));
+      head.appendChild(el('span', 'xhfa-sub', '仅孙一琳本人可见 · 陪伴观察，不是医学诊断'));
+      var again = el('button', null, '重新分析');
+      again.onclick = function () { portraitLoaded = false; renderPortrait(true); };
+      head.appendChild(again);
+      box.appendChild(head);
+
+      if (data.overall) box.appendChild(el('p', 'xhfa-meta', data.overall));
+      var people = data.people || [];
+      if (!people.length) {
+        box.appendChild(el('div', 'xhfa-empty', '还没有足够的盒子/QQ 对话可以画像'));
+      }
+      people.forEach(function (person) {
+        var card = el('div', 'xhfa-portrait');
+        var title = el('h4');
+        title.appendChild(document.createTextNode(person.name || '家人'));
+        var riskText = person.risk === 'high' ? '需要关注' : (person.risk === 'medium' ? '留意一下' : '平稳');
+        title.appendChild(el('span', 'xhfa-tag risk-' + (person.risk || 'low'), riskText));
+        card.appendChild(title);
+
+        var meta = [];
+        if (person.msgs) meta.push('记录 ' + person.msgs + ' 句');
+        if (person.quiet_days !== null && person.quiet_days !== undefined) {
+          meta.push(person.quiet_days === 0 ? '今天说过话' : '已经 ' + person.quiet_days + ' 天没说话');
+        }
+        if (person.active_hours && person.active_hours.length) {
+          meta.push('常在 ' + person.active_hours.join('、') + ' 点说话');
+        }
+        if (person.topics && person.topics.length) meta.push('常聊 ' + person.topics.join('、'));
+        if (meta.length) card.appendChild(el('div', 'xhfa-meta', meta.join(' · ')));
+
+        if (person.summary) card.appendChild(el('p', null, person.summary));
+        if (person.mood_word) card.appendChild(el('p', null, '情绪：' + person.mood_word));
+        if (person.need) card.appendChild(el('p', null, '在意：' + person.need));
+        if (person.care) card.appendChild(el('p', null, '可以这样关心：' + person.care));
+        if (person.risk_reason) card.appendChild(el('p', 'xhfa-meta', '提示：' + person.risk_reason));
+        (person.samples || []).slice(0, 3).forEach(function (text) {
+          card.appendChild(el('div', 'xhfa-quote', text));
+        });
+        box.appendChild(card);
+      });
+
+      var alerts = data.alerts || [];
+      if (alerts.length) {
+        var alertCard = el('div', 'xhfa-portrait');
+        alertCard.appendChild(el('h4', null, '最近的告警'));
+        alerts.slice(0, 5).forEach(function (alert) {
+          alertCard.appendChild(el('div', 'xhfa-quote', '[' + fmt(alert.created_at) + '] ' + (alert.text || '')));
+        });
+        box.appendChild(alertCard);
+      }
+      box.appendChild(el('div', 'xhfa-meta', '更新于 ' + fmt(data.generated_at) +
+        (data.ai_used ? ' · 已用模型润色' : (data.ai_enabled ? ' · 模型暂不可用，规则分析' : ' · 规则分析'))));
+    }).catch(function () {
+      box.innerHTML = '';
+      box.appendChild(el('div', 'xhfa-empty', '画像连接失败'));
+    });
+  }
 
   async function renderLogs() {
     var box = document.getElementById('xhfaLogs');
@@ -595,6 +725,13 @@
         renderSched();
         renderTasks(data);
         renderRecordings(data);
+        if (me.data.portrait) {
+          renderPortrait(false);
+        } else {
+          var portraitBox = document.getElementById('xhfaPortrait');
+          if (portraitBox) portraitBox.style.display = 'none';
+        }
+        renderAstrbot(me.data.level === 'owner');
       });
     }).catch(function () { err('连接失败'); });
   }
