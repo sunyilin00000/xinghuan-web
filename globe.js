@@ -1,4 +1,4 @@
-/* ============================================================================
+﻿/* ============================================================================
  * 星环运营中枢 · 3D 地球态势屏（v2.49）
  * 纯 Canvas 正射投影手写 3D 地球：大陆轮廓 + 真实态势数据
  * 数据来源：memberService web_org_overview（成员库 + 审计日志实时计算）
@@ -418,7 +418,17 @@
       });
       var payload = await resp.json();
       if (!payload || payload.code !== 0 || !payload.data) throw new Error((payload && payload.message) || ('HTTP ' + resp.status));
-      ORGS = payload.data.orgs || [];
+      var allowed = null;
+      try {
+        var partnerButtons = document.querySelectorAll('#partners [data-org]');
+        if (partnerButtons.length) {
+          allowed = {};
+          Array.prototype.forEach.call(partnerButtons, function (b) { allowed[b.dataset.org] = true; });
+        }
+      } catch (e) { allowed = null; }
+      var overviewRows = payload.data.orgs || [];
+      var scopeRows = allowed ? overviewRows.filter(function (o) { return allowed[o.key]; }) : overviewRows;
+      ORGS = scopeRows.length ? scopeRows : overviewRows;
       FEED = payload.data.feed || [];
       ALERTS = payload.data.alerts || [];
       var regions = {};
