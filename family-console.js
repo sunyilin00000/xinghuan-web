@@ -112,6 +112,10 @@
   #${MOUNT_ID} .xhfa-pagehead h3{margin:0;font-size:18px;color:var(--gold-bright,#f8ebce);font-weight:600;letter-spacing:.03em}
   #${MOUNT_ID} #xhfaDetail .xhfa-head h3{display:none}
   #${MOUNT_ID} #xhfaDetail .xhfa-head{margin-bottom:8px}
+  #${MOUNT_ID} .xhfa-review{border-bottom:1px solid rgba(255,255,255,.06);padding:12px 14px}
+  #${MOUNT_ID} .xhfa-review-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+  #${MOUNT_ID} .xhfa-review-text{font-size:13px;color:var(--text,#f2f5f8);margin-bottom:8px;line-height:1.5}
+  #${MOUNT_ID} .xhfa-review-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   #${MOUNT_ID} .xhfa-tree{padding:6px 8px 18px;overflow:auto}
   #${MOUNT_ID} .xhfa-tree ul{display:flex;justify-content:center;position:relative;margin:0;padding:18px 0 0;list-style:none;flex-wrap:nowrap}
   #${MOUNT_ID} .xhfa-tree li{list-style:none;position:relative;padding:18px 8px 0;display:flex;flex-direction:column;align-items:center}
@@ -146,7 +150,8 @@
     { key: 'portrait', title: '心理画像', sub: '陪伴观察，不做医学诊断', nodes: ['xhfaPortrait'], owner: true },
     { key: 'loginLogs', title: '登录日志', sub: '谁在什么时候登录', nodes: ['xhfaLoginLogs'], owner: true },
     { key: 'boxSettings', title: '盒子参数', sub: '音色、灵敏度、声纹模型', nodes: ['xhfaBoxSettings'], owner: true },
-    { key: 'astrbot', title: 'AstrBot 面板', sub: '人格、插件、模型配置', nodes: ['xhfaAstrbot'], owner: true }
+    { key: 'astrbot', title: 'AstrBot 面板', sub: '人格、插件、模型配置', nodes: ['xhfaAstrbot'], owner: true },
+    { key: 'reviews', title: '语音审核', sub: '识别可疑的语音，人工听一遍再入库', nodes: ['xhfaReviews'], owner: true }
   ];
   var view = { key: '', me: null, data: null, owner: false };
   var AUTO_REFRESH = ['boxStatus', 'chat', 'tasks', 'recordings', 'members'];
@@ -215,6 +220,7 @@
     else if (m.key === 'loginLogs') renderLoginLogs(true);
     else if (m.key === 'boxSettings') renderBoxSettings(true);
     else if (m.key === 'astrbot') renderAstrbot(true);
+    else if (m.key === 'reviews') renderReviews();
   }
 
   function openModule(key, keepHash) {
@@ -537,6 +543,8 @@
       grid.appendChild(settingToggle('语音识别（ASR）', 'asr_enabled', current.asr_enabled !== false));
       grid.appendChild(settingToggle('声纹认人', 'voiceprint_enabled', current.voiceprint_enabled !== false));
       grid.appendChild(settingToggle('声音事件检测', 'sed_enabled', current.sed_enabled !== false));
+      grid.appendChild(settingToggle('语音存档到 COS', 'audio_archive_enabled', current.audio_archive_enabled !== false));
+      grid.appendChild(settingToggle('可疑语音送审', 'audio_review_enabled', current.audio_review_enabled !== false));
       box.appendChild(grid);
 
       var saveRow = el('div', 'xhfa-row');
@@ -1226,6 +1234,71 @@
     });
   }
 
+
+  async function renderReviews() {
+    var box = document.getElementById('xhfaReviews');
+    if (!box) return;
+    box.innerHTML = '<div class="xhfa-empty">正在读取待审核语音…</div>';
+    var res = await api('/console/reviews');
+    var items = (res && res.data && res.data.items) || [];
+    box.innerHTML = '';
+
+    var head = el('div', 'xhfa-head');
+    head.appendChild(el('h3', null, '语音审核'));
+    head.appendChild(el('span', 'xhfa-sub', '识别可疑（太短 / 重复 / 不像正常话）的语音会送到这里；听一遍、改对文字再通过'));
+    var refresh = el('button', null, '刷新');
+    refresh.onclick = function () { renderReviews(); };
+    head.appendChild(refresh);
+    box.appendChild(head);
+
+    if (!items.length) {
+      box.appendChild(el('div', 'xhfa-empty', '暂时没有待审核的语音。盒子识别到可疑内容时会自动传上来。'));
+      return;
+    }
+
+    items.forEach(function (item) {
+      var row = el('div', 'xhfa-review');
+      var top = el('div', 'xhfa-review-top');
+      top.appendChild(el('span', 'xhfa-tag ' + (item.status === 'approved' ? 'ok' : (item.status === 'rejected' ? 'bad' : 'qq')), item.status === 'approved' ? '已通过' : (item.status === 'rejected' ? '已驳回' : '待审核')));
+      top.appendChild(el('span', 'xhfa-time', fmt(item.created_at)));
+      if (item.person) top.appendChild(el('span', 'xhfa-tag', item.person));
+      if (item.reason) top.appendChild(el('span', 'xhfa-tag', item.reason));
+      if (item.duration) top.appendChild(el('span', 'xhfa-time', '约 ' + item.duration + ' 秒'));
+      row.appendChild(top);
+      row.appendChild(el('div', 'xhfa-review-text', item.text ? ('识别为：' + item.text) : '（没有识别出文字）'));
+
+      var controls = el('div', 'xhfa-review-controls');
+      if (item.url) {
+        var audio = document.createElement('audio');
+        audio.controls = true;
+        audio.preload = 'none';
+        audio.src = item.url;
+        audio.style.cssText = 'height:30px;max-width:260px';
+        controls.appendChild(audio);
+      } else {
+        controls.appendChild(el('span', 'xhfa-time', '音频链接不可用'));
+      }
+      var input = textInput('改对后的文字（可留空）');
+      input.value = item.corrected_text || item.text || '';
+      controls.appendChild(input);
+      var ok = el('button', 'xhfa-save', '通过');
+      ok.onclick = function () {
+        api('/console/review', { id: item.id, action: 'approve', corrected_text: input.value.trim() }).then(function (r) {
+          if (r && r.code === 0) renderReviews(); else err((r && r.message) || '操作失败');
+        });
+      };
+      var no = el('button', null, '驳回');
+      no.onclick = function () {
+        api('/console/review', { id: item.id, action: 'reject', corrected_text: input.value.trim() }).then(function (r) {
+          if (r && r.code === 0) renderReviews(); else err((r && r.message) || '操作失败');
+        });
+      };
+      controls.appendChild(ok);
+      controls.appendChild(no);
+      row.appendChild(controls);
+      box.appendChild(row);
+    });
+  }
 
   async function renderSched() {
     var box = document.getElementById('xhfaSched');
