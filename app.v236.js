@@ -2640,13 +2640,34 @@
     // AI 抽屉：历史按钮
     async function hubAiHistLoad() {
       const box = document.getElementById('hubAiMsgs');
+      if (!box) return;
       box.innerHTML = '<div class="ai-msg bot">读取中…</div>';
-      const r = await apiFetch('/ai/history', { method: 'POST', body: {} });
-      const list = (r && r.data) || [];
-      box.innerHTML = list.map(m =>
-        '<div class="ai-msg bot"><div style="color:#7cc7ff;font-size:11px;margin-bottom:4px">问：' + String(m.question || '').slice(0, 80) + '</div>' + String(m.answer || '').slice(0, 300) + '</div>').join('')
-        || '<div class="ai-msg bot">还没有历史对话</div>';
-      box.scrollTop = box.scrollHeight;
+      try {
+        const token = state.user && state.user.token;
+        if (!token) { box.innerHTML = '<div class="ai-msg bot">请先登录后再查看历史</div>'; return; }
+        const base = window.XINGHUAN_BIND_API || '';
+        const controller = new AbortController();
+        const timer = setTimeout(function () { controller.abort(); }, 8000);
+        const resp = await fetch(base + '/ai/history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: token }),
+          signal: controller.signal
+        });
+        clearTimeout(timer);
+        const payload = await resp.json();
+        const rows = (payload && payload.data && payload.data.messages) || [];
+        if (!rows.length) { box.innerHTML = '<div class="ai-msg bot">还没有历史对话</div>'; return; }
+        box.innerHTML = rows.map(function (m) {
+          const tag = m.source === 'qq' ? '<div style="color:#ffc98a;font-size:11px;margin-bottom:4px">QQ</div>' : '';
+          const cls = m.role === 'user' ? 'user' : 'bot';
+          const safe = String(m.content || '').replace(/[<>&]/g, function (c) { return { '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]; });
+          return '<div class="ai-msg ' + cls + '">' + tag + safe + '</div>';
+        }).join('');
+        box.scrollTop = box.scrollHeight;
+      } catch (e) {
+        box.innerHTML = '<div class="ai-msg bot">读取失败：' + ((e && e.message) || e) + '</div>';
+      }
     }
 
 
