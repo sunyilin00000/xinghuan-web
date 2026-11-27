@@ -87,6 +87,7 @@
       '<div class="xhfa-list" id="xhfaElderForm"></div>' +
       '<div class="xhfa-list" id="xhfaContentForm"></div>' +
       '<div class="xhfa-list" id="xhfaTasks"></div>' +
+      '<div class="xhfa-list" id="xhfaSched"></div>' +
       '<div class="xhfa-list" id="xhfaLogs"></div>' +
       '<div class="xhfa-list" id="xhfaRecordings"></div>' +
       '<div style="display:flex;gap:8px;margin-bottom:10px">' +
@@ -511,6 +512,46 @@
     });
   }
 
+
+  async function renderSched() {
+    var box = document.getElementById('xhfaSched');
+    if (!box) return;
+    var res = await api('/schedule/list');
+    var items = (res && res.data && res.data.items) || [];
+    box.innerHTML = '';
+    var head = el('div', 'xhfa-head');
+    head.appendChild(el('h3', null, '定时消息'));
+    head.appendChild(el('span', 'xhfa-sub', '发到盒子 / 群聊 / 私聊'));
+    box.appendChild(head);
+    var labels = { box: '盒子', group: '群聊', private: '私聊' };
+    items.forEach(function (it) {
+      var line = el('div', 'xhfa-row');
+      line.appendChild(el('span', 'xhfa-tag ' + (it.channel === 'box' ? 'ok' : 'qq'), labels[it.channel] || it.channel));
+      line.appendChild(el('span', 'xhfa-body', (it.text || '') + ' · ' + fmt(it.due_at) + ' · ' + (it.repeat || 'once') + ' · ' + (it.status || '')));
+      var del = el('button', null, '删除');
+      del.onclick = function () { api('/schedule/delete', { id: it._id }).then(function () { renderSched(); }); };
+      line.appendChild(del);
+      box.appendChild(line);
+    });
+    var form = el('div', 'xhfa-row');
+    var ch = selectBox([['box', '盒子'], ['group', '群聊'], ['private', '私聊']], 'box');
+    var text = textInput('要发送的内容');
+    var due = document.createElement('input'); due.type = 'datetime-local';
+    due.style.cssText = 'background:#060608;border:1px solid rgba(255,255,255,.12);color:#f2f5f8;border-radius:8px;padding:4px 8px;font-size:12px;font-family:inherit';
+    var rep = selectBox([['once', '一次'], ['daily', '每天'], ['weekly', '每周']], 'once');
+    var add = el('button', 'xhfa-save', '添加');
+    add.onclick = function () {
+      var v = text.value.trim();
+      if (!v) { err('请输入内容'); return; }
+      var when = due.value ? new Date(due.value).getTime() : Date.now();
+      api('/schedule/save', { channel: ch.value, text: v, due_at: when, repeat: rep.value }).then(function (r) {
+        if (r && r.code === 0) { text.value = ''; renderSched(); } else err((r && r.message) || '添加失败');
+      });
+    };
+    form.appendChild(ch); form.appendChild(text); form.appendChild(due); form.appendChild(rep); form.appendChild(add);
+    box.appendChild(form);
+  }
+
   function sendBox() {
     var input = document.getElementById('xhfaBoxText');
     var text = input.value.trim();
@@ -543,6 +584,7 @@
         renderElders();
         renderPeople();
         renderLogs();
+        renderSched();
         renderTasks(data);
         renderRecordings(data);
       });
