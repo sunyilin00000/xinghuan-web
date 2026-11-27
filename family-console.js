@@ -87,6 +87,7 @@
       '<div class="xhfa-list" id="xhfaElderForm"></div>' +
       '<div class="xhfa-list" id="xhfaContentForm"></div>' +
       '<div class="xhfa-list" id="xhfaTasks"></div>' +
+      '<div class="xhfa-list" id="xhfaLogs"></div>' +
       '<div class="xhfa-list" id="xhfaRecordings"></div>' +
       '<div style="display:flex;gap:8px;margin-bottom:10px">' +
       '  <input type="text" id="xhfaBoxText" placeholder="跟妈说：记得吃药" style="flex:1;min-width:200px" />' +
@@ -335,6 +336,136 @@
     });
   }
 
+
+  function selectBox(options, value) {
+    var sel = document.createElement('select');
+    sel.style.cssText = 'background:#060608;border:1px solid rgba(255,255,255,.12);color:#f2f5f8;border-radius:8px;padding:5px 8px;font-size:12px;font-family:inherit';
+    options.forEach(function (opt) {
+      var o = document.createElement('option');
+      o.value = opt[0]; o.textContent = opt[1];
+      if (opt[0] === value) o.selected = true;
+      sel.appendChild(o);
+    });
+    return sel;
+  }
+
+  function textInput(placeholder) {
+    var input = document.createElement('input');
+    input.type = 'text'; input.placeholder = placeholder || '';
+    input.style.cssText = 'flex:1;min-width:90px;background:#060608;border:1px solid rgba(255,255,255,.12);color:#f2f5f8;border-radius:8px;padding:5px 9px;font-size:12px;font-family:inherit';
+    return input;
+  }
+
+  var RELATIONS = [['son', '儿子'], ['daughter', '女儿'], ['grandson', '孙子'], ['granddaughter', '孙女'], ['spouse', '配偶'], ['caregiver', '护工'], ['other', '其他']];
+
+  async function renderElders() {
+    var box = document.getElementById('xhfaElderForm');
+    if (!box) return;
+    var res = await api('/elder/list');
+    var elders = (res && res.data && res.data.elders) || [];
+    box.innerHTML = '';
+    var head = el('div', 'xhfa-head');
+    head.appendChild(el('h3', null, '被监护者'));
+    head.appendChild(el('span', 'xhfa-sub', '客厅盒子，不需要智能手机'));
+    box.appendChild(head);
+    elders.forEach(function (e) {
+      var line = el('div', 'xhfa-row');
+      line.appendChild(el('span', 'xhfa-tag ok', e.call || e.name || '未命名'));
+      line.appendChild(el('span', 'xhfa-body', [e.age ? e.age + '岁' : '', e.room, e.wake, e.sleep].filter(Boolean).join(' · ') || '未填写详细信息'));
+      var del = el('button', null, '删除');
+      del.onclick = function () {
+        if (!confirm('删除该被监护者？')) return;
+        api('/elder/delete', { id: e._id }).then(function () { renderElders(); });
+      };
+      line.appendChild(del);
+      box.appendChild(line);
+    });
+    var form = el('div', 'xhfa-row');
+    var call = textInput('称呼，例如：爷爷');
+    var age = textInput('年龄');
+    var room = textInput('房间');
+    var wake = textInput('起床 07:00');
+    var sleep = textInput('睡觉 21:30');
+    var likes = textInput('喜欢 / 忌讳');
+    var add = el('button', 'xhfa-save', '添加被监护者');
+    add.onclick = function () {
+      if (!call.value.trim()) { err('请填写称呼'); return; }
+      api('/elder/create', { call: call.value.trim(), name: call.value.trim(), age: age.value.trim(), room: room.value.trim(), wake: wake.value.trim(), sleep: sleep.value.trim(), likes: likes.value.trim() }).then(function (r) {
+        if (r && r.code === 0) renderElders(); else err((r && r.message) || '添加失败');
+      });
+    };
+    form.appendChild(call); form.appendChild(age); form.appendChild(room); form.appendChild(wake); form.appendChild(sleep); form.appendChild(likes); form.appendChild(add);
+    box.appendChild(form);
+  }
+
+  async function renderPeople() {
+    var box = document.getElementById('xhfaContentForm');
+    if (!box) return;
+    var eldersRes = await api('/elder/list');
+    var elders = (eldersRes && eldersRes.data && eldersRes.data.elders) || [];
+    var res = await api('/people/list');
+    var people = (res && res.data && res.data.people) || [];
+    box.innerHTML = '';
+    var head = el('div', 'xhfa-head');
+    head.appendChild(el('h3', null, '人员与关系'));
+    head.appendChild(el('span', 'xhfa-sub', '家人 / 护工，以及生物识别状态'));
+    box.appendChild(head);
+    people.forEach(function (p) {
+      var line = el('div', 'xhfa-row');
+      line.appendChild(el('span', 'xhfa-tag', p.name || ''));
+      var rel = (RELATIONS.filter(function (r) { return r[0] === p.relation; })[0] || [p.relation, p.relation || '']);
+      var elderHit = elders.filter(function (e) { return e._id === p.elder_id; })[0] || {}; line.appendChild(el('span', 'xhfa-body', rel[1] + (elderHit.call ? ' · ' + elderHit.call : '')));
+      line.appendChild(el('span', 'xhfa-tag ' + (p.voice_status === 'enrolled' ? 'ok' : ''), '声纹' + (p.voice_status === 'enrolled' ? '✓' : '—')));
+      line.appendChild(el('span', 'xhfa-tag', '人脸—'));
+      line.appendChild(el('span', 'xhfa-tag', '指纹—'));
+      var del = el('button', null, '删除');
+      del.onclick = function () { if (confirm('删除该人员？')) api('/people/delete', { id: p._id }).then(function () { renderPeople(); }); };
+      line.appendChild(del);
+      box.appendChild(line);
+    });
+    var form = el('div', 'xhfa-row');
+    var name = textInput('姓名');
+    var relSel = selectBox(RELATIONS, 'son');
+    var elderSel = selectBox([['', '（不指定老人）']].concat(elders.map(function (e) { return [e._id, e.call || e.name]; })), '');
+    var add = el('button', 'xhfa-save', '添加人员');
+    add.onclick = function () {
+      if (!name.value.trim()) { err('请填写姓名'); return; }
+      api('/people/save', { name: name.value.trim(), relation: relSel.value, elder_id: elderSel.value }).then(function (r) {
+        if (r && r.code === 0) renderPeople(); else err((r && r.message) || '添加失败');
+      });
+    };
+    form.appendChild(name); form.appendChild(relSel); form.appendChild(elderSel); form.appendChild(add);
+    box.appendChild(form);
+  }
+
+  var logFilter = '';
+
+  async function renderLogs() {
+    var box = document.getElementById('xhfaLogs');
+    if (!box) return;
+    var res = await api('/family/messages', { source: logFilter });
+    var rows = (res && res.data && res.data.messages) || [];
+    box.innerHTML = '';
+    var head = el('div', 'xhfa-head');
+    head.appendChild(el('h3', null, '聊天记录'));
+    var all = el('button', logFilter === '' ? 'xhfa-save' : null, '全部');
+    var boxBtn = el('button', logFilter === 'box' ? 'xhfa-save' : null, '盒子');
+    var qqBtn = el('button', logFilter === 'qq_group' ? 'xhfa-save' : null, '群聊');
+    all.onclick = function () { logFilter = ''; renderLogs(); };
+    boxBtn.onclick = function () { logFilter = 'box'; renderLogs(); };
+    qqBtn.onclick = function () { logFilter = 'qq_group'; renderLogs(); };
+    head.appendChild(all); head.appendChild(boxBtn); head.appendChild(qqBtn);
+    box.appendChild(head);
+    if (!rows.length) { box.appendChild(el('div', 'xhfa-empty', '还没有记录')); return; }
+    rows.slice(-40).reverse().forEach(function (m) {
+      var line = el('div', 'xhfa-row');
+      line.appendChild(el('span', 'xhfa-tag ' + (m.source === 'box' ? 'ok' : 'qq'), m.source === 'box' ? '盒子' : '群聊'));
+      line.appendChild(el('span', 'xhfa-body', (m.person_name || m.person_id || '') + '：' + (m.content || '')));
+      line.appendChild(el('span', 'xhfa-time', fmt(m.ts)));
+      box.appendChild(line);
+    });
+  }
+
   function sendBox() {
     var input = document.getElementById('xhfaBoxText');
     var text = input.value.trim();
@@ -360,8 +491,9 @@
         renderMembers(data);
         renderBox(data);
         renderChat(data);
-        renderElder(data);
-        renderContent(data);
+        renderElders();
+        renderPeople();
+        renderLogs();
         renderTasks(data);
         renderRecordings(data);
       });
