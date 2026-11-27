@@ -4892,17 +4892,26 @@
       var box = document.getElementById('pubResList');
       if (!box || box.dataset.loaded) return;
       box.dataset.loaded = '1';
+
+      // 与「学习资源」里的天文公开资料共用同一份数据
+      var shared = (typeof ASTRO_RES !== 'undefined' && Array.isArray(ASTRO_RES)) ? ASTRO_RES : [];
+      var items = shared.filter(function (r) { return r && r.url; }).map(function (r) {
+        return '<a class="pub-res-item" href="' + r.url + '" target="_blank" rel="noopener"><b>' + (r.title || '资料') + '</b><span>' + (r.tag || '') + '</span></a>';
+      });
+
+      // 再补充后台登记为「公开」的动态资料
       try {
         var resp = await fetch(SCF_API + '/res/list', { method: 'GET' });
         var payload = await resp.json();
         var list = (payload && payload.data) || [];
-        var links = list.filter(function (d) { return d.visibility === 'public' && d.kind === 'link' && d.url; });
-        box.innerHTML = links.map(function (d) {
-          return '<a class="pub-res-item" href="' + d.url + '" target="_blank" rel="noopener"><b>' + d.title + '</b><span>' + (d.by || '') + '</span></a>';
-        }).join('') || '<p class="pub-res-empty">暂无公开资料</p>';
+        list.filter(function (d) { return d.visibility === 'public' && d.kind === 'link' && d.url; }).forEach(function (d) {
+          items.push('<a class="pub-res-item" href="' + d.url + '" target="_blank" rel="noopener"><b>' + (d.title || '资料') + '</b><span>' + (d.by || '') + '</span></a>');
+        });
       } catch (e) {
-        box.innerHTML = '<p class="pub-res-empty">公开资料载入失败</p>';
+        /* 后端不可用时仍展示共享的静态资料 */
       }
+
+      box.innerHTML = items.length ? items.join('') : '<p class="pub-res-empty">暂无公开资料</p>';
     };
 
     /* v2.53 视频直传：网关签名 → 浏览器 PUT 到 COS（不过服务器、大小不限）→ 自动登记清单 */
