@@ -81,7 +81,7 @@
       '<div class="xhfa-error" id="xhfaErr"></div>' +
       '<div class="xhfa-grid" id="xhfaStats"></div>' +
       '<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button id="xhfaBind">绑定 QQ</button></div>' +
-      '<div class="xhfa-list" id="xhfaElder"><div class="xhfa-empty">被监护者通过客厅盒子交流，不需要智能手机，也不需要绑定 QQ。</div></div>' +
+      '<div class="xhfa-list" id="xhfaElder"><div class="xhfa-empty">被监护者 / 服务对象可以通过客厅盒子交流，不强制需要智能手机。</div></div>' +
       '<div class="xhfa-head" style="margin:14px 0 8px"><h3 style="font-size:14px">监护者（QQ 绑定）</h3></div>' +
       '<div class="xhfa-list" id="xhfaMembers"></div>' +
       '<div class="xhfa-list" id="xhfaElderForm"></div>' +
@@ -418,7 +418,7 @@
     box.innerHTML = '';
     var head = el('div', 'xhfa-head');
     head.appendChild(el('h3', null, '人员与关系'));
-    head.appendChild(el('span', 'xhfa-sub', '家人 / 护工，以及生物识别状态'));
+    head.appendChild(el('span', 'xhfa-sub', '成员、关系与生物识别状态，可自定义'));
     box.appendChild(head);
     people.forEach(function (p) {
       var line = el('div', 'xhfa-row');
@@ -436,7 +436,7 @@
     var form = el('div', 'xhfa-row');
     var name = textInput('姓名');
     var relSel = selectBox(RELATIONS, 'son');
-    var elderSel = selectBox([['', '（不指定老人）']].concat(elders.map(function (e) { return [e._id, e.call || e.name]; })), '');
+    var elderSel = selectBox([['', '（不指定对象）']].concat(elders.map(function (e) { return [e._id, e.call || e.name]; })), '');
     var add = el('button', 'xhfa-save', '添加人员');
     add.onclick = function () {
       if (!name.value.trim()) { err('请填写姓名'); return; }
