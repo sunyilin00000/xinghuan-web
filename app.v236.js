@@ -1664,7 +1664,8 @@
       outdoor: { name: '户外协会', logo: 'logo.png' },
       guest: { name: '游客', logo: 'logo.png' },
       sagittarius: { name: '南斗天文社', logo: 'sagittarius-logo.png' },
-      metaverse: { name: '元宇宙发展协会', logo: 'logo.png' }
+      metaverse: { name: '元宇宙发展协会', logo: 'logo.png' },
+      program: { name: '星环计划', logo: 'logo.png' }
     };
     const wbState = { members: [], isAdmin: false };
     // 经 SCF /member-bridge 中转调用 memberService（鉴权透传）
@@ -5182,5 +5183,5 @@
     document.addEventListener('click', function (ev) {
       if (ev.target && ev.target.id === 'planEnter') { openPlan(); }
       if (ev.target && ev.target.id === 'planApply') { openJoinModal(); }
-      if (ev.target && ev.target.id === 'planJoin') { openJoinModal(); }
+
     });
