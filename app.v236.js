@@ -1,4 +1,4 @@
-
+﻿
     const ENV_ID = 'cloud1-d6gagyei397d315ca';
     const COLLECTION = 'experiment_results';
     const SCF_API = window.XINGHUAN_API || 'https://你的-SCF-网关地址';
@@ -2630,8 +2630,8 @@
         if (id === 'navHome') { showLanding(); var sp = document.getElementById('shopPage'); if (sp) sp.hidden = true; window.scrollTo({ top: 0, behavior: 'smooth' }); }
         else if (id === 'navPartners') { openPartners(); var partnersEl = document.querySelector('#partners'); if (partnersEl) setTimeout(function () { partnersEl.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60); }
         else if (id === 'navShop') enterShop();
-        else if (id === 'navMonitor') enterHub('classroom');
-        else if (b.dataset.hub) enterHub(b.dataset.hub);
+        else if (id === 'navMonitor') { enterHub('classroom'); hubScroll('classroom'); }
+        else if (b.dataset.hub) { enterHub(b.dataset.hub); hubScroll(b.dataset.hub); }
         else if (b.dataset.scroll) { var navTarget = document.querySelector(b.dataset.scroll); if (navTarget) navTarget.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
       } catch (err) { if (window.__rec) window.__rec('navERR:' + err.message); }
     }, true);
@@ -3403,8 +3403,16 @@
       }
     }
 
-    function switchPage(tab) {
-      document.querySelectorAll('.page-tab').forEach((b) => {
+    const HUB_SCROLL = { classroom: '#deckHead', resources: '#resourcesPage', console: '#consolePage', workbench: '#workbenchPage', community: '#communityPage' };
+    function hubScroll(tab) {
+      try {
+        let target = HUB_SCROLL[tab] ? document.querySelector(HUB_SCROLL[tab]) : null;
+        if (!target && tab === 'classroom') target = document.querySelector('.tab-classroom');
+        if (target) setTimeout(function () { target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
+      } catch (e) {}
+    }
+
+    function switchPage(tab) {      document.querySelectorAll('.page-tab').forEach((b) => {
         b.classList.toggle('active', b.dataset.tab === tab);
       });
       // 课堂板块整体显隐
@@ -4388,10 +4396,10 @@
       if (wbSearchEl) wbSearchEl.oninput = wbRenderMembers;
       // v2.22 顶栏中枢入口
       document.querySelectorAll('.nav-hub-item').forEach(b => {
-        b.addEventListener('click', () => enterHub(b.dataset.hub));
+        b.addEventListener('click', () => { enterHub(b.dataset.hub); hubScroll(b.dataset.hub); });
       });
       const navMon = document.getElementById('navMonitor');
-      if (navMon) navMon.addEventListener('click', () => enterHub('classroom'));
+      if (navMon) navMon.addEventListener('click', () => { enterHub('classroom'); hubScroll('classroom'); });
       // v2.28 导航跳转钉死
       const navHome = document.getElementById('navHome');
       if (navHome) navHome.addEventListener('click', () => {

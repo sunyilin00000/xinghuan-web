@@ -7021,3 +7021,7 @@ body.plan-view .plan-page { margin: 0 auto; padding-top: 100px; min-height: 100v
 /* 顶部导航跳转时避免被吸顶头部遮挡 */
 section[id], main [id] { scroll-margin-top: 92px; }
 
+
+/* 中枢导航跳转时避免被吸顶头部遮挡 */
+#hubArea section, #hubArea .panel { scroll-margin-top: 92px; } /* hub-scroll-margin */
+
