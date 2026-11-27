@@ -112,6 +112,21 @@
   #${MOUNT_ID} .xhfa-pagehead h3{margin:0;font-size:18px;color:var(--gold-bright,#f8ebce);font-weight:600;letter-spacing:.03em}
   #${MOUNT_ID} #xhfaDetail .xhfa-head h3{display:none}
   #${MOUNT_ID} #xhfaDetail .xhfa-head{margin-bottom:8px}
+  #${MOUNT_ID} .xhfa-tree{padding:6px 8px 18px;overflow:auto}
+  #${MOUNT_ID} .xhfa-tree ul{display:flex;justify-content:center;position:relative;margin:0;padding:18px 0 0;list-style:none;flex-wrap:nowrap}
+  #${MOUNT_ID} .xhfa-tree li{list-style:none;position:relative;padding:18px 8px 0;display:flex;flex-direction:column;align-items:center}
+  #${MOUNT_ID} .xhfa-tree li::before,#${MOUNT_ID} .xhfa-tree li::after{content:'';position:absolute;top:0;right:50%;border-top:1px solid rgba(232,201,142,.3);width:50%;height:18px}
+  #${MOUNT_ID} .xhfa-tree li::after{right:auto;left:50%;border-left:1px solid rgba(232,201,142,.3)}
+  #${MOUNT_ID} .xhfa-tree li:only-child::after,#${MOUNT_ID} .xhfa-tree li:only-child::before{display:none}
+  #${MOUNT_ID} .xhfa-tree li:only-child{padding-top:0}
+  #${MOUNT_ID} .xhfa-tree li:first-child::before,#${MOUNT_ID} .xhfa-tree li:last-child::after{border:0 none}
+  #${MOUNT_ID} .xhfa-tree li:last-child::before{border-right:1px solid rgba(232,201,142,.3);border-radius:0 6px 0 0}
+  #${MOUNT_ID} .xhfa-tree li:first-child::after{border-radius:6px 0 0 0}
+  #${MOUNT_ID} .xhfa-tree li > ul::before{content:'';position:absolute;top:0;left:50%;border-left:1px solid rgba(232,201,142,.3);height:18px}
+  #${MOUNT_ID} .xhfa-tree .xhfa-node{background:rgba(17,17,21,.95);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:7px 12px;min-width:96px;text-align:center;transition:border-color .15s}
+  #${MOUNT_ID} .xhfa-tree .xhfa-node:hover{border-color:rgba(232,201,142,.45)}
+  #${MOUNT_ID} .xhfa-tree .xhfa-node b{display:block;font-size:12.5px;color:var(--gold-bright,#f8ebce);font-weight:600}
+  #${MOUNT_ID} .xhfa-tree .xhfa-node span{display:block;font-size:10.5px;color:var(--muted,#92a0af);margin-top:2px}
   @media (max-width:720px){ #${MOUNT_ID} .xhfa-member .xhfa-name{min-width:0} }
   `;
 
@@ -861,6 +876,64 @@
     box.appendChild(form);
   }
 
+  var peopleView = 'table';
+  try { peopleView = localStorage.getItem('xhfaPeopleView') || 'table'; } catch (e) { peopleView = 'table'; }
+
+  function relationLabel(value) {
+    var hit = RELATIONS.filter(function (r) { return r[0] === value; })[0];
+    if (hit && hit[0] !== 'custom') return hit[1];
+    return value || '成员';
+  }
+
+  function treeNode(title, sub) {
+    var node = el('div', 'xhfa-node');
+    node.appendChild(el('b', null, title));
+    if (sub) node.appendChild(el('span', null, sub));
+    return node;
+  }
+
+  function buildPeopleTree(elders, people) {
+    var wrap = el('div', 'xhfa-tree');
+    var rootUl = document.createElement('ul');
+    var roots = [];
+    elders.forEach(function (elder) {
+      roots.push({
+        label: elder.call || elder.name || '未命名',
+        sub: '被监护者',
+        items: people.filter(function (p) { return String(p.elder_id || '') === String(elder._id); })
+      });
+    });
+    var known = {};
+    elders.forEach(function (elder) { known[String(elder._id)] = true; });
+    var orphans = people.filter(function (p) { return !p.elder_id || !known[String(p.elder_id)]; });
+    if (orphans.length) roots.push({ label: '未指定对象', sub: '还没关联到老人', items: orphans });
+    if (!roots.length) roots.push({ label: '还没有人员', sub: '在下面表单里添加', items: [] });
+
+    var rootLi = document.createElement('li');
+    rootLi.appendChild(treeNode('家庭', '人员架构'));
+    var level1 = document.createElement('ul');
+    roots.forEach(function (root) {
+      var li = document.createElement('li');
+      li.appendChild(treeNode(root.label, root.sub));
+      if (root.items.length) {
+        var level2 = document.createElement('ul');
+        root.items.forEach(function (p) {
+          var child = document.createElement('li');
+          var sub = relationLabel(p.relation);
+          if (p.voice_status === 'enrolled') sub += ' · 声纹✓';
+          child.appendChild(treeNode(p.name || '未命名', sub));
+          level2.appendChild(child);
+        });
+        li.appendChild(level2);
+      }
+      level1.appendChild(li);
+    });
+    rootLi.appendChild(level1);
+    rootUl.appendChild(rootLi);
+    wrap.appendChild(rootUl);
+    return wrap;
+  }
+
   async function renderPeople() {
     var box = document.getElementById('xhfaContentForm');
     if (!box) return;
@@ -869,23 +942,49 @@
     var res = await api('/people/list');
     var people = (res && res.data && res.data.people) || [];
     box.innerHTML = '';
+
     var head = el('div', 'xhfa-head');
     head.appendChild(el('h3', null, '人员与关系'));
-    head.appendChild(el('span', 'xhfa-sub', '成员、关系与生物识别状态，可自定义'));
+    head.appendChild(el('span', 'xhfa-sub', '成员、关系与生物识别状态'));
+    var tableBtn = el('button', peopleView === 'table' ? 'xhfa-save' : null, '表格');
+    var treeBtn = el('button', peopleView === 'tree' ? 'xhfa-save' : null, '树状图');
+    tableBtn.onclick = function () {
+      peopleView = 'table';
+      try { localStorage.setItem('xhfaPeopleView', 'table'); } catch (e) {}
+      renderPeople();
+    };
+    treeBtn.onclick = function () {
+      peopleView = 'tree';
+      try { localStorage.setItem('xhfaPeopleView', 'tree'); } catch (e) {}
+      renderPeople();
+    };
+    head.appendChild(tableBtn);
+    head.appendChild(treeBtn);
     box.appendChild(head);
-    people.forEach(function (p) {
-      var line = el('div', 'xhfa-row');
-      line.appendChild(el('span', 'xhfa-tag', p.name || ''));
-      var rel = (RELATIONS.filter(function (r) { return r[0] === p.relation; })[0] || [p.relation, p.relation || '']);
-      var elderHit = elders.filter(function (e) { return e._id === p.elder_id; })[0] || {}; line.appendChild(el('span', 'xhfa-body', rel[1] + (elderHit.call ? ' · ' + elderHit.call : '')));
-      line.appendChild(el('span', 'xhfa-tag ' + (p.voice_status === 'enrolled' ? 'ok' : ''), '声纹' + (p.voice_status === 'enrolled' ? '✓' : '—')));
-      line.appendChild(el('span', 'xhfa-tag', '人脸—'));
-      line.appendChild(el('span', 'xhfa-tag', '指纹—'));
-      var del = el('button', null, '删除');
-      del.onclick = function () { if (confirm('删除该人员？')) api('/people/delete', { id: p._id }).then(function () { renderPeople(); }); };
-      line.appendChild(del);
-      box.appendChild(line);
-    });
+
+    if (!people.length) {
+      box.appendChild(el('div', 'xhfa-empty', '还没有人员。下面表单添加后，这里会同时生成表格和树状图。'));
+    } else if (peopleView === 'tree') {
+      box.appendChild(buildPeopleTree(elders, people));
+    } else {
+      people.forEach(function (p) {
+        var line = el('div', 'xhfa-row');
+        line.appendChild(el('span', 'xhfa-tag', p.name || ''));
+        var elderHit = elders.filter(function (e) { return String(e._id) === String(p.elder_id); })[0] || {};
+        var sub = relationLabel(p.relation) + (elderHit.call ? ' · ' + elderHit.call : '');
+        line.appendChild(el('span', 'xhfa-body', sub));
+        line.appendChild(el('span', 'xhfa-tag ' + (p.voice_status === 'enrolled' ? 'ok' : ''), '声纹' + (p.voice_status === 'enrolled' ? '✓' : '—')));
+        line.appendChild(el('span', 'xhfa-tag', '人脸—'));
+        line.appendChild(el('span', 'xhfa-tag', '指纹—'));
+        var del = el('button', null, '删除');
+        del.onclick = function () {
+          if (confirm('删除该人员？')) api('/people/delete', { id: p._id }).then(function () { renderPeople(); });
+        };
+        line.appendChild(del);
+        box.appendChild(line);
+      });
+    }
+
     var form = el('div', 'xhfa-row');
     var name = textInput('姓名');
     var relSel = selectBox(RELATIONS, 'son');
