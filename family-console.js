@@ -394,7 +394,7 @@
     input.checked = Boolean(checked);
     input.setAttribute('data-key', key);
     box.appendChild(input);
-    box.appendChild(document.createTextNode('开启（热加载 PANNs，约 10 秒）'));
+    box.appendChild(document.createTextNode('开启'));
     line.appendChild(box);
     return line;
   }
