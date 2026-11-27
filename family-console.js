@@ -102,50 +102,155 @@
   #${MOUNT_ID} details.xhfa-sec .xhfa-list{background:transparent;border:0;border-radius:0;margin:0}
   #${MOUNT_ID} details.xhfa-sec .xhfa-head h3{display:none}
   #${MOUNT_ID} details.xhfa-sec .xhfa-head{margin-bottom:8px}
+  #${MOUNT_ID} .xhfa-home{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin:4px 0 14px}
+  #${MOUNT_ID} .xhfa-tile{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;background:rgba(17,17,21,.85);border:1px solid rgba(255,255,255,.075);border-radius:14px;padding:16px 18px;cursor:pointer;transition:border-color .15s,transform .15s}
+  #${MOUNT_ID} .xhfa-tile:hover{border-color:rgba(232,201,142,.45);transform:translateY(-1px)}
+  #${MOUNT_ID} .xhfa-tile-title{font-size:14.5px;font-weight:600;color:var(--gold-bright,#f8ebce)}
+  #${MOUNT_ID} .xhfa-tile-value{font-size:24px;font-weight:700;color:var(--gold,#e5c68d);line-height:1.1}
+  #${MOUNT_ID} .xhfa-tile-sub{font-size:11.5px;color:var(--muted,#92a0af);line-height:1.4}
+  #${MOUNT_ID} .xhfa-pagehead{display:flex;align-items:center;gap:12px;margin:2px 0 14px;flex-wrap:wrap}
+  #${MOUNT_ID} .xhfa-pagehead h3{margin:0;font-size:18px;color:var(--gold-bright,#f8ebce);font-weight:600;letter-spacing:.03em}
+  #${MOUNT_ID} #xhfaDetail .xhfa-head h3{display:none}
+  #${MOUNT_ID} #xhfaDetail .xhfa-head{margin-bottom:8px}
   @media (max-width:720px){ #${MOUNT_ID} .xhfa-member .xhfa-name{min-width:0} }
   `;
 
-  function updateToggleAllLabel(root) {
-    var btn = document.getElementById('xhfaToggleAll');
-    if (!btn) return;
-    var anyOpen = false;
-    root.querySelectorAll('details.xhfa-sec').forEach(function (sec) {
-      if (sec.open && sec.style.display !== 'none') anyOpen = true;
-    });
-    btn.textContent = anyOpen ? '全部收起' : '全部展开';
+
+  // ---------------- 模块注册表：总览里点一个，只打开那一个页面 ----------------
+  var MODULES = [
+    { key: 'boxStatus', title: '盒子状态', sub: '在线、心跳、今天听到了什么', nodes: ['xhfaBoxStatus'] },
+    { key: 'boxMessages', title: '盒子留言', sub: '给老人带句话，盒子会念出来', nodes: ['xhfaBoxForm', 'xhfaBox'] },
+    { key: 'schedule', title: '定时消息', sub: '盒子 / 群聊 / 私聊的定时任务', nodes: ['xhfaSched'] },
+    { key: 'members', title: '监护者', sub: '已绑定 QQ 的家人', nodes: ['xhfaMembers'] },
+    { key: 'elders', title: '被监护者', sub: '老人档案、称呼与作息', nodes: ['xhfaElder', 'xhfaElderForm'] },
+    { key: 'people', title: '人员与关系', sub: '成员、声纹与关系', nodes: ['xhfaContentForm'] },
+    { key: 'tasks', title: '任务', sub: '下发给盒子的任务', nodes: ['xhfaTasks'] },
+    { key: 'recordings', title: '录音', sub: '盒子录下的片段', nodes: ['xhfaRecordings'] },
+    { key: 'logs', title: '操作日志', sub: '谁改了什么', nodes: ['xhfaLogs'] },
+    { key: 'chat', title: '最近对话', sub: '家人和星环的问答', nodes: ['xhfaChat'] },
+    { key: 'portrait', title: '心理画像', sub: '陪伴观察，不做医学诊断', nodes: ['xhfaPortrait'], owner: true },
+    { key: 'loginLogs', title: '登录日志', sub: '谁在什么时候登录', nodes: ['xhfaLoginLogs'], owner: true },
+    { key: 'boxSettings', title: '盒子参数', sub: '音色、灵敏度、声纹模型', nodes: ['xhfaBoxSettings'], owner: true },
+    { key: 'astrbot', title: 'AstrBot 面板', sub: '人格、插件、模型配置', nodes: ['xhfaAstrbot'], owner: true }
+  ];
+  var view = { key: '', me: null, data: null, owner: false };
+  var AUTO_REFRESH = ['boxStatus', 'chat', 'tasks', 'recordings', 'members'];
+
+  function moduleByKey(key) {
+    for (var i = 0; i < MODULES.length; i += 1) {
+      if (MODULES[i].key === key) return MODULES[i];
+    }
+    return null;
   }
 
-  function initSections(root) {
-    var saved = {};
-    try { saved = JSON.parse(localStorage.getItem('xhfaOpen') || '{}') || {}; } catch (e) { saved = {}; }
-    var sections = root.querySelectorAll('details.xhfa-sec');
-    sections.forEach(function (sec) {
-      var key = sec.getAttribute('data-key');
-      var fallback = sec.getAttribute('data-default') === 'open';
-      sec.open = Object.prototype.hasOwnProperty.call(saved, key) ? Boolean(saved[key]) : fallback;
-      sec.addEventListener('toggle', function () {
-        var state = {};
-        try { state = JSON.parse(localStorage.getItem('xhfaOpen') || '{}') || {}; } catch (e) { state = {}; }
-        state[key] = sec.open;
-        try { localStorage.setItem('xhfaOpen', JSON.stringify(state)); } catch (e) {}
-        updateToggleAllLabel(root);
+  function nodeHtml(id) {
+    if (id === 'xhfaElderForm') return '<div class="xhfa-list" id="xhfaElderForm" style="display:none"></div>';
+    if (id === 'xhfaBoxForm') {
+      return '<div id="xhfaBoxForm" style="display:none;margin-bottom:12px">' +
+        '<div style="display:flex;gap:8px">' +
+        '<input type="text" id="xhfaBoxText" placeholder="跟妈说：记得吃药" style="flex:1;min-width:200px" />' +
+        '<button id="xhfaBoxSend">发到盒子</button>' +
+        '</div></div>';
+    }
+    return '<div class="xhfa-list xhfa-page" id="' + id + '" style="display:none"></div>';
+  }
+
+  function renderTiles() {
+    var home = document.getElementById('xhfaHome');
+    if (!home) return;
+    home.innerHTML = '';
+    var data = view.data || {};
+    MODULES.forEach(function (m) {
+      if (m.owner && !view.owner) return;
+      var tile = el('button', 'xhfa-tile');
+      var top = el('span', 'xhfa-tile-title', m.title);
+      tile.appendChild(top);
+      var value = tileValue(m, data);
+      if (value) tile.appendChild(el('b', 'xhfa-tile-value', value));
+      tile.appendChild(el('span', 'xhfa-tile-sub', value ? m.sub : m.sub));
+      tile.onclick = function () { openModule(m.key); };
+      home.appendChild(tile);
+    });
+  }
+
+  function tileValue(m, data) {
+    var s = data.box_status || {};
+    if (m.key === 'boxStatus') return s.online ? '在线' : '离线';
+    if (m.key === 'boxMessages') return String((data.messages || []).length);
+    if (m.key === 'tasks') return String((data.tasks || []).length);
+    if (m.key === 'recordings') return String((data.recordings || []).length);
+    if (m.key === 'chat') return String((data.chats || []).length);
+    if (m.key === 'members') return String((data.members || []).length);
+    return '';
+  }
+
+  function renderModule(m) {
+    var data = view.data || {};
+    if (m.key === 'boxStatus') renderBoxStatus(data);
+    else if (m.key === 'boxMessages') renderBox(data);
+    else if (m.key === 'schedule') renderSched();
+    else if (m.key === 'members') renderMembers(data);
+    else if (m.key === 'elders') renderElders();
+    else if (m.key === 'people') renderPeople();
+    else if (m.key === 'tasks') renderTasks(data);
+    else if (m.key === 'recordings') renderRecordings(data);
+    else if (m.key === 'logs') renderLogs();
+    else if (m.key === 'chat') renderChat(data);
+    else if (m.key === 'portrait') renderPortrait(false);
+    else if (m.key === 'loginLogs') renderLoginLogs(true);
+    else if (m.key === 'boxSettings') renderBoxSettings(true);
+    else if (m.key === 'astrbot') renderAstrbot(true);
+  }
+
+  function openModule(key, keepHash) {
+    var m = moduleByKey(key);
+    if (!m) return;
+    if (m.owner && !view.owner) return;
+    view.key = key;
+    var home = document.getElementById('xhfaHome');
+    var detail = document.getElementById('xhfaDetail');
+    if (home) home.style.display = 'none';
+    if (detail) detail.style.display = '';
+    MODULES.forEach(function (mm) {
+      mm.nodes.forEach(function (id) {
+        var node = document.getElementById(id);
+        if (node) node.style.display = mm.key === key ? '' : 'none';
       });
     });
-    var toggleAll = document.getElementById('xhfaToggleAll');
-    if (toggleAll) {
-      toggleAll.onclick = function () {
-        var anyOpen = false;
-        sections.forEach(function (sec) {
-          if (sec.open && sec.style.display !== 'none') anyOpen = true;
-        });
-        sections.forEach(function (sec) {
-          if (sec.style.display === 'none') return;
-          sec.open = !anyOpen;
-        });
-        updateToggleAllLabel(root);
-      };
+    var title = document.getElementById('xhfaDetailTitle');
+    if (title) title.textContent = m.title;
+    var sub = document.getElementById('xhfaDetailSub');
+    if (sub) sub.textContent = m.sub;
+    renderModule(m);
+    if (!keepHash) {
+      try { history.replaceState(null, '', '#xhfa/' + key); } catch (e) { location.hash = 'xhfa/' + key; }
     }
-    updateToggleAllLabel(root);
+  }
+
+  function showHome() {
+    view.key = '';
+    var home = document.getElementById('xhfaHome');
+    var detail = document.getElementById('xhfaDetail');
+    if (home) home.style.display = '';
+    if (detail) detail.style.display = 'none';
+    renderTiles();
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { location.hash = ''; }
+  }
+
+  function refreshData(silent) {
+    return api('/console/data').then(function (payload) {
+      if (!payload || payload.code !== 0) {
+        if (!silent) err((payload && payload.message) || '加载失败');
+        return;
+      }
+      view.data = payload.data || {};
+      clearErr();
+      renderTiles();
+      if (view.key) {
+        var m = moduleByKey(view.key);
+        if (m) renderModule(m);
+      }
+    });
   }
 
   function mount() {
@@ -160,56 +265,39 @@
 
     var root = document.createElement('div');
     root.id = MOUNT_ID;
+    var nodes = MODULES.map(function (m) {
+      return m.nodes.map(nodeHtml).join('');
+    }).join('');
     root.innerHTML =
       '<div class="xhfa-head"><h3>QQ 家庭助手</h3>' +
-      '<span class="xhfa-sub">群聊/私聊问答 · 家人 · 盒子</span>' +
+      '<span class="xhfa-sub">群聊 / 私聊 / 盒子</span>' +
       '<span class="xhfa-sub" style="margin-left:auto" id="xhfaWho"></span>' +
-      '<button id="xhfaToggleAll">全部展开</button>' +
       '<button id="xhfaRefresh">刷新</button></div>' +
       '<div class="xhfa-error" id="xhfaErr"></div>' +
-      '<div class="xhfa-grid" id="xhfaStats"></div>' +
-      '<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button id="xhfaBind">绑定 QQ</button></div>' +
-      section('boxStatus', '盒子状态', true, '<div class="xhfa-list" id="xhfaBoxStatus"></div>') +
-      section('boxSettings', '盒子参数（在线调）', false, '<div class="xhfa-list" id="xhfaBoxSettings"></div>') +
-      section('loginLogs', '登录日志', false, '<div class="xhfa-list" id="xhfaLoginLogs"></div>') +
-      section('members', '监护者（QQ 绑定）', false, '<div class="xhfa-list" id="xhfaMembers"></div>') +
-      section('elders', '被监护者', false,
-        '<div class="xhfa-list" id="xhfaElder"><div class="xhfa-empty">被监护者 / 服务对象可以通过客厅盒子交流，不强制需要智能手机。</div></div>' +
-        '<div class="xhfa-list" id="xhfaElderForm"></div>') +
-      section('people', '人员与关系', false, '<div class="xhfa-list" id="xhfaContentForm"></div>') +
-      section('tasks', '任务', false, '<div class="xhfa-list" id="xhfaTasks"></div>') +
-      section('schedule', '定时消息', false, '<div class="xhfa-list" id="xhfaSched"></div>') +
-      section('logs', '操作日志', false, '<div class="xhfa-list" id="xhfaLogs"></div>') +
-      section('recordings', '录音', false, '<div class="xhfa-list" id="xhfaRecordings"></div>') +
-      section('boxMessages', '盒子留言', false,
-        '<div style="display:flex;gap:8px;margin-bottom:10px">' +
-        '  <input type="text" id="xhfaBoxText" placeholder="跟妈说：记得吃药" style="flex:1;min-width:200px" />' +
-        '  <button id="xhfaBoxSend">发到盒子</button>' +
-        '</div>' +
-        '<div class="xhfa-list" id="xhfaBox"></div>') +
-      section('chat', '最近对话', false, '<div class="xhfa-list" id="xhfaChat"></div>') +
-      section('portrait', '心理画像（仅超管）', false, '<div class="xhfa-list" id="xhfaPortrait"></div>') +
-      section('astrbot', 'AstrBot 面板（仅超管）', false, '<div class="xhfa-list" id="xhfaAstrbot"></div>');
+      '<div id="xhfaHome" class="xhfa-home"></div>' +
+      '<div id="xhfaDetail" style="display:none">' +
+      '  <div class="xhfa-pagehead">' +
+      '    <button id="xhfaBack">← 返回总览</button>' +
+      '    <h3 id="xhfaDetailTitle"></h3>' +
+      '    <span class="xhfa-sub" id="xhfaDetailSub"></span>' +
+      '  </div>' +
+      '  <div id="xhfaDetailBody">' + nodes + '</div>' +
+      '</div>';
     page.appendChild(root);
-    initSections(root);
 
-    document.getElementById('xhfaRefresh').onclick = load;
-    document.getElementById('xhfaBoxSend').onclick = sendBox;
+    document.getElementById('xhfaRefresh').onclick = function () { refreshData(false); };
+    document.getElementById('xhfaBack').onclick = showHome;
+    var send = document.getElementById('xhfaBoxSend');
+    if (send) send.onclick = sendBox;
     function syncProgramOnly() {
-      var root = document.getElementById(MOUNT_ID);
-      if (!root) return;
+      var node = document.getElementById(MOUNT_ID);
+      if (!node) return;
       var org = '';
       try { org = localStorage.getItem('wbOrg') || ''; } catch (e) {}
-      root.style.display = (org === 'program') ? '' : 'none';
+      node.style.display = (org === 'program') ? '' : 'none';
     }
     syncProgramOnly();
     setInterval(syncProgramOnly, 1500);
-
-    var bindBtn = document.getElementById('xhfaBind');
-    if (bindBtn) bindBtn.onclick = function () {
-      if (window.XHBind && typeof window.XHBind.open === 'function') window.XHBind.open();
-      else err('绑定组件还没加载，请刷新页面');
-    };
     return root;
   }
 
@@ -1154,6 +1242,7 @@
     }).catch(function () { status.textContent = '查询失败'; });
   }
 
+
   function load() {
     if (!mount()) return;
     if (!token()) { err('请先登录网站'); return; }
@@ -1165,47 +1254,49 @@
         return;
       }
       removeMemberHome();
+      view.me = me.data || {};
+      view.owner = view.me.level === 'owner';
       var who = document.getElementById('xhfaWho');
-      if (who) who.textContent = (me.data.name || '') + ' · ' + (me.data.level === 'owner' ? '超级管理员' : '管理员');
+      if (who) who.textContent = (view.me.name || '') + ' · ' + (view.owner ? '超级管理员' : '管理员');
       return api('/console/data').then(function (payload) {
         if (!payload || payload.code !== 0) { err((payload && payload.message) || '加载失败'); return; }
+        view.data = payload.data || {};
         clearErr();
-        var data = payload.data || {};
-        renderStats(data);
-        renderBoxStatus(data);
-        renderMembers(data);
-        renderBox(data);
-        renderChat(data);
-        renderElders();
-        renderPeople();
-        renderLogs();
-        renderSched();
-        renderTasks(data);
-        renderRecordings(data);
-        if (me.data.portrait) {
-          renderPortrait(false);
-        } else {
-          var portraitBox = document.getElementById('xhfaPortrait');
-          if (portraitBox) portraitBox.style.display = 'none';
-        }
-        renderAstrbot(me.data.level === 'owner');
-        renderBoxSettings(me.data.level === 'owner');
-        renderLoginLogs(me.data.level === 'owner');
-        if (me.data.level !== 'owner') {
-          var settingsBox = document.getElementById('xhfaBoxSettings');
-          if (settingsBox) settingsBox.style.display = 'none';
-          var logsBox = document.getElementById('xhfaLoginLogs');
-          if (logsBox) logsBox.style.display = 'none';
-        }
+        renderTiles();
+        var wanted = '';
+        var hash = String(location.hash || '');
+        if (hash.indexOf('#xhfa/') === 0) wanted = hash.slice(6);
+        if (wanted && moduleByKey(wanted)) openModule(wanted, true);
+        else showHome();
       });
     }).catch(function () { err('连接失败'); });
   }
 
   function start() {
     if (!mount()) return;
+    if (!pollTimer) {
+      pollTimer = setInterval(function () {
+        var root = document.getElementById(MOUNT_ID);
+        if (!root || root.style.display === 'none') return;
+        if (document.hidden) return;
+        var focused = document.activeElement;
+        if (focused && root.contains(focused) && /^(INPUT|SELECT|TEXTAREA)$/.test(focused.tagName)) return;
+        if (!view.key) { refreshData(true); return; }
+        if (AUTO_REFRESH.indexOf(view.key) >= 0) refreshData(true);
+      }, 20000);
+    }
     load();
-    if (!pollTimer) pollTimer = setInterval(load, 15000);
   }
+
+  window.addEventListener('hashchange', function () {
+    var hash = String(location.hash || '');
+    if (hash.indexOf('#xhfa/') === 0) {
+      var key = hash.slice(6);
+      if (moduleByKey(key)) openModule(key, true);
+    } else {
+      showHome();
+    }
+  });
 
   // 网站是单页切换，控制台页显示时再挂载
   if (document.readyState === 'loading') {
