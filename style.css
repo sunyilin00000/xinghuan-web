@@ -1,4 +1,4 @@
-
+﻿
     :root {
       color-scheme: dark;
       --bg: #0e0e10;
@@ -7032,3 +7032,34 @@ section[id], main [id] { scroll-margin-top: 92px; }
 .wb-org-btn { border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.03); color:var(--muted); border-radius:999px; padding:5px 14px; font-size:12px; cursor:pointer; font-family:inherit; }
 .wb-org-btn:hover { border-color:rgba(232,201,142,.4); color:var(--gold-bright); }
 .wb-org-btn.active { border-color:rgba(232,201,142,.55); color:var(--gold-bright); background:rgba(232,201,142,.08); }
+
+
+/* 星环计划 · 与社团卡同排 */
+.partner-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.plan-hero.plan-card {
+  position: relative;
+  margin: 0;
+  align-items: stretch;
+  gap: 0;
+  box-shadow: none;
+  display: flex;
+  min-width: 0;
+  min-height: 268px;
+  flex-direction: column;
+  padding: 22px;
+  overflow: hidden;
+  border: 1px solid rgba(232, 201, 142, 0.32);
+  border-radius: 20px;
+  background: linear-gradient(155deg, rgba(232, 201, 142, 0.10), rgba(255, 255, 255, 0.008) 58%);
+}
+.plan-card .plan-hero-copy { position: relative; z-index: 1; display: flex; flex: 1; flex-direction: column; }
+.plan-card .plan-hero-kicker { margin: 0 0 8px; font-size: 9px; letter-spacing: .3em; color: rgba(230, 199, 143, .75); }
+.plan-card .plan-hero-title { margin: 0; font-size: 26px; font-weight: 500; letter-spacing: .06em; color: #f8f3e6; }
+.plan-card .plan-hero-desc { margin: 10px 0 0; font-size: 12px; line-height: 1.8; color: rgba(200, 205, 218, .62); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.plan-card .plan-hero-actions { display: flex; gap: 8px; margin-top: auto; padding-top: 16px; flex-wrap: wrap; }
+.plan-card .plan-hero-btn,
+.plan-card .plan-hero-ghost { height: 34px; padding: 0 16px; border-radius: 999px; font-size: 12px; box-shadow: none; transform: none; }
+.plan-card .plan-hero-btn:hover,
+.plan-card .plan-hero-ghost:hover { transform: none; }
+.plan-card .plan-hero-visual { position: absolute; right: -34px; bottom: -34px; width: 160px; height: 160px; opacity: .45; transform: scale(.7); pointer-events: none; }
+.plan-card-mark { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(232, 201, 142, .4); color: #f3dcb0; font-size: 16px; }
