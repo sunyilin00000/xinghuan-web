@@ -761,16 +761,38 @@
   // AstrBot WebUI 的公网 HTTPS 入口（服务器 Caddy 反代 127.0.0.1:6185）
   var ASTRBOT_URL = (window.XINGHUAN_ASTRBOT_URL || 'https://cloud1-d6gagyei397d315ca-1521583267.ap-shanghai.app.tcloudbase.com/');
 
+  var panelTicket = '';
+
+  function panelEntryUrl(ticket) {
+    return ASTRBOT_URL.replace(/\/+$/, '') + '/xh-panel-entry?ticket=' + encodeURIComponent(ticket || '');
+  }
+
+  function fetchPanelTicket() {
+    return api('/console/panel-ticket').then(function (res) {
+      if (res && res.code === 0 && res.data && res.data.ticket) {
+        panelTicket = res.data.ticket;
+      }
+      return panelTicket;
+    }).catch(function () { return ''; });
+  }
+
   function loadAstrbotFrame() {
     var holder = document.getElementById('xhfaAstrbotFrame');
     if (!holder) return;
-    holder.innerHTML = '';
-    var frame = document.createElement('iframe');
-    frame.src = ASTRBOT_URL;
-    frame.style.cssText = 'width:100%;height:100%;border:0;background:#fff';
-    frame.setAttribute('allow', 'clipboard-read; clipboard-write');
-    frame.setAttribute('referrerpolicy', 'no-referrer');
-    holder.appendChild(frame);
+    holder.innerHTML = '<div class="xhfa-empty">正在申请面板访问票据…</div>';
+    fetchPanelTicket().then(function (ticket) {
+      holder.innerHTML = '';
+      if (!ticket) {
+        holder.appendChild(el('div', 'xhfa-empty', '没有拿到面板票据（需要超级管理员本人登录）'));
+        return;
+      }
+      var frame = document.createElement('iframe');
+      frame.src = panelEntryUrl(ticket);
+      frame.style.cssText = 'width:100%;height:100%;border:0;background:#fff';
+      frame.setAttribute('allow', 'clipboard-read; clipboard-write');
+      frame.setAttribute('referrerpolicy', 'no-referrer');
+      holder.appendChild(frame);
+    });
   }
 
   // AstrBot 面板：只有超级管理员能看（服务端另有人工入口限制）
@@ -786,7 +808,7 @@
     head.appendChild(el('span', 'xhfa-sub', '机器人配置 / 插件 / 日志（首次需用 AstrBot 账号登录）'));
     var open = el('button', null, '打开面板');
     var popup = document.createElement('a');
-    popup.href = ASTRBOT_URL;
+    popup.href = '#';
     popup.target = '_blank';
     popup.rel = 'noopener';
     popup.textContent = '新窗口打开';
@@ -800,6 +822,13 @@
     holder.appendChild(el('div', 'xhfa-empty', '点「打开面板」加载；如果一直白屏，说明服务器 443 还没放行，或浏览器拦了第三方 Cookie，请用「新窗口打开」。'));
     box.appendChild(holder);
     open.onclick = loadAstrbotFrame;
+    popup.onclick = function (ev) {
+      ev.preventDefault();
+      fetchPanelTicket().then(function (ticket) {
+        if (!ticket) { err('没有拿到面板票据（需要超级管理员本人登录）'); return; }
+        window.open(panelEntryUrl(ticket), '_blank', 'noopener');
+      });
+    };
   }
 
   // 心理画像：只对超级管理员本人（孙一琳）开放，服务端也会再校验一次
