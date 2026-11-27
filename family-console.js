@@ -22,6 +22,25 @@
     return isNaN(d) ? '' : d.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
   }
 
+  function fmtDuration(seconds) {
+    var value = Math.max(0, Math.round(Number(seconds) || 0));
+    var day = Math.floor(value / 86400);
+    var hour = Math.floor((value % 86400) / 3600);
+    var minute = Math.floor((value % 3600) / 60);
+    if (day) return day + ' 天 ' + hour + ' 小时';
+    if (hour) return hour + ' 小时 ' + minute + ' 分';
+    return minute + ' 分钟';
+  }
+
+  function fmtAgo(seconds) {
+    if (seconds === null || seconds === undefined) return '未知';
+    var value = Math.max(0, Math.round(Number(seconds) || 0));
+    if (value < 60) return value + ' 秒前';
+    if (value < 3600) return Math.round(value / 60) + ' 分钟前';
+    if (value < 86400) return Math.round(value / 3600) + ' 小时前';
+    return Math.round(value / 86400) + ' 天前';
+  }
+
   function api(path, body) {
     return fetch(API + path, {
       method: 'POST',
@@ -88,6 +107,7 @@
       '<button id="xhfaRefresh">刷新</button></div>' +
       '<div class="xhfa-error" id="xhfaErr"></div>' +
       '<div class="xhfa-grid" id="xhfaStats"></div>' +
+      '<div class="xhfa-list" id="xhfaBoxStatus"></div>' +
       '<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button id="xhfaBind">绑定 QQ</button></div>' +
       '<div class="xhfa-list" id="xhfaElder"><div class="xhfa-empty">被监护者 / 服务对象可以通过客厅盒子交流，不强制需要智能手机。</div></div>' +
       '<div class="xhfa-list" id="xhfaPortrait" style="display:none"></div>' +
@@ -135,6 +155,46 @@
     box.classList.add('show');
   }
   function clearErr() { var b = document.getElementById('xhfaErr'); if (b) b.classList.remove('show'); }
+
+  // 盒子状态：靠盒子服务每 45 秒上报的心跳判断，不用登服务器看日志
+  function renderBoxStatus(data) {
+    var box = document.getElementById('xhfaBoxStatus');
+    if (!box) return;
+    box.innerHTML = '';
+    var s = data.box_status;
+    var head = el('div', 'xhfa-head');
+    head.appendChild(el('h3', null, '盒子状态'));
+    head.appendChild(el('span', 'xhfa-tag ' + (s && s.online ? 'ok' : 'bad'), s ? (s.online ? '在线' : '离线') : '还没上报'));
+    if (s && s.online) {
+      head.appendChild(el('span', 'xhfa-sub', s.device_connected ? 'ESP32 已连接' : 'ESP32 未连接（服务在跑，等盒子联网）'));
+    }
+    box.appendChild(head);
+    if (!s) {
+      box.appendChild(el('div', 'xhfa-empty', '盒子服务还没上报状态（刚重启时等 1 分钟；一直为空说明服务没起来）'));
+      return;
+    }
+    var facts = [];
+    facts.push('服务已运行 ' + fmtDuration(s.uptime_sec));
+    facts.push('上次心跳 ' + fmtAgo(s.stale_seconds));
+    if (s.device_connected && s.device_addr) facts.push('盒子地址 ' + s.device_addr);
+    facts.push('今日对话 ' + (s.today_user_msgs || 0) + ' 句');
+    facts.push('已认人 ' + (s.named_persons || 0) + '/' + (s.persons || 0));
+    facts.push('语音 ' + (s.tts === 'piper' ? '本地 Piper' : 'Edge 云端'));
+    var line1 = el('div', 'xhfa-row');
+    line1.appendChild(el('span', 'xhfa-body', facts.join(' · ')));
+    box.appendChild(line1);
+
+    var engines = [];
+    engines.push('识别' + (s.asr_ready ? '✓' : '—'));
+    engines.push('声纹' + (s.voiceprint_ready ? '✓' : '—'));
+    engines.push('声音事件' + (s.sound_events ? '✓' : '关'));
+    var line2 = el('div', 'xhfa-row');
+    line2.appendChild(el('span', 'xhfa-tag', engines.join(' ')));
+    line2.appendChild(el('span', 'xhfa-body', '最后听到：' + (s.last_voice_ts ? fmt(s.last_voice_ts * 1000) : '还没听到过')));
+    if (s.awaiting_name) line2.appendChild(el('span', 'xhfa-tag ok', '正在问称呼'));
+    if (s.pending_task) line2.appendChild(el('span', 'xhfa-tag qq', '任务录音中'));
+    box.appendChild(line2);
+  }
 
   function renderStats(data) {
     var box = document.getElementById('xhfaStats');
@@ -716,6 +776,7 @@
         clearErr();
         var data = payload.data || {};
         renderStats(data);
+        renderBoxStatus(data);
         renderMembers(data);
         renderBox(data);
         renderChat(data);
