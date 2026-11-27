@@ -4863,7 +4863,7 @@
       var u = state.user || {};
       var org = state.wbOrg || u.org || 'astro';
       var list = ORG_DEPTS[org] || [];
-      var current = (u.department || '').trim();
+      var current = ((u.org_identities && u.org_identities[org] && u.org_identities[org].department) || u.department || '').trim();
       sel.innerHTML = '<option value="">选填</option>' + list.map(function (d) {
         return '<option value="' + d + '"' + (d === current ? ' selected' : '') + '>' + d + '</option>';
       }).join('');
@@ -4873,8 +4873,10 @@
       refreshDeptOptions();
       var u = state.user || {};
       document.querySelectorAll('[data-pf]').forEach(function (input) {
+        if (input.dataset.pf === 'department') return;
         input.value = u[input.dataset.pf] || '';
       });
+      refreshDeptOptions();
     }
     async function saveProfile() {
       var msg = document.getElementById('wbMeMsg');
