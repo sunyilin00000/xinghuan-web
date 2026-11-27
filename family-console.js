@@ -80,6 +80,7 @@
       '<button id="xhfaRefresh">刷新</button></div>' +
       '<div class="xhfa-error" id="xhfaErr"></div>' +
       '<div class="xhfa-grid" id="xhfaStats"></div>' +
+      '<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button id="xhfaBind">绑定 QQ</button></div>' +
       '<div class="xhfa-list" id="xhfaMembers"></div>' +
       '<div style="display:flex;gap:8px;margin-bottom:10px">' +
       '  <input type="text" id="xhfaBoxText" placeholder="跟妈说：记得吃药" style="flex:1;min-width:200px" />' +
@@ -91,6 +92,11 @@
 
     document.getElementById('xhfaRefresh').onclick = load;
     document.getElementById('xhfaBoxSend').onclick = sendBox;
+    var bindBtn = document.getElementById('xhfaBind');
+    if (bindBtn) bindBtn.onclick = function () {
+      if (window.XHBind && typeof window.XHBind.open === 'function') window.XHBind.open();
+      else err('绑定组件还没加载，请刷新页面');
+    };
     return root;
   }
 

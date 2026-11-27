@@ -162,35 +162,6 @@
     overlay._stop = stopPolling;
   }
 
-  function mount() {
-    if (!token()) return;
-    if (pill || document.getElementById('xh-bind-pill')) return;
-    pill = el('button',
-      'position:fixed;right:22px;bottom:22px;z-index:99997;padding:10px 16px;border-radius:999px;' +
-      'border:1px solid rgba(214,183,116,.5);background:rgba(23,23,27,.92);color:#f0dfb4;' +
-      'font:13px/1 system-ui,sans-serif;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.35)',
-      '绑定 QQ');
-    pill.id = 'xh-bind-pill';
-    pill.onclick = openModal;
-    document.body.appendChild(pill);
-  }
-
-  function unmount() {
-    if (pill) { pill.remove(); pill = null; }
-    closeModal();
-  }
-
-  // 站内登录/退出不刷新页面，轮询一下 token 状态
-  setInterval(function () {
-    if (token()) mount(); else unmount();
-  }, 2000);
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', mount);
-  } else {
-    mount();
-  }
-
-  // 便于站内按钮直接调用
-  window.XHBind = { open: openModal, close: closeModal };
+  // 不再显示右下角浮标：绑定入口已放进控制台「QQ 家庭助手」面板
+    window.XHBind = { open: openModal, close: closeModal };
 })();
