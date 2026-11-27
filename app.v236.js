@@ -1673,7 +1673,7 @@
       const response = await fetch(SCF_API + '/member-bridge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Member-Token': state.user.token },
-        body: JSON.stringify({ action, data: data || {} })
+        body: JSON.stringify({ action, data: Object.assign({ active_org: state.wbOrg || '' }, data || {}) })
       });
       return response.json();
     }
