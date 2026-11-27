@@ -1667,6 +1667,11 @@
       metaverse: { name: '元宇宙发展协会', logo: 'logo.png' },
       program: { name: '星环计划', logo: 'logo.png' }
     };
+    const ORG_CATEGORY = {
+      astro: 'astro', nankai_astro: 'astro', sagittarius: 'astro',
+      metaverse: 'general', bio: 'general', outdoor: 'general', program: 'general', guest: 'general'
+    };
+
     const ORG_DEPTS = {
       astro: ['秘书处', '活动部', '观测部', '宣传部', '外联部'],
       nankai_astro: ['学术部', '观测部', '宣传部', '外联部'],
@@ -1728,6 +1733,8 @@
             wbLoadRes();
           };
         });
+        var communityTab = document.querySelector('.wb-tab[data-wbt="community"]');
+        if (communityTab) communityTab.hidden = (ORG_CATEGORY[activeOrg] || 'general') !== 'astro';
         if (myOrgs.length <= 1) {
           var hint = document.createElement('span');
           hint.className = 'wb-org-hint';
