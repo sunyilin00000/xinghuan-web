@@ -1667,6 +1667,16 @@
       metaverse: { name: '元宇宙发展协会', logo: 'logo.png' },
       program: { name: '星环计划', logo: 'logo.png' }
     };
+    const ORG_DEPTS = {
+      astro: ['秘书处', '活动部', '观测部', '宣传部', '外联部'],
+      nankai_astro: ['学术部', '观测部', '宣传部', '外联部'],
+      sagittarius: ['观测部', '学术部', '宣传部'],
+      metaverse: ['运营部', '技术部', '内容部'],
+      bio: ['学术部', '活动部'],
+      outdoor: ['活动部', '宣传部'],
+      program: ['运营', '技术', '内容', '设计'],
+      guest: []
+    };
     const wbState = { members: [], isAdmin: false };
     // 经 SCF /member-bridge 中转调用 memberService（鉴权透传）
     async function wbCall(action, data) {
@@ -1750,6 +1760,10 @@
             '<div class="ap-toolbar"><span style="color:var(--faint);font-size:12px">完善个人信息（学校/校区/专业为必填，联系方式选填）</span></div>' +
             '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;max-width:900px">' +
             [['school','学校（必填）','如：中国海洋大学'],['campus','校区（必填）','如：崂山校区'],['major','专业（必填）','如：物理学'],['department','社团部门','选填'],['phone','手机号','选填'],['email','邮箱','选填'],['wechat','微信','选填'],['qq','QQ','选填']].map(function (f) {
+              if (f[0] === 'department') {
+                return '<div class="field" style="display:grid;gap:6px"><label style="font-size:10px;letter-spacing:.2em;color:#5c7194">' + f[1] + '</label>' +
+                  '<select data-pf="department" id="wbMeDept" style="padding:11px 14px;border:1px solid rgba(124,167,220,.2);border-radius:11px;background:rgba(9,9,13,.8);color:#eaf2fb;font-size:13px;outline:none;font-family:inherit"></select></div>';
+              }
               return '<div class="field" style="display:grid;gap:6px"><label style="font-size:10px;letter-spacing:.2em;color:#5c7194">' + f[1] + '</label>' +
                 '<input data-pf="' + f[0] + '" placeholder="' + f[2] + '" style="padding:11px 14px;border:1px solid rgba(124,167,220,.2);border-radius:11px;background:rgba(255,255,255,.03);color:#eaf2fb;font-size:13px;outline:none;font-family:inherit" /></div>';
             }).join('') +
@@ -4836,7 +4850,20 @@
     window.wbPfDel = async function (id, name) { if (window.wbDelMember) return window.wbDelMember(id, name); };
 
     /* v2.46 资料表单读写 */
+    function refreshDeptOptions() {
+      var sel = document.getElementById('wbMeDept');
+      if (!sel) return;
+      var u = state.user || {};
+      var org = state.wbOrg || u.org || 'astro';
+      var list = ORG_DEPTS[org] || [];
+      var current = (u.department || '').trim();
+      sel.innerHTML = '<option value="">选填</option>' + list.map(function (d) {
+        return '<option value="' + d + '"' + (d === current ? ' selected' : '') + '>' + d + '</option>';
+      }).join('');
+    }
+
     function fillProfileForm() {
+      refreshDeptOptions();
       var u = state.user || {};
       document.querySelectorAll('[data-pf]').forEach(function (input) {
         input.value = u[input.dataset.pf] || '';
