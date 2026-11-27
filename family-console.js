@@ -1010,6 +1010,61 @@
     });
   }
 
+  // 普通成员的工作台：不显示超管模块，但给一个「我的」卡片，而不是一片空白
+  var MEMBER_HOME_ID = 'xhMemberHome';
+
+  function removeMemberHome() {
+    var node = document.getElementById(MEMBER_HOME_ID);
+    if (node) node.remove();
+  }
+
+  function renderMemberHome() {
+    var page = document.getElementById('workbenchPage');
+    if (!page) return;
+    if (document.getElementById(MEMBER_HOME_ID)) return;
+    var box = document.createElement('div');
+    box.id = MEMBER_HOME_ID;
+    box.style.cssText = 'margin:8px 0 20px;background:rgba(17,17,21,.85);border:1px solid rgba(255,255,255,.075);border-radius:14px;padding:16px 18px';
+
+    var title = document.createElement('h3');
+    title.textContent = '我的工作台';
+    title.style.cssText = 'margin:0 0 6px;font-size:17px;color:#f8ebce;font-weight:600;letter-spacing:.04em';
+    box.appendChild(title);
+
+    var sub = document.createElement('p');
+    sub.textContent = '你目前是星环计划成员。家庭助手、心理画像、登录日志、机器人面板只对超级管理员（孙一琳）开放。';
+    sub.style.cssText = 'margin:0 0 12px;font-size:12.5px;color:#92a0af;line-height:1.6';
+    box.appendChild(sub);
+
+    var line = document.createElement('div');
+    line.style.cssText = 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px;color:#f2f5f8';
+    line.appendChild(document.createTextNode('我的 QQ 绑定：'));
+    var status = document.createElement('span');
+    status.textContent = '查询中…';
+    status.style.color = '#5e6b79';
+    line.appendChild(status);
+    var bindBtn = document.createElement('button');
+    bindBtn.textContent = '绑定 QQ';
+    bindBtn.style.cssText = 'background:#17171c;color:#f2f5f8;border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:5px 12px;cursor:pointer;font-size:12px';
+    bindBtn.onclick = function () {
+      if (window.XHBind && typeof window.XHBind.open === 'function') window.XHBind.open();
+    };
+    line.appendChild(bindBtn);
+    box.appendChild(line);
+    page.appendChild(box);
+
+    api('/bot/bind/status').then(function (res) {
+      if (res && res.code === 0 && res.data) {
+        status.textContent = res.data.bound
+          ? ('已绑定 ' + (res.data.openid_mask || '') + (res.data.bot_id ? ' · 机器人 ' + res.data.bot_id : ''))
+          : '未绑定';
+        status.style.color = res.data.bound ? '#86b5a0' : '#ffc98a';
+      } else {
+        status.textContent = '查询失败（可能登录已失效）';
+      }
+    }).catch(function () { status.textContent = '查询失败'; });
+  }
+
   function load() {
     if (!mount()) return;
     if (!token()) { err('请先登录网站'); return; }
@@ -1017,8 +1072,10 @@
       if (!me || me.code !== 0) {
         var root = document.getElementById(MOUNT_ID);
         if (root) root.style.display = 'none';
+        renderMemberHome();
         return;
       }
+      removeMemberHome();
       var who = document.getElementById('xhfaWho');
       if (who) who.textContent = (me.data.name || '') + ' · ' + (me.data.level === 'owner' ? '超级管理员' : '管理员');
       return api('/console/data').then(function (payload) {
