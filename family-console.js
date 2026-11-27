@@ -16,6 +16,13 @@
     return node;
   }
 
+  function section(key, title, open, body) {
+    return '<details class="xhfa-sec" data-key="' + key + '" data-default="' + (open ? 'open' : 'closed') + '"' +
+      (open ? ' open' : '') + '>' +
+      '<summary>' + title + '</summary>' +
+      '<div class="xhfa-sec-body">' + body + '</div></details>';
+  }
+
   function fmt(ts) {
     if (!ts) return '';
     var d = new Date(ts);
@@ -85,8 +92,61 @@
   #${MOUNT_ID} .xhfa-tag.risk-high{color:#ff8b8b;border-color:rgba(255,139,139,.5)}
   #${MOUNT_ID} .xhfa-tag.risk-medium{color:#ffc98a;border-color:rgba(255,180,90,.45)}
   #${MOUNT_ID} .xhfa-tag.risk-low{color:#86b5a0;border-color:rgba(134,181,160,.4)}
+  #${MOUNT_ID} details.xhfa-sec{margin-bottom:12px;border:1px solid rgba(255,255,255,.075);border-radius:14px;background:rgba(17,17,21,.85);overflow:hidden}
+  #${MOUNT_ID} details.xhfa-sec>summary{cursor:pointer;list-style:none;padding:11px 14px;font-size:14px;color:var(--gold-bright,#f8ebce);font-weight:600;letter-spacing:.03em;display:flex;align-items:center;gap:8px}
+  #${MOUNT_ID} details.xhfa-sec>summary::-webkit-details-marker{display:none}
+  #${MOUNT_ID} details.xhfa-sec>summary:before{content:'▸';color:#5e6b79;transition:transform .15s;font-weight:400}
+  #${MOUNT_ID} details.xhfa-sec[open]>summary:before{transform:rotate(90deg)}
+  #${MOUNT_ID} details.xhfa-sec>summary:hover{color:var(--gold,#e5c68d)}
+  #${MOUNT_ID} details.xhfa-sec .xhfa-sec-body{padding:0 14px 12px}
+  #${MOUNT_ID} details.xhfa-sec .xhfa-list{background:transparent;border:0;border-radius:0;margin:0}
+  #${MOUNT_ID} details.xhfa-sec .xhfa-head h3{display:none}
+  #${MOUNT_ID} details.xhfa-sec .xhfa-head{margin-bottom:8px}
   @media (max-width:720px){ #${MOUNT_ID} .xhfa-member .xhfa-name{min-width:0} }
   `;
+
+  function updateToggleAllLabel(root) {
+    var btn = document.getElementById('xhfaToggleAll');
+    if (!btn) return;
+    var anyOpen = false;
+    root.querySelectorAll('details.xhfa-sec').forEach(function (sec) {
+      if (sec.open && sec.style.display !== 'none') anyOpen = true;
+    });
+    btn.textContent = anyOpen ? '全部收起' : '全部展开';
+  }
+
+  function initSections(root) {
+    var saved = {};
+    try { saved = JSON.parse(localStorage.getItem('xhfaOpen') || '{}') || {}; } catch (e) { saved = {}; }
+    var sections = root.querySelectorAll('details.xhfa-sec');
+    sections.forEach(function (sec) {
+      var key = sec.getAttribute('data-key');
+      var fallback = sec.getAttribute('data-default') === 'open';
+      sec.open = Object.prototype.hasOwnProperty.call(saved, key) ? Boolean(saved[key]) : fallback;
+      sec.addEventListener('toggle', function () {
+        var state = {};
+        try { state = JSON.parse(localStorage.getItem('xhfaOpen') || '{}') || {}; } catch (e) { state = {}; }
+        state[key] = sec.open;
+        try { localStorage.setItem('xhfaOpen', JSON.stringify(state)); } catch (e) {}
+        updateToggleAllLabel(root);
+      });
+    });
+    var toggleAll = document.getElementById('xhfaToggleAll');
+    if (toggleAll) {
+      toggleAll.onclick = function () {
+        var anyOpen = false;
+        sections.forEach(function (sec) {
+          if (sec.open && sec.style.display !== 'none') anyOpen = true;
+        });
+        sections.forEach(function (sec) {
+          if (sec.style.display === 'none') return;
+          sec.open = !anyOpen;
+        });
+        updateToggleAllLabel(root);
+      };
+    }
+    updateToggleAllLabel(root);
+  }
 
   function mount() {
     var page = document.getElementById('workbenchPage');
@@ -104,31 +164,34 @@
       '<div class="xhfa-head"><h3>QQ 家庭助手</h3>' +
       '<span class="xhfa-sub">群聊/私聊问答 · 家人 · 盒子</span>' +
       '<span class="xhfa-sub" style="margin-left:auto" id="xhfaWho"></span>' +
+      '<button id="xhfaToggleAll">全部展开</button>' +
       '<button id="xhfaRefresh">刷新</button></div>' +
       '<div class="xhfa-error" id="xhfaErr"></div>' +
       '<div class="xhfa-grid" id="xhfaStats"></div>' +
-      '<div class="xhfa-list" id="xhfaBoxStatus"></div>' +
-      '<div class="xhfa-list" id="xhfaBoxSettings" style="display:none"></div>' +
-      '<div class="xhfa-list" id="xhfaLoginLogs" style="display:none"></div>' +
-      '<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button id="xhfaBind">绑定 QQ</button></div>' +
-      '<div class="xhfa-list" id="xhfaElder"><div class="xhfa-empty">被监护者 / 服务对象可以通过客厅盒子交流，不强制需要智能手机。</div></div>' +
-      '<div class="xhfa-list" id="xhfaPortrait" style="display:none"></div>' +
-      '<div class="xhfa-list" id="xhfaAstrbot" style="display:none"></div>' +
-      '<div class="xhfa-head" style="margin:14px 0 8px"><h3 style="font-size:14px">监护者（QQ 绑定）</h3></div>' +
-      '<div class="xhfa-list" id="xhfaMembers"></div>' +
-      '<div class="xhfa-list" id="xhfaElderForm"></div>' +
-      '<div class="xhfa-list" id="xhfaContentForm"></div>' +
-      '<div class="xhfa-list" id="xhfaTasks"></div>' +
-      '<div class="xhfa-list" id="xhfaSched"></div>' +
-      '<div class="xhfa-list" id="xhfaLogs"></div>' +
-      '<div class="xhfa-list" id="xhfaRecordings"></div>' +
-      '<div style="display:flex;gap:8px;margin-bottom:10px">' +
-      '  <input type="text" id="xhfaBoxText" placeholder="跟妈说：记得吃药" style="flex:1;min-width:200px" />' +
-      '  <button id="xhfaBoxSend">发到盒子</button>' +
-      '</div>' +
-      '<div class="xhfa-list" id="xhfaBox"></div>' +
-      '<div class="xhfa-list" id="xhfaChat"></div>';
+      '<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button id="xhfaBind">绑定 QQ</button></div>' +
+      section('boxStatus', '盒子状态', true, '<div class="xhfa-list" id="xhfaBoxStatus"></div>') +
+      section('boxSettings', '盒子参数（在线调）', false, '<div class="xhfa-list" id="xhfaBoxSettings"></div>') +
+      section('loginLogs', '登录日志', false, '<div class="xhfa-list" id="xhfaLoginLogs"></div>') +
+      section('members', '监护者（QQ 绑定）', false, '<div class="xhfa-list" id="xhfaMembers"></div>') +
+      section('elders', '被监护者', false,
+        '<div class="xhfa-list" id="xhfaElder"><div class="xhfa-empty">被监护者 / 服务对象可以通过客厅盒子交流，不强制需要智能手机。</div></div>' +
+        '<div class="xhfa-list" id="xhfaElderForm"></div>') +
+      section('people', '人员与关系', false, '<div class="xhfa-list" id="xhfaContentForm"></div>') +
+      section('tasks', '任务', false, '<div class="xhfa-list" id="xhfaTasks"></div>') +
+      section('schedule', '定时消息', false, '<div class="xhfa-list" id="xhfaSched"></div>') +
+      section('logs', '操作日志', false, '<div class="xhfa-list" id="xhfaLogs"></div>') +
+      section('recordings', '录音', false, '<div class="xhfa-list" id="xhfaRecordings"></div>') +
+      section('boxMessages', '盒子留言', false,
+        '<div style="display:flex;gap:8px;margin-bottom:10px">' +
+        '  <input type="text" id="xhfaBoxText" placeholder="跟妈说：记得吃药" style="flex:1;min-width:200px" />' +
+        '  <button id="xhfaBoxSend">发到盒子</button>' +
+        '</div>' +
+        '<div class="xhfa-list" id="xhfaBox"></div>') +
+      section('chat', '最近对话', false, '<div class="xhfa-list" id="xhfaChat"></div>') +
+      section('portrait', '心理画像（仅超管）', false, '<div class="xhfa-list" id="xhfaPortrait"></div>') +
+      section('astrbot', 'AstrBot 面板（仅超管）', false, '<div class="xhfa-list" id="xhfaAstrbot"></div>');
     page.appendChild(root);
+    initSections(root);
 
     document.getElementById('xhfaRefresh').onclick = load;
     document.getElementById('xhfaBoxSend').onclick = sendBox;
