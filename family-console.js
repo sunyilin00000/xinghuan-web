@@ -215,6 +215,38 @@
     return line;
   }
 
+  function settingSelect(label, key, options, value) {
+    var line = el('div', 'xhfa-row');
+    line.appendChild(el('span', 'xhfa-tag', label));
+    var select = document.createElement('select');
+    select.setAttribute('data-key', key);
+    select.style.cssText = 'background:#060608;border:1px solid rgba(255,255,255,.12);color:#f2f5f8;border-radius:8px;padding:5px 8px;font-size:12px;font-family:inherit';
+    options.forEach(function (opt) {
+      var item = document.createElement('option');
+      item.value = opt[0];
+      item.textContent = opt[1];
+      if (String(opt[0]) === String(value)) item.selected = true;
+      select.appendChild(item);
+    });
+    line.appendChild(select);
+    return line;
+  }
+
+  function settingToggle(label, key, checked) {
+    var line = el('div', 'xhfa-row');
+    line.appendChild(el('span', 'xhfa-tag', label));
+    var box = document.createElement('label');
+    box.style.cssText = 'display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted,#92a0af)';
+    var input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = Boolean(checked);
+    input.setAttribute('data-key', key);
+    box.appendChild(input);
+    box.appendChild(document.createTextNode('开启（热加载 PANNs，约 10 秒）'));
+    line.appendChild(box);
+    return line;
+  }
+
   function renderBoxSettings(force) {
     var box = document.getElementById('xhfaBoxSettings');
     if (!box) return;
@@ -234,7 +266,7 @@
 
       var head = el('div', 'xhfa-head');
       head.appendChild(el('h3', null, '盒子参数'));
-      head.appendChild(el('span', 'xhfa-sub', data.box_online ? '盒子在线 · 保存后 60 秒内生效' : '盒子当前离线 · 上线后自动生效'));
+      head.appendChild(el('span', 'xhfa-sub', data.box_online ? '盒子在线 · 保存后 60 秒内生效；换声纹模型/声音事件约 10 秒热切换' : '盒子当前离线 · 上线后自动生效'));
       var refresh = el('button', null, '刷新');
       refresh.onclick = function () { boxSettingsLoaded = false; renderBoxSettings(true); };
       head.appendChild(refresh);
@@ -250,6 +282,18 @@
       grid.appendChild(settingRow('麦克风灵敏度', 'rms_threshold', current.rms_threshold, { min: 50, max: 5000, step: 10 }));
       grid.appendChild(settingRow('静音判定块数', 'silence_chunks', current.silence_chunks, { min: 10, max: 300 }));
       grid.appendChild(settingRow('声纹相似度阈值', 'voice_match', current.voice_match, { min: 0.3, max: 0.95, step: 0.01 }));
+      grid.appendChild(settingSelect('语音合成引擎', 'tts_engine', [['piper', 'Piper 本地（快）'], ['edge', 'Edge 云端（更自然）']], current.tts_engine || 'piper'));
+      grid.appendChild(settingSelect('Edge 音色', 'tts_voice', [
+        ['zh-CN-XiaoxiaoNeural', '晓晓（女声，温和）'],
+        ['zh-CN-XiaoyiNeural', '晓伊（女声，活泼）'],
+        ['zh-CN-YunxiNeural', '云希（男声，年轻）'],
+        ['zh-CN-YunjianNeural', '云健（男声，沉稳）'],
+        ['zh-CN-YunyangNeural', '云扬（男声，新闻）'],
+        ['zh-CN-liaoning-XiaobeiNeural', '晓北（东北女声）'],
+        ['zh-CN-shaanxi-XiaoniNeural', '晓妮（陕西女声）']
+      ], current.tts_voice || 'zh-CN-XiaoxiaoNeural'));
+      grid.appendChild(settingSelect('声纹模型', 'sv_model', [['cam++', 'cam++（当前）'], ['eres2netv2', 'ERes2NetV2（更准，热切换）']], current.sv_model || 'cam++'));
+      grid.appendChild(settingToggle('声音事件检测', 'sed_enabled', current.sed_enabled));
       box.appendChild(grid);
 
       var saveRow = el('div', 'xhfa-row');
@@ -257,8 +301,10 @@
       var state = el('span', 'xhfa-meta', '');
       save.onclick = function () {
         var settings = {};
-        grid.querySelectorAll('input[data-key]').forEach(function (input) {
-          settings[input.getAttribute('data-key')] = input.value.trim();
+        grid.querySelectorAll('[data-key]').forEach(function (field) {
+          var key = field.getAttribute('data-key');
+          if (field.type === 'checkbox') settings[key] = field.checked;
+          else settings[key] = field.value.trim();
         });
         save.disabled = true;
         state.textContent = '保存中…';
@@ -285,7 +331,10 @@
           + ' · 语速 ' + (applied.tts_rate || '-')
           + ' · 灵敏度 ' + (applied.rms_threshold != null ? applied.rms_threshold : '-')
           + ' · 静音 ' + (applied.silence_chunks != null ? applied.silence_chunks : '-')
-          + ' · 声纹 ' + (applied.voice_match != null ? applied.voice_match : '-');
+          + ' · 声纹 ' + (applied.voice_match != null ? applied.voice_match : '-')
+          + ' · 引擎 ' + (applied.tts_engine || '-')
+          + ' · 模型 ' + (applied.sv_model || '-')
+          + ' · 声音事件 ' + (applied.sed_enabled ? '开' : '关');
         box.appendChild(el('div', 'xhfa-meta', summary));
       } else {
         box.appendChild(el('div', 'xhfa-meta', '还没收到盒子回传的生效值（等一次心跳即可）'));
