@@ -389,6 +389,38 @@
     } else {
       statusRow(box, '心率', '未接', '', '还没收到 MAX30102 数据（固件 v5 烧录后每 5 秒上报）');
     }
+
+    // 快捷开关：不用跳到「盒子参数」也能开关
+    var quick = el('div', 'xhfa-row');
+    quick.appendChild(el('span', 'xhfa-tag', '开关'));
+    var holder = el('span', 'xhfa-body', '读取中…');
+    quick.appendChild(holder);
+    box.appendChild(quick);
+    api('/console/box/settings').then(function (res) {
+      var cur = (res && res.data && (res.data.settings || res.data.applied)) || {};
+      holder.innerHTML = '';
+      var defs = [
+        ['asr_enabled', '收音', cur.asr_enabled !== false],
+        ['voiceprint_enabled', '声纹', cur.voiceprint_enabled !== false],
+        ['sed_enabled', '声音事件', cur.sed_enabled === true],
+        ['hr_enabled', '心率', cur.hr_enabled !== false]
+      ];
+      defs.forEach(function (d) {
+        var b = el('button', d[2] ? 'xhfa-save' : null, d[1] + ' ' + (d[2] ? '开' : '关'));
+        b.style.marginRight = '6px';
+        b.onclick = function () {
+          b.disabled = true;
+          var patch = {};
+          patch[d[0]] = !d[2];
+          api('/console/box/settings', { settings: patch }).then(function (r) {
+            b.disabled = false;
+            if (r && r.code === 0) { refreshData(false); }
+            else err((r && r.message) || '切换失败');
+          });
+        };
+        holder.appendChild(b);
+      });
+    }).catch(function () { holder.textContent = '开关读取失败'; });
   }
 
   // 盒子参数：工作台里在线调，盒子每 60 秒拉一次热更新
@@ -566,6 +598,7 @@
       grid.appendChild(settingToggle('声音事件检测', 'sed_enabled', current.sed_enabled !== false));
       grid.appendChild(settingToggle('语音存档到 COS', 'audio_archive_enabled', current.audio_archive_enabled !== false));
       grid.appendChild(settingToggle('可疑语音送审', 'audio_review_enabled', current.audio_review_enabled !== false));
+      grid.appendChild(settingToggle('心率/血氧采集', 'hr_enabled', current.hr_enabled !== false));
       box.appendChild(grid);
 
       var saveRow = el('div', 'xhfa-row');
