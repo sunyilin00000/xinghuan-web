@@ -373,7 +373,8 @@
     if (s.pending_task) line2.appendChild(el('span', 'xhfa-tag qq', '任务录音中'));
     if (s.hr || s.spo2 || s.finger) {
       var vital = el('div', 'xhfa-row');
-      vital.appendChild(el('span', 'xhfa-tag ' + (s.finger ? 'ok' : ''), s.finger ? '手指在位' : '未检测到手指'));
+      var fresh = !s.vitals_stale;
+      vital.appendChild(el('span', 'xhfa-tag ' + (fresh && s.finger ? 'ok' : ''), fresh ? (s.finger ? '手指在位' : '未检测到手指') : '数据已过期'));
       var ago = s.vitals_ts ? Math.max(0, Math.floor(Date.now() / 1000 - s.vitals_ts)) : null;
       vital.appendChild(el('span', 'xhfa-body', '心率 ' + (s.hr || '—') + ' bpm · 血氧 ' + (s.spo2 || '—') + '%' + (ago !== null ? ' · 更新于 ' + fmtAgo(ago) : '')));
       box.appendChild(vital);
